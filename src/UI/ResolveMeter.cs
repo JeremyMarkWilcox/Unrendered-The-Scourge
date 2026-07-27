@@ -9,11 +9,11 @@ namespace Unrendered.UI;
 /// it is going, because the player needs to read danger at a glance; the small arrow at
 /// the end is what shows the trend.
 /// </summary>
-public partial class SanityMeter : Control
+public partial class ResolveMeter : Control
 {
-    private float _current = GameConfig.SanityMax;
-    private float _max = GameConfig.SanityMax;
-    private float _displayed = GameConfig.SanityMax;
+    private float _current = GameConfig.ResolveMax;
+    private float _max = GameConfig.ResolveMax;
+    private float _displayed = GameConfig.ResolveMax;
     private float _pulse;
 
     public override void _Ready()
@@ -22,16 +22,16 @@ public partial class SanityMeter : Control
         CustomMinimumSize = new Vector2(420, 34);
 
         var bus = EventBus.Instance;
-        if (bus != null) bus.SanityChanged += OnSanityChanged;
+        if (bus != null) bus.ResolveChanged += OnResolveChanged;
     }
 
     public override void _ExitTree()
     {
         var bus = EventBus.Instance;
-        if (bus != null) bus.SanityChanged -= OnSanityChanged;
+        if (bus != null) bus.ResolveChanged -= OnResolveChanged;
     }
 
-    private void OnSanityChanged(float current, float max)
+    private void OnResolveChanged(float current, float max)
     {
         _current = current;
         _max = max;
@@ -74,7 +74,7 @@ public partial class SanityMeter : Control
         DrawRect(new Rect2(pad, pad, (w - pad * 2f) * fraction, h - pad * 2f), fill);
 
         // Trend arrow: draining or recovering.
-        var rate = SanityManager.Instance?.CurrentRatePerSecond() ?? 0f;
+        var rate = ResolveManager.Instance?.CurrentRatePerSecond() ?? 0f;
         if (!Mathf.IsZeroApprox(rate))
         {
             var draining = rate > 0f;

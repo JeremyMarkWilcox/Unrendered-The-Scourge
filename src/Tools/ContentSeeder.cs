@@ -96,7 +96,7 @@ public static class ContentSeeder
             DisplayName = "Clearmind Salve",
             Description = "Bitterroot and tallow, worked cold. Rub it under the eyes and the second world dims for a while.",
             Category = ItemCategory.Salve,
-            SanityRestore = 35f,
+            ResolveRestore = 35f,
             PlaceholderColor = new Color("#8fb8a8"),
         }, $"{GameConfig.ItemDataDir}/salve_clearmind.tres");
 

@@ -8,5 +8,5 @@ Id = "salve_clearmind"
 DisplayName = "Clearmind Salve"
 Description = "Bitterroot and tallow, worked cold. Rub it under the eyes and the second world dims for a while."
 Category = 1
-SanityRestore = 35.0
+ResolveRestore = 35.0
 PlaceholderColor = Color(0.56078434, 0.72156864, 0.65882355, 1)

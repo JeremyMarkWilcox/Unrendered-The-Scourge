@@ -22,7 +22,7 @@ WorldStateManager="*res://src/Managers/WorldStateManager.cs"
 EntityStateManager="*res://src/Managers/EntityStateManager.cs"
 RealmTransitionManager="*res://src/Managers/RealmTransitionManager.cs"
 InventoryCraftingManager="*res://src/Managers/InventoryCraftingManager.cs"
-SanityManager="*res://src/Managers/SanityManager.cs"
+ResolveManager="*res://src/Managers/ResolveManager.cs"
 NavigationManager="*res://src/Managers/NavigationManager.cs"
 DreamRunManager="*res://src/Managers/DreamRunManager.cs"
 

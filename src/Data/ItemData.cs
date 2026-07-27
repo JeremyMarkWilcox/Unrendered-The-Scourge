@@ -8,7 +8,7 @@ public enum ItemCategory
     /// <summary>Raw material. Herbs, fungus, bone, ore.</summary>
     Reagent = 0,
 
-    /// <summary>Apothecary output. Restores Sanity.</summary>
+    /// <summary>Apothecary output. Restores Resolve.</summary>
     Salve = 1,
 
     /// <summary>Craftsman output. Spends in the Dream realm as an ability.</summary>
@@ -31,8 +31,8 @@ public partial class ItemData : Resource
     [Export] public Texture2D Icon { get; set; }
     [Export] public int MaxStack { get; set; } = 20;
 
-    /// <summary>Sanity restored on use. Salves only.</summary>
-    [Export] public float SanityRestore { get; set; }
+    /// <summary>Resolve restored on use. Salves only.</summary>
+    [Export] public float ResolveRestore { get; set; }
 
     /// <summary>Placeholder swatch used by the inventory grid until icons exist.</summary>
     [Export] public Color PlaceholderColor { get; set; } = new("#6b7f5e");

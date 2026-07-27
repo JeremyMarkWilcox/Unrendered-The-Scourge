@@ -34,7 +34,7 @@ public partial class Main : Node
             return;
         }
 
-        if (SanityManager.Instance != null) SanityManager.Instance.Active = true;
+        if (ResolveManager.Instance != null) ResolveManager.Instance.Active = true;
 
         if (Boot.VerifySlice)
         {

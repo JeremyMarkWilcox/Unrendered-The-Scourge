@@ -32,7 +32,7 @@ public static class SliceVerifier
         _checks = 0;
 
         // Deterministic: no ambient drain racing the assertions.
-        if (SanityManager.Instance != null) SanityManager.Instance.Active = false;
+        if (ResolveManager.Instance != null) ResolveManager.Instance.Active = false;
 
         GateM1_TwoScreenNavigation();
         GateM2_StateRealmTable();
@@ -239,12 +239,12 @@ public static class SliceVerifier
         Section("heist  clock, pursuit and both failure endings");
 
         var run = DreamRunManager.Instance;
-        var sanity = SanityManager.Instance;
+        var resolve = ResolveManager.Instance;
 
         Check("the heist is registered", run.GetHeist("waystation_heist") != null);
 
         // -- Being touched --
-        sanity.SetTo(sanity.Max);
+        resolve.SetTo(resolve.Max);
         Check("a run begins", run.Begin("waystation_heist"));
         Check("the pursuer starts on the prize", run.PursuerRoomId == "dream_way_solar");
         Check("and is three rooms off", run.PursuerDistance == 3);
@@ -253,31 +253,31 @@ public static class SliceVerifier
         Check("closing the distance is reported", run.PursuerDistance == 2);
 
         // Burn some of the clock, then walk straight into it.
-        sanity.SetTo(sanity.Max * 0.5f);
+        resolve.SetTo(resolve.Max * 0.5f);
         Walk("dream_way_stair");
         Walk("dream_way_solar");
         Check("walking into the pursuer ends the run", !run.IsRunning);
-        Check("returning refills the bar", Mathf.IsEqualApprox(sanity.Current, sanity.Max));
+        Check("returning refills the bar", Mathf.IsEqualApprox(resolve.Current, resolve.Max));
         Check("and throws you back to the Waking world",
             NavigationManager.Instance.CurrentRoomId == "waystation_yard" &&
             RealmTransitionManager.Instance.CurrentRealm == GameRealm.Waking);
 
         // -- Running out of nerve --
-        sanity.SetTo(sanity.Max);
+        resolve.SetTo(resolve.Max);
         Check("a second run begins", run.Begin("waystation_heist"));
         Check("drain is at least the base rate",
             run.CurrentDrainPerSecond() >= run.ActiveHeist.DrainPerSecond);
 
-        sanity.SetTo(0f);
+        resolve.SetTo(0f);
         Check("running out of Resolve ends the run", !run.IsRunning);
         Check("and ejects you", NavigationManager.Instance.CurrentRoomId == "waystation_yard");
-        Check("and you are ready to try again", Mathf.IsEqualApprox(sanity.Current, sanity.Max));
+        Check("and you are ready to try again", Mathf.IsEqualApprox(resolve.Current, resolve.Max));
 
         // -- The Waking world never touches the bar --
-        var held = sanity.Current;
-        Check("no drain outside a heist", Mathf.IsZeroApprox(sanity.CurrentRatePerSecond()));
+        var held = resolve.Current;
+        Check("no drain outside a heist", Mathf.IsZeroApprox(resolve.CurrentRatePerSecond()));
         Check("the bar holds still in the Waking world",
-            Mathf.IsEqualApprox(sanity.Current, held));
+            Mathf.IsEqualApprox(resolve.Current, held));
 
         run.ForceClear();
     }
@@ -315,6 +315,36 @@ public static class SliceVerifier
         Check("room restored", NavigationManager.Instance.CurrentRoomId == "waystation_yard");
 
         SaveService.DeleteSave(path);
+
+        // -- A save taken inside a heist must not strand you there --
+        // No Dream room has a door back to the Waking world, so a load that restores a Dream
+        // room without a run is a soft lock with no drain, no exit and a dead anchor.
+        const string dreamPath = "user://verify_slice_dream.json";
+        var run = DreamRunManager.Instance;
+
+        Check("a run begins for the stranding check", run.Begin("waystation_heist"));
+        run.DebugSetPursuerRoom("dream_way_cistern");
+        Walk("dream_way_gallery");
+
+        Check("a save can be taken from inside the maze",
+            NavigationManager.Instance.CurrentRoomId == "dream_way_gallery" &&
+            SaveService.Save(dreamPath));
+
+        // Simulate a fresh session: the run is gone, only the file remains.
+        run.ForceClear();
+
+        Check("loading a mid-heist save reads", SaveService.Load(dreamPath));
+        Check("and does not strand you inside the Dream maze",
+            !run.IsDreamRoom(NavigationManager.Instance.CurrentRoomId));
+        Check("and returns you to the heist's exit",
+            NavigationManager.Instance.CurrentRoomId == "waystation_yard");
+        Check("and puts you back in the Waking world",
+            RealmTransitionManager.Instance.CurrentRealm == GameRealm.Waking);
+        Check("and leaves the realm unlocked",
+            !RealmTransitionManager.Instance.TransitionsLocked);
+        Check("and leaves no run running", !run.IsRunning);
+
+        SaveService.DeleteSave(dreamPath);
     }
 
     // ---- Plumbing --------------------------------------------------------

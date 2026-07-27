@@ -12,7 +12,7 @@ public sealed class SaveGame
 
     public string CurrentRoomId { get; set; } = "";
     public int CurrentRealm { get; set; }
-    public float Sanity { get; set; } = 100f;
+    public float Resolve { get; set; } = 100f;
 
     public Dictionary<string, bool> Flags { get; set; } = new();
     public Dictionary<string, int> ZonePhases { get; set; } = new();

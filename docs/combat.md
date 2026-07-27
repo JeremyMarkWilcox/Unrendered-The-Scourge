@@ -5,7 +5,13 @@ combat, traps and progression is **designed, not built** — numbers there are s
 for tuning, not gospel.
 
 Supersedes the "Sanity as universal health pool" idea from the original build plan, and the
-Snap duel from the GDD.
+Snap duel from the GDD. The resource is called **Resolve** everywhere, in the docs and now in the
+code — there is no "Sanity" left in the project.
+
+Sections **15–17** are newer than the rest and were written in one pass; where they disagree with
+an earlier section, they win, and the earlier text carries a note saying so. The one deliberate
+revision is in Section 6: Resolve now moves in Waking-world boss fights, which the original
+version of that section forbade.
 
 ---
 
@@ -42,9 +48,10 @@ deflates, regeneration stops, Resilience drops to a token value.
 This teaches itself. A player watches a wound close, and understands. Then watches the
 shimmer die, and understands they have won something. No tutorial copy required.
 
-> Already half-implemented: `EntityData.CorruptionAura` exists and `SanityManager` only
-> counts it while the entity is `Corrupted`, so severing already reduces room drain today.
-> Missing: the visual aura, the regen, and Resilience.
+> Partly implemented: `EntityData.CorruptionAura` exists and gates on state. The old
+> Waking-world *ambient* drain it used to feed has been **removed** — see the note in
+> `EntityData.cs` — so the field is now free to carry what Section 6 asks of it.
+> Missing: the visual aura, the regen, Resilience, and the boss-fight Resolve drain.
 
 ### The loop runs one way only
 
@@ -140,27 +147,51 @@ the window, everything burns in five brutal turns. A setpiece, not a chore.
 | Pool | Spent by | Restored by |
 |---|---|---|
 | **Vitality** | Waking-world combat | her salves (finite), crude substitutes (poor) |
-| **Resolve** | the Dream, and only the Dream | returning to the Waking world |
+| **Resolve** | the Dream, and boss fights against an intact aura | leaving the Dream; resting at a camp |
 
-**Resolve does not move in the Waking world.** No ambient drain, no corrupted-ground
-pressure, no bleed for standing near something anchored. It is a heist clock and nothing
-else, and coming back refills it. One resource, one meaning, one place.
+**Resolve is your nerve, and an empty bar means one thing everywhere: you are removed from
+the confrontation.** In the Dream that is ejection from the realm. In a boss fight it is
+forced flight. One meaning, two venues.
 
-**At 0 Vitality:** you wake in a sanctuary having **lost everything you were carrying.** Not
-a reload — the run cost you the inheritance. Crueller and more interesting than lost time.
+It moves in exactly those two places. **There is still no ambient drain** — no
+corrupted-ground pressure, no bleed for standing near something anchored, nothing outside an
+actual confrontation. Normal enemies never touch it: they have no aura and cannot be severed,
+so a drain there would teach the player nothing.
 
-**At 0 Resolve:** the Dream throws you out. There is no Snap duel; Resolve empty and being
-touched are the same ending. Because the bar cannot move outside a heist, an empty bar has
-exactly one meaning.
+> **Revised.** This supersedes the earlier rule that Resolve *never* moves in the Waking
+> world. That version kept the bar unambiguous by confining it to one place; the "removed
+> from the confrontation" reading keeps it unambiguous while letting the aura actually bite,
+> which is what makes fighting an un-severed boss feel like a decision. The incentive to
+> sever was already carried by regeneration and Resilience (Section 2) — this adds pressure,
+> not the reason.
 
-> **Consequence, unresolved.** With a full refill on return, *failing a heist now costs
-> nothing but time* — and the two-route economy in Section 1 depends on the Dream route
-> having a price. Cheapest fix that fits everything else: **crossing consumes a catalyst.**
-> You burn incense to open the way; botch the run and you have to go make more. That moves
-> the cost into the finite-supply economy where it already belongs, keeps Resolve a pure
-> timer, and is exactly the GDD's *"real-world crafting items catalyze abilities in the
-> Pixel Realm."* Needs M4 inventory first. Alternatively drop
-> `DreamHeistData.ResolveRestoredOnReturn` below 1.0 so a botched run leaves a mark.
+**At 0 Vitality:** you wake **at a camp**, having lost what you were carrying. Not a reload —
+but **her named salves and other protected items survive.** The only way to lose those is to
+spend them, which is the point: burning her work must always be a choice, never bad luck.
+
+**At 0 Resolve in the Dream:** it throws you out. There is no Snap duel; Resolve empty and
+being touched are the same ending.
+
+**At 0 Resolve in a boss fight:** you are driven off to camp and **lose everything you
+rigged** — traps spent, the site consumed, rebuild before you try again. Fleeing voluntarily
+costs the same rigging; the difference is that you still have your unspent consumables,
+because you stopped before pouring them all in. Same loss, very different bill.
+
+> **Consequence — decided.** Resolve refilling on return would mean *failing a heist costs
+> nothing but time*, and the two-route economy in Section 1 depends on the Dream route having
+> a price. **Crossing consumes a catalyst.** You burn incense to open the way; botch the run
+> and you go make more. That puts the cost in the finite-supply economy where it belongs,
+> keeps Resolve a pure clock, and is exactly the GDD's *"real-world crafting items catalyze
+> abilities in the Pixel Realm."* Needs M4 inventory first.
+>
+> **Catalysts are craftable from common materials, not rare finds.** This is what keeps the
+> Dream punishing without making it undoable: rare catalysts risk a genuine soft lock where
+> you cannot afford to cross and cannot progress without crossing, whereas craftable ones make
+> a botched run cost a gathering trip. Annoying and recoverable, which is the target feel.
+>
+> This matters more than it first did, because Resolve now bounds *every* Dream visit and not
+> just three heists — see Section 15. Thirty free retries would turn an unsettling place into
+> a grind.
 
 Max Vitality rises through **rare items**, never levels.
 
@@ -248,14 +279,39 @@ craftable substitutes exist and are visibly worse.
 Spending a real one should always sting slightly. Burning her work to avoid being frightened
 is characterisation, not just economy.
 
+**Her salves are protected from death** (Section 6). Losing them to a bad fight is noise, and
+noise characterises nothing; losing them because you chose to spend them is the whole point.
+
+**Crude substitutes must be *sufficient*, not merely present.** Anchored bosses regenerate
+between visits (Section 3), so overkill has to land in one sitting; her salves are finite; and
+a failed engagement costs you the rigging. Put those together and a player who fails twice
+could otherwise lose the overkill route *permanently*. So the crude versions have to be able
+to close a fight — worse, slower, needing more of them and better rigging — or failure
+silently deletes half of Section 1. Not a soft lock, since severing always remains, but the
+second route would quietly stop existing.
+
+**Her named salves stay uncraftable.** Physick approaching their quality late (Section 8 says
+her stock outclasses your work *"for most of the game"*) means brewing your own near-equals
+under your own names. You learn her craft; you never duplicate her hand.
+
 ---
 
 ## 11. Complexity budget
 
-Two pools · three proficiencies · one turn-based resolver with two skins · five Dream verbs ·
-a handful of traps.
+Two pools · three proficiencies · one turn-based resolver for Waking combat · node-or-3D stealth
+in the Dream · a handful of traps · observation puzzles in both realms · camps.
 
-No attributes. No XP. No skill trees. No second inventory. No health bars.
+No attributes. No XP. No skill trees. No second inventory. No health bars. **No damage
+multipliers** — crafting grants variety and access, Zelda-style tools rather than weapon tiers,
+which is what keeps invariant 5 intact while letting the crafting side run deep.
+
+Two things were considered and **rejected** for this budget, recorded so they are not
+re-derived: using the Dream as a **traversal shortcut** past monsters (a third route paid in a
+freely-refilling resource, which collapses Section 1 — crafted bridges are the same fantasy in
+the correct currency), and **harvesting crafting supplies** in the Dream (it inflates the
+finite-supply economy, and carrying physical goods out of a place that is not real makes no
+sense). Also rejected: puzzles built on spatial reconfiguration, which would have been a new
+system rather than new content.
 
 Small enough to finish, deep enough to have opinions about.
 
@@ -280,13 +336,26 @@ until M5 starts.
 
 ## 13. Still open
 
-- **Does body damage persist between engagements once severed?** Section 3 assumes yes. It is
-  the only item here that touches the save format, so it wants deciding before M5.
+**Answered:**
+
+- ~~Does body damage persist between engagements once severed?~~ **Yes — and it does not
+  persist while anchored.** That asymmetry *is* the reward for severing: without it, severing
+  would only remove regen *within* a fight, and Section 3's lesson would have no contrast to
+  teach from. A husk has nothing animating it, so nothing closes the wound. Cheap to build:
+  `SaveService` persists plain dictionaries, so this rides alongside the per-instance entity
+  state that already never resets on room re-entry — persistent wounds are the zero-respawn
+  rule one level deeper. The number exists for the resolver and is never shown; Section 5's
+  condition bands stay the only readout.
+- ~~Can traps be recovered after a fight, or are they consumed?~~ **Consumed, always** — win,
+  flee or driven off. Which is why they must be cheap and rebuildable from common materials;
+  if failure destroyed precious components, players would reload rather than retry.
+- ~~What the Dream fight actually *is*, turn to turn.~~ There is no Dream fight. See Section 14
+  and Section 15.
+
+**Still open:**
+
 - Trap placement: free-form on a grid, or fixed authored sites per room? Authored sites are
-  far less work and probably read better on painted backgrounds.
-- Can traps be recovered after a fight, or are they consumed?
-- What the Dream fight actually *is*, turn to turn — Section 9 lists the verbs but not the
-  shape of the encounter. **Biggest remaining gap — see below.**
+  far less work and probably read better on painted backgrounds. Nothing else blocks on this.
 
 ---
 
@@ -307,21 +376,215 @@ Reuses the existing room system. Six-room Waystation maze with two loops, a BFS 
 Resolve clock, both failure endings, and language-only proximity cues. Covered by the
 automated gates in `SliceVerifier`.
 
-### Not built, deliberately
+### 2.5D — the gate is cleared, and it is the plan
 
-The 2.5D version. A first-person pixel-3D Dream would be more immersive, and the architecture
-would absorb it — the Dream already renders through a `SubViewport` that could host a 3D
-subscene, and nothing in `RealmTransitionManager`, `EntityStateManager` or the save system
+Node stealth existed to answer one question before spending months: **is being hunted in this
+game frightening?** It has now been played, and it is — you feel rushed and chased with nothing
+but text proximity cues and no audio at all, which makes the result stronger rather than weaker.
+
+The cost estimate that justified deferring also turns out to have been wrong, because it assumed
+3D creature art. The actual plan is **pixel-textured geometry with the hostile spirits as 2D
+sprites** — no rigs, no animation blending, no 3D character work. At 480×270 with nearest
+filtering, low-poly reads as style rather than as cheapness.
+
+The architecture absorbs it: the Dream already renders through a `SubViewport` that can host a
+3D subscene, and nothing in `RealmTransitionManager`, `EntityStateManager` or the save system
 cares what the Dream looks like.
 
-But it is months of work, most of it in *feel*, which cannot be shortcut. Node stealth answers
-the only question that matters first: **is being hunted in this game frightening?** If it is at
-this fidelity, 2.5D is worth the months. If it is not, higher fidelity would not have rescued
-it.
+**The real risk is mechanical, not artistic.** Real-time movement adds a *reflex* requirement
+even though ejection-on-touch keeps invariant 2 intact — and a player who cannot dodge would be
+walled out of the efficient route and forced into overkill, which is exactly the difficulty
+slider Section 1 exists to prevent. So the 2.5D Dream should be deliberate rather than twitchy:
+slow, generous grab windows, readable telegraphs. Slower is also more frightening, so this is
+probably not a trade at all.
 
 ### Still open
 
-- Audio. Stealth without sound cues is thin, and this currently has none.
-- Does the pursuer's pure-BFS chase need softening? Untested against a real player.
-- The entry puzzle is a placeholder `Interact` hotspot, not a minigame.
+- Audio. Deliberately last, once the loop exists — but note that Section 15 removes the pursuer
+  from most of the Dream, so the ordinary Dream's tension now rests on the clock and on dread.
+  Until audio exists, any hazard the player is *meant to hear coming* must be readable by sight
+  alone, or it will playtest as unfair and the wrong conclusion will be drawn.
+- Does the pursuer's pure-BFS chase need softening? Untested against a real player — though it
+  now only runs inside boss pockets, which is a far smaller tuning problem than every room.
+- The entry puzzle is a placeholder `Interact` hotspot, not a minigame. It is now the first real
+  instance of Waking-world puzzle content, so it sets the grammar for everything after it.
 - Traps (Section 4) are designed but unbuilt; they need M4 inventory first.
+
+---
+
+## 15. The ordinary Dream — why you keep going back
+
+Section 9 gave the Dream one purpose, and one purpose that fires three times is a side trip, not
+a realm. This is what makes it load-bearing enough to justify building.
+
+### The premise
+
+The demon that half-possessed you — the same event that opened the Dream to you — **scrambled
+your knowledge of your own craft.** So you go in to reclaim your own stolen memory, and what you
+recover is what lets you rebuild the bridge and go on. The gift and the reason you need it are
+the same wound.
+
+That inverts the fantasy in a useful way: you are not robbing spirits for an advantage, you are
+stealing back from the thing that robbed you.
+
+It also gives Section 8's three tracks a source, which they previously lacked:
+
+| Track | Whose | Where it comes from |
+|---|---|---|
+| **Craft** | yours, stolen | recovered in the Dream — which is why it "grows by making things": you are re-remembering |
+| **Physick** | hers, never yours | her notes, in the Waking world — which is why it starts near zero and grows badly |
+| **Attunement** | the demon's gift | surviving the Dream |
+
+**Recovering knowledge is mandatory. Weakening bosses stays optional.** That is the right way
+round: it makes the Dream necessary for progression while leaving the two-route choice in
+Section 1 genuinely a choice.
+
+### Only knowledge crosses over
+
+Nothing material leaves the Dream. Four things can, and all four already exist in the design or
+the code:
+
+1. **Knowledge** — blueprints (already `ItemCategory.Lore`) and recipes. You learn *how* to build
+   a trap; you never pick one up. This wires the Dream straight into the trap economy without a
+   single object crossing.
+2. **Attunement** — already "grows by surviving the Dream."
+3. **Perception** — you come back able to *see* a Waking hotspot that was always there. Nothing
+   crossed; your eyes changed. Flag-gated hotspots already do this.
+4. **State** — severing, generalised. A door sealed in reality whose anchor is a Dream object
+   opens content rather than bypassing a monster.
+
+### Pockets, not a world
+
+The Dream is a set of **closed-off pockets**, each entered from its own Waking-world object. Enter
+at one point to explore a knowledge area; the boss guarding its tether is in a different pocket
+reached from a different entrance. They never connect.
+
+This costs nothing to build — `DreamRunManager` already enters a run from a relic and derives
+adjacency from Navigate hotspots, so a pocket is just a set of rooms. It buys three things: each
+pocket can have its own rules, small self-contained mazes are far easier to author and tune than
+one large realm, and it **hard-separates the knowledge trips from the hunted ones**, so severing a
+boss can never be incidentally cheap just because you happened to already be inside.
+
+### What is in there
+
+**Chases happen only in boss pockets** — roughly three times in the game. A monster you meet
+constantly becomes a traffic obstacle; three encounters make each one an event, and it lets the
+rest of the Dream run on dread rather than threat, which is far more sustainable. It also shrinks
+the BFS-tuning problem to a bounded setpiece.
+
+Everywhere else there are **mindless creatures**: stationary, or wandering aimlessly, harmful on
+contact, functioning as hazards to route around inside the puzzles. They are cheaper than the
+pursuer — a random walk, no pathfinding — and they frighten differently, unpredictable rather
+than relentless.
+
+**Contact costs Resolve. Only a boss ejects you outright.** One currency, two magnitudes, no new
+pool — and **Vitality must never appear in the Dream**, or the two-pool split in Section 6
+collapses and invariant 2 goes with it. Getting touched costs you exactly the thing you need to
+finish the puzzle, which is a better punishment than a health bar.
+
+That also produces a spiral worth building on purpose: get touched → lose Resolve → the render
+degrades (Section 16) → you can see less → you get touched more. Escalating, diegetic, and it
+still never kills you.
+
+> **Balance warning.** Unpredictable moving hazards in a low-resolution monochrome space with
+> degrading visibility can read as *unfair* rather than tense. Keep them slow, telegraphed, and
+> mostly-stationary with a few wanderers — and see the audio note in Section 14.
+
+### Puzzles are observation, not manipulation
+
+Dream puzzles are about **noticing** something, and the answer is spent in the Waking world. That
+serves the knowledge rule above, turns Resolve into *how long do I dare stay and study this*, and
+makes Dream trips research expeditions rather than errands. It needs no new systems.
+
+Waking-world puzzles are the other half and are nearly free — the game is already a Myst-style
+point-and-click, so hotspots, `HotspotKind` and flag gates are the native machinery.
+
+> **The journal is a dependency, not a nicety.** A player who notices something in the Dream may
+> spend it an hour later. With no journal that is a memory test, and puzzles get designed around
+> answers small enough to hold in your head — a constraint imposed by missing UI rather than
+> chosen. The journal comes *after* crafting (it is a view over discovered-knowledge state that
+> crafting must read anyway), but it must land **before the first real observation puzzle.**
+
+---
+
+## 16. Presentation — colour against monochrome
+
+The Waking world is a **beautifully drawn colour 2D** world. The Dream is **monochrome** — black,
+white and grey — containing nothing but hostile spirits and puzzles.
+
+Three payoffs, only one of them aesthetic:
+
+- **Production cost.** Palette discipline is the hardest part of pixel art at scale and monochrome
+  deletes it. Better, it can be enforced in the *pipeline*: a desaturate/posterise shader on the
+  Dream `SubViewport` puts anything dropped in on-style automatically, so even untextured greybox
+  geometry reads as intentional. One shader instead of permanent per-asset vigilance — and it
+  means Dream levels can be built long before their art exists, which is the same principle
+  `PlaceholderBackdrop` already runs on.
+- **Signposting.** In a colourless realm one coloured object screams. The anchor is the obvious
+  candidate.
+- **Economy.** Section 14 wants the Dream to be somewhere you would rather not go, because *"I
+  would rather spend everything she left me than go back in there"* is what prices the overkill
+  route. A beautiful Waking world against an ugly Dream does that with art instead of rules.
+
+### Greyscale and 1-bit, not one or the other
+
+**Author every asset in greyscale and dither in the shader.** Greyscale posterises down to 1-bit
+trivially; 1-bit can never be recovered up to greyscale. That pipeline order makes both looks
+available everywhere, forever, tunable per room by one parameter — and keeps the choice
+reversible for the life of the project. Two things it unlocks:
+
+- **Dither as depth cue.** Density rising with distance is a fog, which solves the separation
+  problem below while looking distinctive rather than compromised.
+- **Dither as the Resolve readout.** Because it is a shader parameter it can be animated, so the
+  realm visibly degrades as your nerve drains. A timer with no UI, exactly in the spirit of
+  Section 5's *never a digit*.
+
+### The craft problem this creates
+
+Monochrome, 480×270 and 3D depth all fight legibility at once, and 3D normally leans on colour to
+separate near from far. Everything has to be carried by **value**: depth fog, silhouette-first
+shapes, rim light, and the creatures as the highest-contrast thing on screen — which is also
+scarier, so that one is free.
+
+Degrade *distance* and environment as Resolve falls while holding creatures and interactables at
+full contrast. Otherwise legibility collapses exactly when the player most needs to read the
+space. Thematically it is right too: as your resolve fails, your world shrinks to arm's length.
+
+Uniform monochrome also means the pockets read as one realm for free — no shared-landmark work
+needed for cohesion. But it inverts the risk into **samey and disorienting**. With no minimap and
+one palette, players need to know whether they have been down this corridor before, and *random*
+scenery produces noise rather than landmarks. Section 9 says the loops in the maze are the
+mechanic — and a loop only reads as a loop if you recognise you have come back around. So: one
+deliberately placed distinctive silhouette per **junction**, not per room.
+
+---
+
+## 17. Camps
+
+There is no central workshop. Each area has one or more **safe camps**, and that is where crafting
+happens. This is structural rather than cosmetic:
+
+- **Backtracking to a hub is dead time**, and it taxes the exact playstyle the game is built on.
+  Section 4 says preparation *is* the combat, so the bench has to be near the fight.
+- It gives the Waking world **safe/unsafe geography**, which it currently has none of — all the
+  tension lives in the Dream. A defined safe pocket makes everything outside it feel unsafe by
+  contrast. Same trick as colour-against-monochrome, applied to space.
+- It is the **Resolve restore point** the boss-fight drain in Section 6 needs.
+- It gives **her cache** a home.
+- It is the game's only source of relief, which it needs, since everything else is dread.
+
+Near-free to build: a camp is a `RoomData` with a flag, or another `HotspotKind`.
+
+**Per-area, not per-room, and no fast travel.** If you can craft in the room you are about to
+fight in, the logistics vanish and Section 4's "can you rig this site in time" goes with them.
+Per-area camps preserve the real decision — *what do I carry from camp to the site* — without
+bringing hub backtracking back.
+
+The feeling to aim for is **commitment, not desperation**: you left camp with a plan and you find
+out in the room whether the plan was right. Tune it sparse enough that you pack deliberately,
+close enough that failure is not a slog.
+
+Camps are also the single failure destination for both pools (Section 6). Being sent there after a
+lost fight is convenience rather than punishment — you have to rebuild there anyway, so it skips
+dead walking, and it does not weaken the packing decision, because you still walked out with a
+plan the first time.

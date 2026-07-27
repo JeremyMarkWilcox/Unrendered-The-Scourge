@@ -43,7 +43,7 @@ src/
   Managers/   7 autoloads (see below)
   Data/       [GlobalClass] resources authored as .tres
   World/      RoomView, Hotspot, EntityOverlay, PlaceholderBackdrop, InteractionService
-  UI/         Hud, SanityMeter, DebugPanel
+  UI/         Hud, ResolveMeter, DebugPanel
   Save/       JSON round-trip of the manager state
   Tools/      ContentSeeder, SliceVerifier, ScreenshotTool
 data/         rooms/ entities/ items/ zones/   <- the game's content
@@ -53,7 +53,7 @@ scenes/       Boot, Main, RoomView
 ### Autoloads
 
 `EventBus` · `WorldStateManager` · `EntityStateManager` · `RealmTransitionManager` ·
-`InventoryCraftingManager` · `SanityManager` · `NavigationManager`
+`InventoryCraftingManager` · `ResolveManager` · `NavigationManager`
 
 Managers publish to the `EventBus`; views subscribe. Nothing holds a hard reference to
 anything else, so one state change ripples to every backdrop, overlay and HUD element.
@@ -92,8 +92,13 @@ in real art one `.tres` field at a time.
 > **Picking this up after a break? Read [`docs/handoff.md`](docs/handoff.md) first.** It has
 > the current state, what to build next, which parts are lying placeholders, and the design
 > invariants that must not be broken.
+>
+> Two things to know before you open the editor: there is **one live bug with an unknown cause**
+> and a five-minute repro recipe (`handoff.md` §6.1), and the Dream's design changed
+> substantially — `docs/combat.md` gained sections **15–17** and one deliberate revision to
+> section 6.
 
-M0–M3 complete, plus the Dream heist — 84 automated checks, `-- --verify-slice`.
+M0–M3 complete, plus the Dream heist — 92 automated checks, `-- --verify-slice`.
 
 The Waking world is a point-and-click adventure; the Pixel Realm is a stealth heist. Combat
 and progression are designed but unbuilt — see `docs/combat.md`, which is the source of truth

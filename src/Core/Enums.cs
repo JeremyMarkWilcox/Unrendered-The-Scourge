@@ -89,7 +89,7 @@ public enum BackdropStyle
 /// <summary>Progress of a region through the cleansing arc.</summary>
 public enum ZonePhase
 {
-    /// <summary>Distortion field intact. Full corruption, full Sanity drain.</summary>
+    /// <summary>Distortion field intact. Full corruption, full Resolve drain.</summary>
     Corrupted = 0,
 
     /// <summary>Player is clearing it. Zero respawns while the front is active.</summary>

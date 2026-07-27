@@ -57,7 +57,7 @@ public partial class DebugPanel : PanelContainer
         var world = WorldStateManager.Instance;
         var entities = EntityStateManager.Instance;
         var inv = InventoryCraftingManager.Instance;
-        var sanity = SanityManager.Instance;
+        var resolve = ResolveManager.Instance;
 
         sb.AppendLine($"room    {nav?.CurrentRoomId}   zone {nav?.CurrentRoom?.ZoneId}");
         sb.AppendLine($"realm   {RealmTransitionManager.Instance?.CurrentRealm}");
@@ -65,8 +65,8 @@ public partial class DebugPanel : PanelContainer
         if (nav?.CurrentRoom != null && world != null)
             sb.AppendLine($"phase   {world.GetZonePhase(nav.CurrentRoom.ZoneId)}");
 
-        if (sanity != null)
-            sb.AppendLine($"resolve {sanity.Current:F1}/{sanity.Max:F0}   rate {sanity.CurrentRatePerSecond():+0.00;-0.00;0.00}/s");
+        if (resolve != null)
+            sb.AppendLine($"resolve {resolve.Current:F1}/{resolve.Max:F0}   rate {resolve.CurrentRatePerSecond():+0.00;-0.00;0.00}/s");
 
         sb.AppendLine();
         sb.AppendLine("entities");

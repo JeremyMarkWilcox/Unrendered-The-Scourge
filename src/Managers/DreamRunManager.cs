@@ -88,6 +88,33 @@ public partial class DreamRunManager : Node
         return _heists.TryGetValue(heistId, out var h) ? h : null;
     }
 
+    /// <summary>
+    /// The heist whose maze contains this room, or null if the room is not part of one.
+    /// Derived by walking the Navigate graph out from each registered start room rather than
+    /// flagged on the room, so authoring a heist stays "author rooms" — the same rule the
+    /// pursuer's pathfinding already follows.
+    /// </summary>
+    public DreamHeistData HeistOwningRoom(string roomId)
+    {
+        if (string.IsNullOrEmpty(roomId)) return null;
+
+        foreach (var heist in _heists.Values)
+        {
+            if (string.IsNullOrEmpty(heist.StartRoomId)) continue;
+            if (roomId == heist.StartRoomId || Distance(heist.StartRoomId, roomId) >= 0)
+                return heist;
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// True when the room only exists inside a heist. No Dream room has a door back to the
+    /// Waking world — the ejection in <see cref="End"/> is the only way out — so being in one
+    /// of these without a live run is a dead end.
+    /// </summary>
+    public bool IsDreamRoom(string roomId) => HeistOwningRoom(roomId) != null;
+
     // ---- Lifecycle -------------------------------------------------------
 
     public bool Begin(string heistId)
@@ -102,7 +129,7 @@ public partial class DreamRunManager : Node
         }
 
         // Crossing with nothing left in the tank would eject you on the first frame.
-        if (SanityManager.Instance is { Current: <= 1f })
+        if (ResolveManager.Instance is { Current: <= 1f })
         {
             EventBus.Instance?.EmitNotify("You have nothing left to cross with. Not tonight.");
             return false;
@@ -141,7 +168,7 @@ public partial class DreamRunManager : Node
             : heist.SuccessText);
     }
 
-    /// <summary>Called by <see cref="SanityManager"/> the moment Resolve bottoms out.</summary>
+    /// <summary>Called by <see cref="ResolveManager"/> the moment Resolve bottoms out.</summary>
     public void NotifyResolveExhausted()
     {
         if (!IsRunning || _ending) return;
@@ -181,7 +208,7 @@ public partial class DreamRunManager : Node
         NavigationManager.Instance?.GoToRoom(heist.ReturnRoomId);
 
         // The Waking world does not press on your nerve. Coming back is a breath.
-        SanityManager.Instance?.Replenish(heist.ResolveRestoredOnReturn);
+        ResolveManager.Instance?.Replenish(heist.ResolveRestoredOnReturn);
 
         EventBus.Instance?.EmitPursuerProximityChanged(-1);
         EventBus.Instance?.EmitHeistEnded(heist.Id, outcome);

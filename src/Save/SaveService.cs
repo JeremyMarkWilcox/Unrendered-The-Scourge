@@ -20,7 +20,7 @@ public static class SaveService
         {
             CurrentRoomId = NavigationManager.Instance?.CurrentRoomId ?? "",
             CurrentRealm = (int)(RealmTransitionManager.Instance?.CurrentRealm ?? GameRealm.Waking),
-            Sanity = SanityManager.Instance?.Current ?? GameConfig.SanityMax,
+            Resolve = ResolveManager.Instance?.Current ?? GameConfig.ResolveMax,
             Flags = WorldStateManager.Instance?.ExportFlags() ?? new(),
             ZonePhases = WorldStateManager.Instance?.ExportZonePhases() ?? new(),
             EntityStates = EntityStateManager.Instance?.ExportStates() ?? new(),
@@ -68,15 +68,38 @@ public static class SaveService
 
         if (data == null) return false;
 
+        // A heist does not survive a load: whatever run was live belonged to the session we
+        // are leaving behind, and its pursuer and clock have no meaning in this one.
+        DreamRunManager.Instance?.ForceClear();
+
         // Restore state before navigating, so the room renders against the loaded world.
         WorldStateManager.Instance?.ImportState(data.Flags, data.ZonePhases);
         EntityStateManager.Instance?.ImportStates(data.EntityStates);
         InventoryCraftingManager.Instance?.ImportStacks(data.Inventory);
-        SanityManager.Instance?.SetTo(data.Sanity);
-        RealmTransitionManager.Instance?.SetRealm((GameRealm)data.CurrentRealm, force: true);
+        ResolveManager.Instance?.SetTo(data.Resolve);
 
-        if (!string.IsNullOrEmpty(data.CurrentRoomId))
-            NavigationManager.Instance?.GoToRoom(data.CurrentRoomId);
+        var roomId = data.CurrentRoomId;
+        var realm = (GameRealm)data.CurrentRealm;
+
+        // A save taken mid-heist has no run left to carry it out, and no Dream room has a door
+        // to the Waking world — the ejection is the only exit. Land outside instead of inside a
+        // maze that cannot be left.
+        var stranded = DreamRunManager.Instance?.HeistOwningRoom(roomId);
+        if (stranded != null)
+        {
+            roomId = string.IsNullOrEmpty(stranded.ReturnRoomId)
+                ? GameConfig.StartingRoomId
+                : stranded.ReturnRoomId;
+            realm = GameRealm.Waking;
+
+            EventBus.Instance?.EmitNotify(
+                "The way behind you closed while you slept. You are in the cold again, with nothing to show for it.");
+        }
+
+        RealmTransitionManager.Instance?.SetRealm(realm, force: true);
+
+        if (!string.IsNullOrEmpty(roomId))
+            NavigationManager.Instance?.GoToRoom(roomId);
 
         GD.Print($"[Save] Loaded {path}");
         return true;

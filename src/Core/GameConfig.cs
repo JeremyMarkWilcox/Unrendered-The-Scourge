@@ -23,9 +23,9 @@ public static class GameConfig
     /// <summary>Seconds for the fade-to-black when walking between rooms.</summary>
     public const float RoomTransitionSeconds = 0.25f;
 
-    // ---- Sanity ----------------------------------------------------------
+    // ---- Resolve ---------------------------------------------------------
 
-    public const float SanityMax = 100f;
+    public const float ResolveMax = 100f;
 
     // Resolve only moves inside a Dream heist, and each heist owns its own rates.
     // See DreamHeistData.DrainPerSecond / NearDrainPerSecond.

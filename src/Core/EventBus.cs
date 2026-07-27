@@ -44,9 +44,9 @@ public partial class EventBus : Node
     [Signal] public delegate void RoomExitingEventHandler(string roomId);
     [Signal] public delegate void RoomEnteredEventHandler(string roomId);
 
-    // ---- Sanity ----------------------------------------------------------
+    // ---- Resolve ---------------------------------------------------------
 
-    [Signal] public delegate void SanityChangedEventHandler(float current, float max);
+    [Signal] public delegate void ResolveChangedEventHandler(float current, float max);
 
     // ---- Dream heist -----------------------------------------------------
 
@@ -94,8 +94,8 @@ public partial class EventBus : Node
     public void EmitRoomEntered(string roomId)
         => EmitSignal(SignalName.RoomEntered, roomId);
 
-    public void EmitSanityChanged(float current, float max)
-        => EmitSignal(SignalName.SanityChanged, current, max);
+    public void EmitResolveChanged(float current, float max)
+        => EmitSignal(SignalName.ResolveChanged, current, max);
 
     public void EmitHeistStarted(string heistId)
         => EmitSignal(SignalName.HeistStarted, heistId);

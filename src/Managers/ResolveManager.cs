@@ -15,12 +15,12 @@ namespace Unrendered.Managers;
 /// heist is over. See <see cref="DreamRunManager"/>, which owns the drain rate while a run
 /// is live.
 /// </summary>
-public partial class SanityManager : Node
+public partial class ResolveManager : Node
 {
-    public static SanityManager Instance { get; private set; }
+    public static ResolveManager Instance { get; private set; }
 
-    public float Current { get; private set; } = GameConfig.SanityMax;
-    public float Max => GameConfig.SanityMax;
+    public float Current { get; private set; } = GameConfig.ResolveMax;
+    public float Max => GameConfig.ResolveMax;
 
     /// <summary>Off until the first room is entered, and during menus.</summary>
     public bool Active { get; set; }
@@ -66,7 +66,7 @@ public partial class SanityManager : Node
         if (Mathf.IsEqualApprox(next, Current)) return;
 
         Current = next;
-        EventBus.Instance?.EmitSanityChanged(Current, Max);
+        EventBus.Instance?.EmitResolveChanged(Current, Max);
 
         // Emptying is only possible inside a heist, and the run owns what happens next.
         if (Current <= 0f) DreamRunManager.Instance?.NotifyResolveExhausted();

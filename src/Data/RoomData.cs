@@ -26,11 +26,11 @@ public partial class RoomData : Resource
     [ExportGroup("Dream background")]
     [Export] public Texture2D DreamBackground { get; set; }
 
-    /// <summary>Sanity drain scalar for this screen, before zone and realm modifiers. 0..1.</summary>
+    /// <summary>Resolve drain scalar for this screen, before zone and realm modifiers. 0..1.</summary>
     [ExportGroup("Atmosphere")]
     [Export(PropertyHint.Range, "0,1,0.05")] public float BaseCorruption { get; set; } = 0.3f;
 
-    /// <summary>Rooms flagged as sanctuaries restore Sanity instead of draining it.</summary>
+    /// <summary>Rooms flagged as sanctuaries restore Resolve instead of draining it.</summary>
     [Export] public bool IsSanctuary { get; set; }
 
     /// <summary>Which procedural scene to draw while <see cref="WakingBackground"/> is unset.</summary>

@@ -19,7 +19,7 @@ public partial class Hud : CanvasLayer
     private Label _hoverLabel;
     private Label _notifyLabel;
     private Label _dreadLabel;
-    private SanityMeter _sanity;
+    private ResolveMeter _resolve;
     private DebugPanel _debug;
 
     private float _notifyTimer;
@@ -91,8 +91,8 @@ public partial class Hud : CanvasLayer
         resolveCaption.HorizontalAlignment = HorizontalAlignment.Right;
         topRight.AddChild(resolveCaption);
 
-        _sanity = new SanityMeter { Name = "SanityMeter" };
-        topRight.AddChild(_sanity);
+        _resolve = new ResolveMeter { Name = "ResolveMeter" };
+        topRight.AddChild(_resolve);
 
         // -- Bottom centre: hover target and notifications --
         var bottom = new VBoxContainer { Name = "Bottom", MouseFilter = Control.MouseFilterEnum.Ignore };
