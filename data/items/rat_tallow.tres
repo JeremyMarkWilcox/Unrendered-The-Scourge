@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://src/Data/ItemData.cs" id="1_4ow5h"]
+
+[resource]
+script = ExtResource("1_4ow5h")
+Id = "rat_tallow"
+DisplayName = "Rendered Tallow"
+Description = "Ordinary fat from an ordinary animal. It has been a long time since either of you had that."
+PlaceholderColor = Color(0.84705883, 0.78039217, 0.6039216, 1)

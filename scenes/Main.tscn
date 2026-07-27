@@ -1,0 +1,13 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://src/Core/Main.cs" id="1_main"]
+[ext_resource type="PackedScene" path="res://scenes/RoomView.tscn" id="2_roomview"]
+[ext_resource type="Script" path="res://src/UI/Hud.cs" id="3_hud"]
+
+[node name="Main" type="Node"]
+script = ExtResource("1_main")
+
+[node name="RoomView" parent="." instance=ExtResource("2_roomview")]
+
+[node name="Hud" type="CanvasLayer" parent="."]
+script = ExtResource("3_hud")

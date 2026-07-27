@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://src/Data/ItemData.cs" id="1_vcesq"]
+
+[resource]
+script = ExtResource("1_vcesq")
+Id = "herb_bitterroot"
+DisplayName = "Bitterroot"
+Description = "Grows where the ground has been frightened. Chewing it clears the head and ruins the mouth."
+PlaceholderColor = Color(0.43529412, 0.5411765, 0.30980393, 1)

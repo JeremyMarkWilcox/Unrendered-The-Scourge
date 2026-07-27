@@ -1,0 +1,44 @@
+[gd_resource type="Resource" script_class="RoomData" format=3]
+
+[ext_resource type="Script" path="res://src/Data/EntityPlacement.cs" id="1_66eaw"]
+[ext_resource type="Script" path="res://src/Data/HotspotData.cs" id="2_cdxae"]
+[ext_resource type="Script" path="res://src/Data/RoomData.cs" id="3_v64f7"]
+
+[sub_resource type="Resource" id="Resource_66eaw"]
+script = ExtResource("2_cdxae")
+Id = "dream_way_solar__to__dream_way_stair"
+Label = "The Landing"
+Kind = 0
+Region = Rect2(180, 420, 300, 480)
+TargetRoomId = "dream_way_stair"
+
+[sub_resource type="Resource" id="Resource_cdxae"]
+script = ExtResource("2_cdxae")
+Id = "dream_way_solar__to__dream_way_antechamber"
+Label = "Gilded Doors"
+Kind = 0
+Region = Rect2(810, 420, 300, 480)
+TargetRoomId = "dream_way_antechamber"
+
+[sub_resource type="Resource" id="Resource_v64f7"]
+script = ExtResource("2_cdxae")
+Id = "dream_way_solar__look"
+Label = "Look"
+Region = Rect2(760, 120, 400, 200)
+ExamineText = "Porcelain, and a great deal of light with nothing making it."
+
+[sub_resource type="Resource" id="Resource_uyslw"]
+script = ExtResource("2_cdxae")
+Id = "dream_way_anchor"
+Label = "The Gnawing Baron's Anchor"
+Kind = 6
+Region = Rect2(810, 380, 300, 400)
+
+[resource]
+script = ExtResource("3_v64f7")
+Id = "dream_way_solar"
+DisplayName = "The Baron's Solar"
+ZoneId = "waystation_dream"
+BaseCorruption = 1.0
+PlaceholderStyle = 2
+Hotspots = Array[ExtResource("2_cdxae")]([SubResource("Resource_66eaw"), SubResource("Resource_cdxae"), SubResource("Resource_v64f7"), SubResource("Resource_uyslw")])

@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="DreamHeistData" format=3]
+
+[ext_resource type="Script" path="res://src/Data/DreamHeistData.cs" id="1_imlor"]
+
+[resource]
+script = ExtResource("1_imlor")
+Id = "waystation_heist"
+DisplayName = "The Gnawing Baron's Solar"
+TargetEntityId = "waystation.rat_01"
+ReturnRoomId = "waystation_yard"
+StartRoomId = "dream_way_threshold"
+PursuerStartRoomId = "dream_way_solar"
+PursuerMoveSeconds = 3.5
+PursuerWanderChance = 0.3
+DrainPerSecond = 2.5
+NearDrainPerSecond = 3.0
+EntryText = "The hum stops. You are standing somewhere with edges, and the edges are square."
+SuccessText = "The relic comes away warm. Somewhere behind you, a great deal of porcelain stops being calm."
+CaptureText = "The Mind-Stalker puts something through you that is not a hand. The world tears along a straight line and you are in the cold again, on your knees."
+TimeoutText = "Your nerve goes all at once. The Pixel Realm lets go of you the way you would put down something you had stopped finding interesting."

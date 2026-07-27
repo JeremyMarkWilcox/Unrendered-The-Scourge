@@ -1,0 +1,39 @@
+[gd_resource type="Resource" script_class="RoomData" format=3]
+
+[ext_resource type="Script" path="res://src/Data/EntityPlacement.cs" id="1_5ecl6"]
+[ext_resource type="Script" path="res://src/Data/HotspotData.cs" id="2_xsf0w"]
+[ext_resource type="Script" path="res://src/Data/RoomData.cs" id="3_u7qqa"]
+
+[sub_resource type="Resource" id="Resource_5ecl6"]
+script = ExtResource("2_xsf0w")
+Id = "shed_to_yard"
+Label = "Back to the Yard"
+Kind = 0
+Region = Rect2(70, 430, 300, 520)
+TargetRoomId = "waystation_yard"
+
+[sub_resource type="Resource" id="Resource_xsf0w"]
+script = ExtResource("2_xsf0w")
+Id = "shed_bench"
+Label = "Craftsman's Bench"
+Kind = 4
+Region = Rect2(760, 560, 420, 260)
+ExamineText = "Your tools, where you left them, under a year of dust. The vice still turns."
+SetsFlag = "waystation.bench_found"
+
+[sub_resource type="Resource" id="Resource_u7qqa"]
+script = ExtResource("2_xsf0w")
+Id = "shed_gravecap"
+Label = "Gravecap Fungus"
+Kind = 3
+Region = Rect2(1350, 800, 260, 180)
+ItemId = "herb_gravecap"
+
+[resource]
+script = ExtResource("3_u7qqa")
+Id = "waystation_shed"
+DisplayName = "Waystation Shed"
+ZoneId = "waystation"
+BaseCorruption = 0.25
+PlaceholderStyle = 1
+Hotspots = Array[ExtResource("2_xsf0w")]([SubResource("Resource_5ecl6"), SubResource("Resource_xsf0w"), SubResource("Resource_u7qqa")])

@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="ZoneData" format=3]
+
+[ext_resource type="Script" path="res://src/Data/ZoneData.cs" id="1_lankl"]
+
+[resource]
+script = ExtResource("1_lankl")
+Id = "waystation"
+DisplayName = "The Forgotten Waystation"
+LieutenantEntityId = "waystation.rat_01"
+PurificationText = "The distortion breaks. Air moves. Somewhere, birds."
