@@ -39,6 +39,13 @@ public partial class RoomView : Control
     private Tween _realmTween;
     private Tween _fadeTween;
 
+    /// <summary>
+    /// The room currently on screen. Exposed so the gates can assert what the player can
+    /// actually see, rather than only what <see cref="NavigationManager"/> believes — the two
+    /// came apart once, and nothing headless noticed.
+    /// </summary>
+    public string DisplayedRoomId => _room?.Id ?? "";
+
     /// <summary>Draws every hotspot boundary. Toggled from the debug panel.</summary>
     public bool ShowHotspotOutlines
     {
@@ -105,6 +112,14 @@ public partial class RoomView : Control
 
     private void OnRoomEntered(string roomId)
     {
+        // Never paint a room the player has already left. A subscriber ahead of us in this
+        // signal's list can navigate again before we are reached — being caught ejects you
+        // from inside this very emit — and the newer RoomEntered then arrives first, leaving
+        // the stale one to land last. Trusting the payload there would draw the Dream room
+        // you were just yanked out of, with the realm and the run already gone: no drain, no
+        // exits, and no way to tell what happened. See handoff.md 6.1.
+        if (NavigationManager.Instance?.CurrentRoomId != roomId) return;
+
         _room = NavigationManager.Instance?.GetRoom(roomId);
         if (_room == null) return;
 

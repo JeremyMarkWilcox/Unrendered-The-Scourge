@@ -4,16 +4,25 @@ using Unrendered.Core;
 namespace Unrendered.Managers;
 
 /// <summary>
-/// Resolve. It is a clock, and it only runs in the Pixel Realm.
+/// Resolve. It is a clock, and an empty bar always means the same thing: you are removed
+/// from the confrontation.
 ///
-/// The Waking world does not touch it at all — no ambient drain, no corrupted-ground
-/// pressure, no slow bleed for standing next to something anchored. Out there the danger is
-/// Vitality and the supplies you are spending, and Resolve is simply how long you can stay
-/// on the other side. Returning from a heist refills it.
+/// **As built, it only runs in the Pixel Realm** — <see cref="DreamRunManager"/> owns the
+/// rate while a run is live, and returning refills it. Out here the danger is Vitality and
+/// the supplies you are spending.
 ///
-/// One resource, one meaning, one place. An empty bar can only ever mean one thing: the
-/// heist is over. See <see cref="DreamRunManager"/>, which owns the drain rate while a run
-/// is live.
+/// Per docs/combat.md §6 that is not the finished rule: Resolve moves in *two* venues, the
+/// Dream and a boss fight, where empty means forced flight rather than ejection. Boss fights
+/// do not exist yet, which is the only reason this manager is Dream-only today — do not read
+/// the current behaviour as the design.
+///
+/// When they land, the drain is **conditional on the tether**: a boss still
+/// <see cref="Unrendered.Core.EntityState.Corrupted"/> drains, one already
+/// <see cref="Unrendered.Core.EntityState.Severed"/> does not. So the rate will need to ask
+/// <see cref="EntityStateManager"/> about the entity being fought, exactly as
+/// <see cref="CurrentRatePerSecond"/> currently asks <see cref="DreamRunManager"/> about the
+/// run. What §6 keeps permanently is that there is **no ambient drain**: no corrupted-ground
+/// pressure, no bleed for standing near something anchored, nothing outside a confrontation.
 /// </summary>
 public partial class ResolveManager : Node
 {

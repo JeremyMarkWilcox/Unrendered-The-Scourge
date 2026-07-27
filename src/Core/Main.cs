@@ -38,7 +38,7 @@ public partial class Main : Node
 
         if (Boot.VerifySlice)
         {
-            GetTree().Quit(SliceVerifier.Run());
+            GetTree().Quit(SliceVerifier.Run(_roomView, _hud));
             return;
         }
 

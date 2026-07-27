@@ -6,6 +6,7 @@ using Unrendered.Core;
 using Unrendered.Data;
 using Unrendered.Managers;
 using Unrendered.Save;
+using Unrendered.UI;
 using Unrendered.World;
 
 namespace Unrendered.Tools;
@@ -26,14 +27,22 @@ public static class SliceVerifier
     private static readonly List<string> Failures = new();
     private static int _checks;
 
-    public static int Run()
+    // The live view and HUD, so a gate can assert what is on screen and not merely what the
+    // managers hold. Null-tolerant: every check that uses them says so.
+    private static RoomView _view;
+    private static Hud _hud;
+
+    public static int Run(RoomView view = null, Hud hud = null)
     {
         Failures.Clear();
         _checks = 0;
+        _view = view;
+        _hud = hud;
 
         // Deterministic: no ambient drain racing the assertions.
         if (ResolveManager.Instance != null) ResolveManager.Instance.Active = false;
 
+        GateHarness();
         GateM1_TwoScreenNavigation();
         GateM2_StateRealmTable();
         GateM3_MicroLoop();
@@ -53,6 +62,22 @@ public static class SliceVerifier
         foreach (var f in Failures) GD.Print($"    x {f}");
         GD.Print(new string('-', 62));
         return 1;
+    }
+
+    // ---- The harness itself ----------------------------------------------
+
+    /// <summary>
+    /// Every view check below is written to pass when its view is null, so that the gates stay
+    /// runnable from anywhere. That politeness would otherwise turn a wiring mistake in
+    /// <c>Main</c> into five silently skipped checks and a green run — the same shape of
+    /// blindness that hid 6.1 in the first place. So assert the wiring once, here, loudly.
+    /// </summary>
+    private static void GateHarness()
+    {
+        Section("harness  the gates can see what the player sees");
+
+        Check("the live RoomView was handed to the verifier", _view != null);
+        Check("the live Hud was handed to the verifier", _hud != null);
     }
 
     // ---- M1: two screens, a toggle, and a doorway ------------------------
@@ -194,6 +219,8 @@ public static class SliceVerifier
             RealmTransitionManager.Instance.CurrentRealm == GameRealm.Waking);
         Check("realm is unlocked again", !RealmTransitionManager.Instance.TransitionsLocked);
         Check("the heist is over", !DreamRunManager.Instance.IsRunning);
+        Check("and the screen came back with you",
+            _view == null || _view.DisplayedRoomId == "waystation_yard");
 
         // 5. Reality gave way.
         Check("the road is now passable", InteractionService.ActivateHotspot(Hotspot("yard_to_shed")));
@@ -252,6 +279,12 @@ public static class SliceVerifier
         Walk("dream_way_gallery");
         Check("closing the distance is reported", run.PursuerDistance == 2);
 
+        // An ordinary door, to prove the view tracks the player at all before we ask it to
+        // survive the hard case. Without this, "the view never renders the wrong room" could
+        // be passed by a view that renders nothing.
+        Check("the view follows an ordinary door",
+            _view == null || _view.DisplayedRoomId == "dream_way_gallery");
+
         // Burn some of the clock, then walk straight into it.
         resolve.SetTo(resolve.Max * 0.5f);
         Walk("dream_way_stair");
@@ -261,6 +294,17 @@ public static class SliceVerifier
         Check("and throws you back to the Waking world",
             NavigationManager.Instance.CurrentRoomId == "waystation_yard" &&
             RealmTransitionManager.Instance.CurrentRealm == GameRealm.Waking);
+
+        // Being caught navigates *from inside* the RoomEntered handler that reported the step
+        // into the pursuer's room. The ejection's RoomEntered therefore reaches every later
+        // subscriber first, and the stale one lands last — so a view that trusts the payload
+        // finishes by drawing the Dream room the player was just yanked out of. Managers stay
+        // correct throughout, which is why the gates above pass and the game still looked
+        // broken: no drain, no exits, the Dream still on screen. This is handoff.md 6.1.
+        Check("the view shows where you were ejected to, not where you were caught",
+            _view == null || _view.DisplayedRoomId == "waystation_yard");
+        Check("and the HUD names that room too",
+            _hud == null || _hud.DisplayedRoomName == "The Forgotten Waystation Yard");
 
         // -- Running out of nerve --
         resolve.SetTo(resolve.Max);
@@ -273,7 +317,12 @@ public static class SliceVerifier
         Check("and ejects you", NavigationManager.Instance.CurrentRoomId == "waystation_yard");
         Check("and you are ready to try again", Mathf.IsEqualApprox(resolve.Current, resolve.Max));
 
-        // -- The Waking world never touches the bar --
+        // -- Nothing outside a heist touches the bar, as built --
+        // True today only because boss fights do not exist. combat.md §6 has Resolve draining in
+        // a Waking boss fight too — though only while that boss's tether is unbroken — so when
+        // auras land these two widen to "no drain outside a heist, or a boss fight against a
+        // Corrupted entity" rather than being deleted. The rule that survives unchanged is that
+        // there is no *ambient* drain, which is what these two actually pin down.
         var held = resolve.Current;
         Check("no drain outside a heist", Mathf.IsZeroApprox(resolve.CurrentRatePerSecond()));
         Check("the bar holds still in the Waking world",
@@ -343,6 +392,7 @@ public static class SliceVerifier
         Check("and leaves the realm unlocked",
             !RealmTransitionManager.Instance.TransitionsLocked);
         Check("and leaves no run running", !run.IsRunning);
+        Check("and shows you the outside", _view == null || _view.DisplayedRoomId == "waystation_yard");
 
         SaveService.DeleteSave(dreamPath);
     }

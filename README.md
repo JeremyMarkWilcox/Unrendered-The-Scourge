@@ -40,23 +40,30 @@ scene, no new code.
 ```
 src/
   Core/       Enums, EventBus, GameConfig, EntityPresentation, Boot, Main
-  Managers/   7 autoloads (see below)
+  Managers/   8 autoloads (see below)
   Data/       [GlobalClass] resources authored as .tres
   World/      RoomView, Hotspot, EntityOverlay, PlaceholderBackdrop, InteractionService
   UI/         Hud, ResolveMeter, DebugPanel
   Save/       JSON round-trip of the manager state
   Tools/      ContentSeeder, SliceVerifier, ScreenshotTool
-data/         rooms/ entities/ items/ zones/   <- the game's content
+data/         rooms/ entities/ items/ zones/ heists/   <- the game's content
 scenes/       Boot, Main, RoomView
 ```
 
 ### Autoloads
 
 `EventBus` · `WorldStateManager` · `EntityStateManager` · `RealmTransitionManager` ·
-`InventoryCraftingManager` · `ResolveManager` · `NavigationManager`
+`InventoryCraftingManager` · `ResolveManager` · `NavigationManager` · `DreamRunManager`
 
 Managers publish to the `EventBus`; views subscribe. Nothing holds a hard reference to
 anything else, so one state change ripples to every backdrop, overlay and HUD element.
+
+**Signal payloads can arrive stale.** Emission is synchronous and in subscription order, so a
+subscriber may act on the signal — including navigating again — before the later subscribers
+are reached. Walking into the pursuer does exactly this: it ejects you from inside
+`RoomEntered`, so the ejection's `RoomEntered` runs to completion first and the one that
+carried you into the Dream room lands *last*. Anything that caches per-room state must check
+the payload against the manager (`CurrentRoomId != roomId → return`) rather than trusting it.
 
 ### State × realm, not state alone
 
@@ -93,12 +100,10 @@ in real art one `.tres` field at a time.
 > the current state, what to build next, which parts are lying placeholders, and the design
 > invariants that must not be broken.
 >
-> Two things to know before you open the editor: there is **one live bug with an unknown cause**
-> and a five-minute repro recipe (`handoff.md` §6.1), and the Dream's design changed
-> substantially — `docs/combat.md` gained sections **15–17** and one deliberate revision to
-> section 6.
+> One thing to know before you open the editor: the Dream's design changed substantially —
+> `docs/combat.md` gained sections **15–17** and one deliberate revision to section 6.
 
-M0–M3 complete, plus the Dream heist — 92 automated checks, `-- --verify-slice`.
+M0–M3 complete, plus the Dream heist — 99 automated checks, `-- --verify-slice`.
 
 The Waking world is a point-and-click adventure; the Pixel Realm is a stealth heist. Combat
 and progression are designed but unbuilt — see `docs/combat.md`, which is the source of truth

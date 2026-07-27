@@ -39,19 +39,69 @@ The single rule everything else hangs off.
 While a spirit's anchor is intact in the Pixel Realm, its Form 1 body in reality:
 
 - **regenerates** every turn
-- carries high **Resilience** (flat damage reduction)
-- projects a visible **aura**, which is also the room's ambient Resolve drain
+- projects a visible **aura**, which **drains your Resolve for as long as you are fighting it**
 
-Sever the anchor and all three collapse at once. The aura snaps off, the body visibly
-deflates, regeneration stops, Resilience drops to a token value.
+Sever the anchor and both collapse at once. The aura snaps off, the body visibly deflates,
+regeneration stops — **and the fight stops costing Resolve.**
+
+**Severing is the only thing that does this.** No trap, item, ward or consumable removes
+regeneration or the drain, in whole or in part — see §4, where a salt line that claimed to was
+struck for exactly this reason. The aura is the anchor's presence in reality, so only the anchor
+can answer it.
+
+**The drain is conditional on the tether, not on the fight** (decided 2026-07-27). A boss
+whose tether you have already broken costs you no Resolve to finish, however long it takes.
+This is the cleanest possible statement of the rule, because it is already the state machine
+the code has: **`Corrupted` drains, `Severed` does not.** No new flag, no boss-specific
+special case — it falls straight out of `EntityStateManager`.
+
+It is also not ambient. Standing in the room costs nothing; only the engagement does. See
+Section 6, which is the authority on where Resolve moves.
 
 This teaches itself. A player watches a wound close, and understands. Then watches the
 shimmer die, and understands they have won something. No tutorial copy required.
 
-> Partly implemented: `EntityData.CorruptionAura` exists and gates on state. The old
-> Waking-world *ambient* drain it used to feed has been **removed** — see the note in
-> `EntityData.cs` — so the field is now free to carry what Section 6 asks of it.
-> Missing: the visual aura, the regen, Resilience, and the boss-fight Resolve drain.
+> **Not implemented at all**, despite appearances. `EntityData.CorruptionAura` exists as an
+> authored field and is set on the rat, but **nothing reads it** — the old Waking-world
+> *ambient* drain it used to feed was removed, and nothing replaced the consumer. So the field
+> is free to carry what Section 6 asks of it, but do not mistake "the field exists" for "the
+> mechanic is half-wired." Missing: the visual aura, the regen, the boss-fight Resolve drain,
+> and the Defence field.
+
+### Defence is fixed, and equipment is the answer to it
+
+**Decided 2026-07-27.** Once the aura carries the Resolve drain, it does not also need to
+carry a variable damage-reduction stat. So **Defence is a fixed property of each unit.** It
+does not rise, does not fall, and — unlike regeneration and the drain — **is not affected by
+severing.** You overcome it by bringing the right *kind* of equipment, not by grinding a
+number or by weakening the thing first.
+
+Why this is the better shape:
+
+- It is invariant 5 stated as a mechanic rather than a prohibition. Defence you beat with a
+  **type** is an access gate; Defence you beat with a bigger number is a tier. This is the
+  same Zelda-tools logic the crafting side already runs on — the tool is the key.
+- It stops the anchor from being a bundle of three loosely-related buffs. The anchor now means
+  two legible things: *it heals* and *it presses on your nerve*. Both visible, both stop when
+  you sever.
+- Severing is still worth doing without being a prerequisite. It removes regen and the drain;
+  it does **not** hand you a weapon that works. That keeps the two routes genuinely different
+  rather than making sever the strictly-dominant opener.
+
+**Values stay moderate — see §7, which is the authority on how high Defence goes.** Fixed does
+not mean insurmountable: the right tool is meant to be clearly better, not the only thing that
+works at all.
+
+That setting is what keeps the answer rule from becoming a trap. Every Defence value should
+still have at least one answer the player can obtain, craftable or findable rather than a unique
+(invariant 7) — but because values are moderate, a player who has *not* found the intended
+answer is inefficient rather than stuck. So this is a **design-quality rule, not a
+softlock-prevention rule**, which is a weaker and much safer thing to depend on. Compare the
+catalyst rule, which really is load-bearing: an uncraftable catalyst has no fallback at all,
+whereas a wrong-tool fight always has the slow, expensive option.
+
+**Still to decide:** the vocabulary of equipment types, and how many there are. Unratified and
+unbuilt — see §7 and §13.
 
 ### The loop runs one way only
 
@@ -96,18 +146,41 @@ Discover **blueprints** in the world, build traps from materials, place them in 
 *then* trigger the engagement. Every room is a different rigging puzzle, so preparation
 cannot go stale the way a combat menu does.
 
-| Trap | Effect |
-|---|---|
-| **Snare** | it loses its next turn |
-| **Pit / spikes** | heavy opening damage on engagement |
-| **Oil slick + ignition** | damage over several turns, bypasses Resilience |
-| **Salt line / ward circle** | **suppresses the aura for N turns — no regeneration** |
-| **Chime** | lures it onto a chosen tile; reveals its condition |
-| **Collapsing beam** | one-shot, large, consumes the site |
+> **This table is a sketch, not a spec.** It was written in a design pass and **never
+> ratified** — Jeremy flagged on 2026-07-27 that the salt line in particular was never
+> something he proposed. **The whole item and trap vocabulary is to be discussed before
+> crafting is built.** Treat every row below as an illustration of the *shape* of trap
+> content, not as a list to implement.
 
-The **salt line is the load-bearing one.** It is a poor man's sever: a regen-free window
-without ever entering the Dream. That is what turns overkill from *"can you afford it"* into
-*"can you outsmart it"* — a far better reading of impractical-but-possible.
+| Trap | Effect | Status |
+|---|---|---|
+| **Snare** | it loses its next turn | sketch |
+| **Pit / spikes** | heavy opening damage on engagement | sketch |
+| **Oil slick + ignition** | damage over several turns, works well against high Defence | sketch |
+| **Chime** | lures it onto a chosen tile; reveals its condition | sketch |
+| **Collapsing beam** | one-shot, large, consumes the site | sketch |
+| ~~**Salt line / ward circle**~~ | ~~suppresses the aura for N turns — no regeneration~~ | **struck, see below** |
+
+#### Only severing touches the aura
+
+**The salt line is struck** (2026-07-27), and the rule it broke is worth stating positively,
+because it is load-bearing:
+
+> **Cutting the tether is the only way to remove regeneration or the Resolve drain.** No trap,
+> item, ward or consumable does either, in whole or in part.
+
+The salt line was described here as "a poor man's sever: a regen-free window without ever
+entering the Dream." That is precisely the thing that must not exist. If a cheap Waking-world
+trap can buy the anchor's effects off, the Dream route stops being the way you weaken a boss and
+becomes a convenience — which hollows out invariant 1, the two routes costing different
+currencies, and takes most of Section 2's teaching with it. The aura is the anchor's presence in
+reality; only the anchor can answer it.
+
+This also settles what would otherwise have been an open question. Once the aura carries the
+Resolve drain as well as regeneration (§6), any trap that "suppresses the aura" would have had to
+either pause the nerve clock — making it mandatory in every boss fight — or suppress an aura that
+still drains, which reads as a contradiction. Striking it removes the question rather than
+answering it awkwardly.
 
 Traps are Waking-world only, which differentiates the two routes further: the real world is
 where you scheme, the Dream is where you are exposed.
@@ -129,7 +202,8 @@ The player reads prose and the aura shimmer. Never a digit.
 
 > *"The oil takes hold. The hide splits, and this time it does not close."*
 
-That single line reports that the salt line is holding, without any UI. This is less work
+That single line reports that the tether is cut — the wound is staying open because nothing is
+animating the body any more — without any UI, and without naming a mechanic. This is less work
 than a stat readout and much better horror.
 
 ### Length is the constraint that matters
@@ -137,8 +211,9 @@ than a stat readout and much better horror.
 **Fights should run 3–6 turns.** Fifteen turns of clicking oil is tedious no matter how good
 the prose is.
 
-Overkill must be **expensive, not long.** Traps front-load the damage, the salt line opens
-the window, everything burns in five brutal turns. A setpiece, not a chore.
+Overkill must be **expensive, not long.** Traps front-load the damage, everything burns in five
+brutal turns, and the nerve clock in §6 is what guarantees it cannot become a grind. A setpiece,
+not a chore.
 
 ---
 
@@ -147,7 +222,7 @@ the window, everything burns in five brutal turns. A setpiece, not a chore.
 | Pool | Spent by | Restored by |
 |---|---|---|
 | **Vitality** | Waking-world combat | her salves (finite), crude substitutes (poor) |
-| **Resolve** | the Dream, and boss fights against an intact aura | leaving the Dream; resting at a camp |
+| **Resolve** | the Dream, and boss fights **while the boss's tether is unbroken** | leaving the Dream; resting at a camp |
 
 **Resolve is your nerve, and an empty bar means one thing everywhere: you are removed from
 the confrontation.** In the Dream that is ejection from the realm. In a boss fight it is
@@ -158,12 +233,53 @@ corrupted-ground pressure, no bleed for standing near something anchored, nothin
 actual confrontation. Normal enemies never touch it: they have no aura and cannot be severed,
 so a drain there would teach the player nothing.
 
+**And within a boss fight it is conditional, not automatic** (decided 2026-07-27): only an
+**unbroken tether** drains. Fight the boss with its anchor intact and the aura works on your
+nerve the whole time; come back after severing and the same fight costs you none. In code that
+is exactly `Corrupted` drains / `Severed` does not — see Section 2.
+
+### How fast it drains
+
+**Size the rate so an unbroken tether empties a full bar in about six turns** (decided
+2026-07-27). That is the top of the 3–6 turn window in §5, which makes the drain the thing
+that *enforces* that window rather than an extra clock running beside it: fight efficiently
+and the bar is a pressure you feel but survive; stall, over-rig mid-fight or chip away at
+something you brought the wrong tools for, and it banishes you at roughly the moment the
+fight had become a chore anyway.
+
+Consequences worth stating, because they are easy to get wrong later:
+
+- **Per turn, not per second.** Resolve in the Dream drains on a wall clock because the Dream
+  is real-time traversal. A boss fight is turn-based, so the drain must tick on turns or the
+  player is punished for thinking. Same bar, same meaning, different unit — `ResolveManager`
+  will need a discrete `SpendForTurn`-style path alongside `_Process`.
+- **Six turns is the budget for the whole engagement, not per phase.** If a boss ever gets
+  multiple phases, the bar does not reset between them.
+- The rate is defined against a **full bar**, which is what makes camps load-bearing: see §17.
+  **Starting a boss fight part-drained is allowed** — you are responsible for your own resource
+  management (decided 2026-07-27). No refusal and no confirmation prompt; the bar is always on
+  screen, so it is an informed choice. Arriving with three turns of nerve left and losing is the
+  system working.
+
 > **Revised.** This supersedes the earlier rule that Resolve *never* moves in the Waking
 > world. That version kept the bar unambiguous by confining it to one place; the "removed
 > from the confrontation" reading keeps it unambiguous while letting the aura actually bite,
-> which is what makes fighting an un-severed boss feel like a decision. The incentive to
-> sever was already carried by regeneration and Resilience (Section 2) — this adds pressure,
-> not the reason.
+> which is what makes fighting an un-severed boss feel like a decision.
+>
+> **Amended 2026-07-27** with the tether condition above. Note what it changes about the
+> sentence this note used to end on. The old wording said the drain "adds pressure, not the
+> reason" to sever, because regeneration already carried the incentive (the old wording also
+> credited Resilience, which is no longer state-dependent — see §2). Once
+> the drain is conditional, severing *also* switches it off, so it is a third reward for
+> severing rather than pressure applied evenly to both routes. That is the point — it pushes
+> on the overkill route specifically, which is the one that is supposed to be expensive.
+>
+> It does not collapse invariant 1. The two routes still cost different things: overkill
+> spends **finite supplies** against a regenerating body under a nerve timer, severing spends
+> a **catalyst and Dream time** and then buys a fight with neither. Resolve appears on both
+> sides, but not as a fungible currency — it refills at camps and on leaving the Dream, so in
+> the boss fight it acts as a *fight-length limit*, which is invariant 6 ("overkill must be
+> expensive, never long") doing its job rather than a second difficulty slider.
 
 **At 0 Vitality:** you wake **at a camp**, having lost what you were carrying. Not a reload —
 but **her named salves and other protected items survive.** The only way to lose those is to
@@ -202,8 +318,41 @@ Max Vitality rises through **rare items**, never levels.
 Deliberate. If damage came from a strength stat, "over-preparing" would mean grinding levels
 and the resource choice evaporates.
 
-**Your damage is entirely what you brought and what you rigged.** A plain weapon cannot
-exceed a Corrupted body's Resilience at all — it does literally zero.
+**Your damage is entirely what you brought and what you rigged.**
+
+**Defence values stay moderate** (decided 2026-07-27). The earlier design leaned on
+absolutes — a plain weapon doing *literally zero* against a boss's Resilience — and that is
+explicitly not the target any more. Fixed Defence is meant to make the right tool clearly
+**better**, not to make every other approach impossible. A wrong-tool fight should feel
+wasteful and slow, which the six-turn nerve clock (§6) already punishes on its own; it does
+not also need a wall.
+
+Two reasons this is the safer setting:
+
+- **It is its own softlock protection.** If Defence is never absolute, a player who has not
+  found the intended answer is inefficient rather than stuck, and the craftable-answer rule in
+  §2 stops being the only thing standing between them and a dead save.
+- **Absolutes make Defence read as a lock, and locks invite key-hunting.** Moderate values keep
+  the interesting question — *is this fight worth what it will cost me?* — which is the question
+  Section 1's two routes exist to ask.
+
+Reserve near-immunity for the rare, deliberate case where "you need something else entirely" is
+the *point* of an encounter. It should be an authored exception, never the default shape of a
+boss.
+
+### Crafting is the answer key
+
+Defence is only the first instance of a bigger idea: **crafting is how you answer what an enemy
+*does*, not just what it resists.** Regeneration, a Defence a plain weapon works badly against,
+and eventually whatever behaviours enemies acquire — the intended response to each is something
+you built, chose or discovered, rather than a number you grew. That is what makes crafting
+load-bearing rather than a side system, and it is invariant 5 ("progression gates access") paying
+off in the place the player actually feels it.
+
+**Open: the equipment-type vocabulary.** "Certain types get through certain Defence" wants an
+actual list eventually, small enough to hold in the head and to read from a description. Nothing
+here is settled and none of it is built — treat the types implied by the trap table below as a
+sketch, not a spec. Genuinely open, and not a gate on M4.
 
 The reason overkill is ruinous: **the thing keeping you alive is the same finite thing that
 lets you win.** Her salves are both your healing and your ammunition.
@@ -211,8 +360,14 @@ lets you win.** Her salves are both your healing and your ammunition.
 ### Legibility
 
 The player must be able to estimate the bill *before* committing, or the choice is a trap.
-Examining a Corrupted body with enough Craft proficiency should report something like
-*"Resilience 12. Nothing you carry will scratch it unbuffed."*
+Examining a body with enough Craft proficiency should report something like
+*"Hide like slate. Nothing you carry will scratch it — it wants burning, not cutting."*
+
+Note that Defence being fixed makes this easier to write, not harder: the reading is a
+permanent fact about the creature rather than a number that changes underneath the player, so
+it can go in the bestiary once and stay true. It also has to name the *answer*, not just the
+problem — a reading that says "nothing works" without hinting at what would is the trap this
+section exists to prevent.
 
 ---
 
@@ -322,7 +477,8 @@ Small enough to finish, deep enough to have opinions about.
 Mostly additive:
 
 - `EntityState` already has the `Severed` middle value the model pivots on
-- `EntityData.CorruptionAura` already exists and already gates on state
+- `EntityData.CorruptionAura` already exists as an authored field — though **nothing reads it
+  yet**; it is set by `ContentSeeder` and stored in the `.tres`, and that is all
 - `SaveService` persists plain dictionaries, so per-entity combat state grows without a save
   format break
 - `EntityStateManager.Resolve` stays the one place that knows how a state looks
@@ -351,11 +507,26 @@ until M5 starts.
   if failure destroyed precious components, players would reload rather than retry.
 - ~~What the Dream fight actually *is*, turn to turn.~~ There is no Dream fight. See Section 14
   and Section 15.
+- ~~Does anything other than severing remove regeneration or the Resolve drain?~~ **No. Cutting
+  the tether is the only way, and the salt line that claimed otherwise is struck** — see §4.
+  Answered 2026-07-27.
+- ~~Can a boss fight be started on a part-empty bar?~~ **Yes. You are responsible for your own
+  resource management** (2026-07-27). No refusal, no confirmation prompt, no special warning: the
+  Resolve bar is on screen at all times, so walking into a boss half-drained is an informed
+  choice and losing that fight is the correct outcome. This is consistent with how the Dream
+  already behaves — `DreamRunManager.Begin` refuses only a bar at literally ≤1, which exists to
+  stop an ejection on the first frame, not to protect the player from a bad plan.
+- ~~How high should Defence go?~~ **Moderate, not absolute** — see §7. Answered 2026-07-27.
 
 **Still open:**
 
 - Trap placement: free-form on a grid, or fixed authored sites per room? Authored sites are
   far less work and probably read better on painted backgrounds. Nothing else blocks on this.
+
+- **The whole item, trap and equipment-type vocabulary.** To be discussed before crafting is
+  built. §4's trap table and §7's type sketch are both explicitly unratified, and everything in
+  them is placeholder and theory — nothing there should be treated as a decision, and nothing in
+  it blocks M4's inventory and crafting *plumbing*, which is deliberately content-agnostic.
 
 ---
 

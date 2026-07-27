@@ -41,9 +41,19 @@ public partial class EntityData : Resource
     [Export] public bool BlocksPath { get; set; } = true;
 
     /// <summary>
-    /// Strength of the visible aura an anchored body projects. Per docs/combat.md this is
-    /// what drives regeneration and Resilience once Waking combat exists. It no longer
-    /// costs the player Resolve — the Waking world does not drain the bar at all.
+    /// Strength of the visible aura an anchored body projects. Per docs/combat.md §2 this is
+    /// what drives regeneration once Waking combat exists — and per §6 it is also what drains
+    /// Resolve during a boss fight, at a rate sized to empty a full bar in about six turns.
+    ///
+    /// It does **not** drive damage reduction. Defence is a separate fixed per-unit value that
+    /// severing does not change (§2), and it is not modelled here yet — do not overload this
+    /// field with it.
+    ///
+    /// That drain is **conditional on the tether**: it applies while the entity is
+    /// <see cref="EntityState.Corrupted"/> and stops entirely once it is
+    /// <see cref="EntityState.Severed"/>, so severing buys a fight that costs no Resolve.
+    /// Read the state, do not add a flag. And it is never ambient — only the engagement
+    /// costs, never standing in the room.
     /// </summary>
     [Export] public float CorruptionAura { get; set; } = 0.15f;
 

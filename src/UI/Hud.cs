@@ -25,6 +25,9 @@ public partial class Hud : CanvasLayer
     private float _notifyTimer;
     private const float NotifyHoldSeconds = 5f;
 
+    /// <summary>The room name on screen. For the gates; see <see cref="RoomView.DisplayedRoomId"/>.</summary>
+    public string DisplayedRoomName => _roomLabel?.Text ?? "";
+
     public override void _Ready()
     {
         Layer = 10;
@@ -151,6 +154,10 @@ public partial class Hud : CanvasLayer
 
     private void OnRoomEntered(string roomId)
     {
+        // Same stale-payload guard as RoomView.OnRoomEntered, for the same reason: an earlier
+        // subscriber can navigate mid-emit, and the label must name where you ended up.
+        if (NavigationManager.Instance?.CurrentRoomId != roomId) return;
+
         var room = NavigationManager.Instance?.GetRoom(roomId);
         _roomLabel.Text = room != null && !string.IsNullOrEmpty(room.DisplayName)
             ? room.DisplayName
