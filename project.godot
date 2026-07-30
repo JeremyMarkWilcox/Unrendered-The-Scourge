@@ -27,6 +27,7 @@ VitalityManager="*res://src/Managers/VitalityManager.cs"
 NavigationManager="*res://src/Managers/NavigationManager.cs"
 DreamRunManager="*res://src/Managers/DreamRunManager.cs"
 CampManager="*res://src/Managers/CampManager.cs"
+CombatManager="*res://src/Managers/CombatManager.cs"
 
 [display]
 

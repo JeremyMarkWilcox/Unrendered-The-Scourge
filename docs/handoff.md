@@ -1,26 +1,48 @@
 # Handoff — where we left off
 
 Last updated: **2026-07-30.** Read this first, then `docs/combat.md` — which is the source of
-truth for combat, Resolve, the Dream and camps, and whose §15–17 are the newest material.
+truth for combat, Resolve, the Dream and camps, and whose §15–18 are the newest material. **§18 is
+the ratified fight design and the authority on how combat works** — it closes the item, trap and
+equipment vocabulary that the rest of that document defers, and it deletes Defence as a number.
 
 **Nothing is currently known to be broken.** The whole slice plays end to end. Commands live in
 `README.md`; Claude runs `--verify-slice` before and after code changes, so there is no start-of-
 session ritual to perform.
 
-**Newest change: camps are built and gated** — `CampManager` (autoload #10), the shared cache,
-crafting gated to a bench, and the 0-Vitality collapse finally carried out. 63 new gates → **279**.
-The inventory panel landed the same day (`scenes/ui/InventoryPanel.tscn`, the shared
-`PanelTheme.tres`, `UseBlock`/`CanUse`, `I` to open).
+**Newest change: the Dream's direction is settled, and it moved to the front of the queue.** The
+**Waking world is first-person in a 2D world** and the **Dream is first-person in a 3D world** —
+that part is closed. The only thing still open is whether the *creatures* in it are 2D billboards or
+3D models. See **"The Dream in 3D"** in §1 for the startup order, which is what Jeremy asked to have
+written down, and open question 8, which is now a far smaller question than its old name made it
+look.
 
-**One thing needs Jeremy before crafting works in play again:** a camp is a room with a
-`HotspotKind.Workbench` hotspot in it, and **no room has one yet.** Until you place it, crafting and
-the cache refuse with `NotAtCamp`. The gates cover the mechanic against synthetic rooms, and the
-whole suite is proven to stay green with a bench in *any* room, `waystation_yard` included — so put
-it wherever it belongs. See §1, "Done 2026-07-30: camps".
+**Also 2026-07-30: the wound ledger is built.** `CombatManager` is autoload **#11** — the 2× / 0.5×
+resolver, per-instance damage with the severed/anchored asymmetry, the derived condition ladder, and
+the save round trip. 39 new gates → **328**. It is the arithmetic half of a fight only: **no turn
+machine, no UI, no way to start one yet.** That is the next unit. Earlier the same day: the combat
+data shapes (`DamageType`, `EquipSlot`, `KnowledgeTrack`, `ItemCategory.Trap`/`.Equipment`, the
+combat `[ExportGroup]`s, `GameConfig.RigSlotsPerFight`); before that camps and the inventory panel
+(`CampManager` as autoload #10, the shared cache, crafting gated to a bench, the 0-Vitality collapse;
+`scenes/ui/InventoryPanel.tscn`, the shared `PanelTheme.tres`, `UseBlock`/`CanUse`, `I` to open).
+
+**The shed is the first camp.** `shed_bench` in `waystation_shed.tres` was already authored as a
+`Craftsman's Bench` — it was `Kind = 4` (Interact) and is now `Kind = 7` (Workbench), which is the
+whole change. Nothing was lost: `InteractionService` handles `Workbench` and still sets
+`waystation.bench_found` and prints the same examine text. So crafting, the cache and the respawn
+destination are all live in play, and **the last thing this file said was waiting on Jeremy is done.**
+Put more benches wherever they belong — the suite is proven to stay green with one in any room.
 
 **Build order changed 2026-07-30: all systems first, then all content in one hand-authored pass.**
-That un-blocks the item vocabulary conversation — it gated authoring, and authoring is now deferred.
+That un-blocked the item vocabulary conversation — it gated authoring, and authoring was deferred.
 The next system is the **crafting panel**. See §1, "Next".
+
+**And then, later the same day, the fight was designed and the vocabulary settled anyway** —
+`combat.md` §18. The reason it stopped waiting is worth knowing: it was never blocked by the content
+pass, it was blocked by the *grammar*, and combat is the grammar. The single most useful thing to
+come out of it: **rig sites hang off the creature, not the room, so `RoomData` and `HotspotData` gain
+nothing from combat and Waking-world room authoring is unblocked now.** Laying out, connecting and
+decorating rooms cannot be invalidated by the encounter loop. Dream rooms are still on hold, for an
+unrelated reason — see "The Dream in 3D" in §1.
 
 ---
 
@@ -89,6 +111,15 @@ Jeremy places the bench, and a red gate that means "not yet" teaches him that re
 to-do list masquerading as a gate. And nothing asserts per-camp storage is absent, because the data
 model cannot express it.
 
+> **The first of those was written after all, once the bench existed** (2026-07-30, same day).
+> `waystation_shed` became a camp, and *then* "at least one authored room is a camp" went in, paired
+> with "and you can walk to one from where the game starts". The reversal is not a change of mind
+> about the rule — it is the rule working. A gate asserting authored content is a to-do list while
+> the content is missing and an invariant once it exists, and the two are told apart by *when* you
+> write it, never by what it says. The paired reachability check is the one that earns its place: a
+> bench in a room with no door into it would silently remove crafting from the entire game, and every
+> other camp gate would stay green because they stand on synthetic `verify_` rooms.
+
 Ordering inside `SliceVerifier.Run` is now commented where it matters: `GateCamps` runs *after*
 `GatePersistence` because reaching a bench refills the bars, and `GateCraftingAndUse` runs last
 because it churns the satchel that persistence inherits from the harvest loop.
@@ -143,8 +174,11 @@ Three traps this build turned up, all of which will bite in the editor:
 ### Deferred: one section per item type
 
 The grid is a single flat 5-wide list. **Eventually it splits into sections per item type** —
-salves, reagents, traps, equipment — but not until the type vocabulary below is settled, because
-sections are a claim about what the categories *are* and drawing them now would freeze a guess.
+salves, reagents, traps, equipment. That was blocked on the type vocabulary, because sections are a
+claim about what the categories *are* and drawing them early would freeze a guess. **The vocabulary
+landed on 2026-07-30 (`combat.md` §18) and `ItemCategory` grows by exactly two — `Trap` and
+`Equipment` — so the sections are now knowable.** Still worth doing after the crafting panel rather
+than before it, but no longer waiting on a decision.
 The ordering already anticipates it: `Ordered()` sorts by `ItemCategory` first, so the stacks are
 grouped in the flat list and turning the groups into headed sections is a layout change in the
 `.tscn` plus a loop in `Refresh()` — no manager work, no new gates beyond one asserting a stack
@@ -158,25 +192,545 @@ when the vocabulary moves — the panel sections above are a small instance of e
 sequence is now *all plumbing, then all content*, and content authoring is a distinct later phase
 rather than something that trails each system.
 
-The consequence that matters: **the item/trap/equipment vocabulary is no longer blocking.** It was
-blocking only because it gated authoring recipes and items, and authoring is now deferred by
+The consequence that mattered at the time: **the item/trap/equipment vocabulary stopped blocking.**
+It was blocking only because it gated authoring recipes and items, and authoring became deferred by
 choice. Systems can be built against the *shape* of an item (a category, a cost, an effect hook)
 without knowing which items exist — which is already how `ItemData` and `RecipeData` are written.
-Have the conversation when the content pass starts; it is the first thing that pass needs.
 
-So, systems still unbuilt, roughly in dependency order:
+**Then the conversation happened anyway, on 2026-07-30, and the vocabulary is settled** —
+`combat.md` §18. What made it possible earlier than planned is that the blocker was never the content
+pass but the **grammar**: "what does this trap do" has no answer until turns exist, and once the turn
+rule was ratified every remaining question had a unit to be answered in. So the ordering lesson is
+narrower than "content last" — it is *settle the rules before the nouns*, and combat was the rules.
 
-1. **The crafting panel** against the published contract — the same job as the inventory panel with
-   nothing new in it, which is what makes it the good one to build by hand. Note that it now has a
-   third state to draw: `CraftBlock.NotAtCamp`, "you need a bench for this".
-2. **Combat** — the turn loop, fixed Defence, traps resolving, the six-turn nerve clock. The
-   largest by far and the one with the most unratified design under it.
-3. **The journal's knowledge model**, then its UI. **Audio last** (see memory).
-4. **2.5D in the Dream** — the one remaining architectural risk, and the only item here that could
-   invalidate work already done.
+So, systems still unbuilt, in the order they will be done. **Reordered 2026-07-30 — the 3D Dream
+moved from last to first**, for the reasons in §1a:
 
-The crafting panel is next — and placing the first `Workbench` hotspot is what makes it testable in
-play, since without a bench every craft is legitimately refused.
+1. **The 3D Dream prototype.** Detailed startup order in **"The Dream in 3D"** below. First for two independent
+   reasons, and it would be worth doing on either one alone: Jeremy wants something to *show* — to
+   his wife, and to the artist he intends to recruit — and this list already called the Dream's
+   direction *"the one remaining architectural risk, and the only item here that could invalidate
+   work already done."* Showing it and de-risking it are the same task.
+2. **Combat** — the turn loop, traps resolving, the six-turn nerve clock. Still the largest by far,
+   but **no longer the one with the most unratified design under it**: `combat.md` §18 settled the
+   staging, the turn currency, damage types, equipment and the archetypes. Three increments, in order:
+   ~~the **data shapes**~~ ✅ *done 2026-07-30 — three enums, two `ItemCategory` members, the combat
+   `[ExportGroup]`s and `GameConfig.RigSlotsPerFight`; **item and creature authoring is unblocked***;
+   ~~the **wound ledger**~~ ✅ *done 2026-07-30 — `CombatManager`, the multiplier, per-instance damage
+   with the severed/anchored split, the condition ladder, the save round trip*; then the **encounter
+   state machine** — the only piece left, and the details are at the end of the wound-ledger section
+   below.
+3. **The crafting panel** against the published contract — the same job as the inventory panel with
+   nothing new in it. Note that it now has a third state to draw: `CraftBlock.NotAtCamp`, "you need a
+   bench for this". Its manager half is already done and its `.tscn` is in the editor pass.
+4. **The journal's knowledge model**, then its UI. **Audio last** (see memory).
+
+**What moving the Dream to the front costs, stated so it is not discovered later.** `CombatManager`
+sits with no caller until item 2 lands, so the arithmetic of a fight stays unexercised by anything
+except its own gates. That is a real cost and a small one — gates do not rot, and the 39 that cover
+it were break-tested. Nothing else in the list is disturbed at all, because **combat is Waking-world
+only and so are traps** (`combat.md` §4), so the two tracks cannot invalidate each other. That
+independence is most of why combat was built first, and it is now paying out in the other direction.
+
+> **Widened 2026-07-30: the editor pass now includes the panels.** Jeremy's call — *"build all of the
+> systems then implement the in-editor stuff… I'll have to kind of learn everything then but it will
+> be worth it."* So `CraftingPanel.tscn`, the combat UI and every room are **one pass at the end**,
+> not a parallel track. The list above is therefore Claude's list, in order, and none of it is
+> "waiting on Jeremy" any more.
+>
+> **What that costs, stated plainly so it is not discovered later: nothing is played until that
+> pass.** The gates stop being a safety net and become the only verification there is — and green
+> gates never proved playability (see §5). Two rules follow for everything built from here:
+> anything a played fight would have settled must be built **easy to change rather than ratified**
+> (the brace verb and the two-rig-slot count are the live examples), and **a system is not finished
+> until its node contract is published**, because the editor pass is only mechanical if every
+> contract is already waiting for him.
+
+The crafting panel's *manager* half is already done and its contract is published (§2, and it needs
+no change for `NotAtCamp` — `%RecipeStatus` carries any `CraftBlock`). Its `.tscn` moves to the
+editor pass. `waystation_shed` holds the first `Workbench`, so a craft there is no longer refused for
+want of a venue whenever that panel does get built.
+
+**What Jeremy can author in parallel, as of 2026-07-30:** all Waking-world rooms — layout, Navigate
+hotspots, Examine text, hazards, harvest nodes, and more benches. Combat adds nothing to `RoomData`
+or `HotspotData`, so none of that can be invalidated by items 2–3. **Items and creatures are now
+open too** — the shapes landed, so a `.tres` written today will not need reopening; fill in
+`VulnerableTo`, `ResistantTo`, `Deals` and `Durability` on a creature and `Deals`/`Slot`/
+`WardsAgainst` on a weapon or trap, and the content sweep will tell you if a combination is inert.
+
+Two things still to hold off on, and the reasons are now different from each other:
+
+- **Dream rooms.** Still on hold, but no longer *pending a decision* — pending a format. A
+  first-person 3D pocket has no use for `RoomData.DreamBackground`, so the 2D Dream authoring model
+  is going regardless of how the creature question lands. The hold now has a definite end — when
+  step 4 of "The Dream in 3D" produces a pocket format — rather than a decision-shaped one.
+- **Creature art**, though not creature *data*. `EntityData`'s combat fields are safe to fill in
+  today; what a spirit *looks like* waits on billboard-versus-model, because that call decides
+  whether the deliverable is a sprite sheet or a mesh. This is the only thing open question 8 still
+  blocks, which is a much shorter list than it used to be.
+
+### The Dream in 3D — the startup order
+
+Written 2026-07-30, at Jeremy's request, when the direction settled. **Nothing below is built.** This
+is the plan and the sequence, not a record.
+
+**The settled part, in one line:** the Waking world is first-person in a 2D world; the Dream is
+first-person in a 3D world. The open part is whether the creatures in it are 2D billboards or 3D
+models.
+
+> **The old name for this question was wrong, and the wrong name cost real time.** "2.5D versus full
+> 3D" reads as a question about the *world*, and on that reading it blocked the entire Dream
+> direction and every Dream room with it. But both answers always had 3D geometry — the memory that
+> recorded the 2.5D plan describes *"3D geometry with pixel-art textures, and the hostile entities as
+> 2D sprites"*, and "full 3D" only ever meant modelling the creatures too. So the question was never
+> about the world at all. Restated correctly it blocks **creature art and nothing else**. Worth
+> keeping as a general lesson: *a question named after the wrong noun blocks the wrong work*, and it
+> does so silently, because nobody re-reads a deferral to check what it is actually about.
+
+**Two reasons this is first**, and it clears the bar on either one alone. Jeremy wants something to
+show his wife and the artist he means to recruit, and an artist cannot be recruited to a text
+document. Separately, this file has called the Dream's direction the one remaining architectural risk
+since before that conversation. The showable thing and the de-risking thing are the same build, which
+is unusually lucky and is why it is worth taking out of order.
+
+#### The order, and why each step is where it is
+
+**0. The value ramp — how many greys, and what pure white is reserved for.** This is the foundational
+decision, and it is the one everything downstream inherits. Jeremy's direction, 2026-07-30: the world
+sits in **black through mid-grey**, and **points of interest carry white**. So white is not a colour
+in this game, it is a *signal*, and the ramp has to be designed around that reservation rather than
+having it applied afterwards by discipline.
+
+**Enforce the reservation in the shader, not in the art.** Clamp ordinary environment surfaces below
+1.0 so geometry physically *cannot* reach white, and let only flagged or emissive materials hit the
+top of the ramp. This is the same move the project already makes twice — camp-ness derived from the
+bench rather than a flag, `SurvivesDeath` keyed on category rather than a per-item opt-in — and it
+has the same payoff: a mistake becomes impossible rather than merely discouraged, and dropped-in
+greybox is on-style automatically.
+
+**Ratified 2026-07-30 — the ramp is semantic, in three tiers:**
+
+| | |
+|---|---|
+| **Creatures** | the **darkest** thing on screen — a hole in the world, not a highlight in it |
+| **Items and points of interest** | reach for **white**, and are the only things allowed to |
+| **Everything else** | the middle, and only the middle |
+
+This settles the collision that would otherwise have appeared later: the art direction says to hold
+*enemies and interactables* at full contrast while Resolve degrades the rest, and if white meant both
+"take this" and "run from this" the signal would mean neither. Using both ends of the ramp gives each
+its own channel, and putting creatures at the bottom is better horror than putting them at the top.
+
+**The authoring consequence is real and easy to miss: the world gets a compressed value band.** With
+both extremes reserved, environment surfaces live in roughly the middle of the ramp — a narrower range
+than it sounds. So **the dither pattern, not the value, has to do most of the texture work.** That is
+a constraint on how the shader is tuned in step 1, not a limitation to design around later.
+
+**How many greys — start low and raise, but the three tiers set a hard floor.** Jeremy's instinct to
+start low and go up as needed is right, and it is free *because the assets are greyscale*: the source
+data always holds more than the ramp shows, so raising the level count later costs nothing, while
+authoring against a generous ramp and then posterising down destroys lighting you have already tuned.
+Same reversibility logic as authoring greyscale and dithering in the shader.
+
+But do not start at the bottom, because the semantic ramp constrains it arithmetically: one band is
+spent on creatures and one on white interactables, so **at four levels the entire world gets two**, and
+two bands cannot separate an object from the wall behind it — which is the only job value has here.
+The floor is roughly **two reserved plus three or four for the world, so six to eight**. Two practical
+notes: **level count and dither strength trade against each other** (strong dithering between adjacent
+bands simulates the values in between, so a heavily dithered six can read richer than a clean twelve),
+so tune them together rather than in sequence. And treat a creeping level count as a **symptom** — if
+things are hard to tell apart, the cause is almost always light placement, not the ramp, and raising
+the count buys legibility at the price of the look. Make it a live parameter bound to a key in the
+prototype and scrub it; this is a screenshot decision, not an argument.
+
+**The renderer is a smaller question than I first wrote, and Jeremy is right about why.** The plan was
+to switch off `gl_compatibility` for volumetric fog, SDFGI, SSAO/SSIL and SSR. But at 480×270 through
+a posterise pass, **that list is mostly thrown away**: bounce GI quantises into a couple of grey
+bands, a volumetric shaft becomes a chunky gradient that a fog term and one textured quad reproduce
+more controllably, shadow-map artifacts vanish into the pixel grid, and reflections are irrelevant in
+a dithered monochrome space. Compatibility is a reasonable default, it is faster, and it keeps the
+web export alive. The one thing that would genuinely reopen it is **many small lights at once**, since
+Compatibility caps lights per object — so revisit it if a pocket ever wants a dozen, and otherwise
+leave it alone.
+
+**What does not change is that monochrome makes light *placement* matter more, not less.** With no
+colour, value is the only tool left for separating an object from the wall behind it, and value comes
+from where the lights are. So the craft is cheap lights placed deliberately and posterised into
+distinct bands — which is authoring, not a rendering backend. That inversion is the useful thing to
+hold on to: *monochrome raises the value of lighting and lowers the value of expensive lighting
+features at the same time.*
+
+#### The lighting model, decided 2026-07-30: the player carries the near field, placed lights own the far field
+
+Jeremy: *"I think I want the lighting to be connected to the player so things appear as you get closer
+to them… And small lights to give you some heads up."*
+
+**Both halves are one system, and it is the right call for a reason beyond cost.** A player-carried
+light means **a pocket costs zero lighting authoring** — build the geometry, walk in, it is lit. For
+one person authoring every room that is the difference between lighting being a per-room task and
+lighting being free. It is also the horror-native model: darkness as a limit on *knowledge* rather
+than a limit on vision, and it makes approach itself the reveal.
+
+**But the near-field light and the far-field lights are not two ideas — the second one repairs what
+the first one breaks.** A player light alone makes everything past its radius uniformly black, and
+uniform black destroys **silhouette**, which is the only thing carrying navigation in a realm with no
+colour and no minimap. It would also quietly break two things already written down: the *distinctive
+landmark per pocket* in step 4 (a landmark you cannot see across a room is not a landmark), and the
+white-for-points-of-interest reserve (a white interactable outside the radius is as black as the wall).
+Placed lights fix all three at once by making the far field a set of **islands** rather than a void —
+you steer between lit points, and the lit points are exactly where the things worth walking to are.
+
+That turns light placement into an **authoring verb** rather than a lighting chore: putting a small
+light somewhere says *this matters, come here*. Same derived-from-content shape the project already
+uses — a camp is the room with the bench, and `SurvivesDeath` is keyed on category.
+
+> **The catch, and it is the one worth deciding before a pocket is authored: three separate systems
+> would now encode distance as value.** Light falloff, dither-rising-with-distance (step 1), and the
+> Resolve degrade all say "further away → less readable". Stacked naively they do not reinforce, they
+> mush — the far field goes to flat black and *none* of the three is legible as a signal. **Pick one
+> owner for distance.**
+>
+> **Decided 2026-07-30: falloff owns distance, dither owns texture, and the Resolve degrade is a
+> shrinking light radius.** Jeremy: *"I like this option to lower the lighting instead of trying to
+> balance more complex things."* Each cue now means exactly one thing, the dither becomes the Resolve
+> channel and nothing else, and the degrade gets more diegetic than a global ramp — the dark closes
+> in on you. It is also a stronger version of the death spiral already designed: touched → Resolve
+> lost → the light shrinks → you see less → you get touched more.
+>
+> **What this deletes is the point.** Dither-rising-with-distance comes out of the shader (falloff
+> already does that job), and the Resolve degrade is not a shader parameter at all — it is one
+> number on the player's light. Step 1 drops from five parameters to three. Fewer knobs, and no two
+> of them fighting over the same pixel.
+
+**Two consequences for the ramp above, both cheap now and expensive later.**
+
+- **A player light is in direct tension with "creatures are the darkest thing."** That rule works
+  beautifully in the near field, where a black shape occludes a lit wall — the creature is visible
+  because it *blocks* light, which is the best possible version of the idea. But past the radius, a
+  black creature in black space is not a subtle threat, it is nothing at all. **Fix adopted
+  2026-07-30: rim light on creatures specifically** — a thin bright edge on a black body. That reads as
+  a hole in the world with an outline, stays findable in the dark, and it is already in the art
+  direction's compensate-with-value list. It is also the natural thing to hold at full strength while
+  everything else degrades, and it is the one exception to the white-clamp: a creature's rim is allowed
+  near the top of the ramp even though its body sits at the bottom.
+- **Compatibility gets safer, not riskier.** One light on the player is trivial in any backend, and
+  *sparse* placed lights stay under the per-object cap. The reopen condition stated above — a dozen
+  small lights in one pocket — is now a thing to watch during authoring rather than a hypothetical.
+
+**1. The look shader — the highest-impact thing in this list.** A screen-space pass on the Dream
+`SubViewport` doing greyscale, posterise and dither. The art direction already settled the pipeline
+order and it makes the hard choice free: **author greyscale, dither in the shader**, because
+greyscale posterises down to 1-bit trivially and 1-bit can never be recovered upward. **This is where
+step 0's ramp is implemented**, so it carries five parameters: posterise levels, the environment
+white-clamp that keeps pure white reserved, dither strength, dither-rising-with-distance, and later a
+degrade amount driven by Resolve. Note the lighting decision above may retire the fourth and move the
+fifth out of the shader entirely — if falloff owns distance and the Resolve degrade is a shrinking
+light radius, this pass keeps only posterise, clamp and dither strength. Build it with all five, then
+delete what the lighting makes redundant once a pocket is walkable; that ordering is cheaper than
+guessing.
+
+Two things it buys beyond looking good. Dither density rising with distance is a **depth cue**, which
+is the one real craft problem monochrome creates — 3D normally leans on colour for depth separation
+and there is none here. And because it is a parameter it can be animated, so the realm can visibly
+degrade as Resolve drains: a diegetic timer with no UI, exactly §5's *"never a digit"*. Degrade
+distance and environment only; hold creatures and interactables at full contrast, or it blinds the
+player precisely when they most need to read the space.
+
+**It is second because it is what makes every later step showable.** Under this shader untextured
+boxes read as intentional rather than as unfinished, which means step 4 produces a screenshot worth
+sending to an artist rather than a greybox worth apologising for. For the audience Jeremy actually
+has in mind, this step does the persuading.
+
+**2. The `SubViewport` seam — and keep it off `Main`.** The Dream already renders through a 480×270
+`SubViewport` with nearest filtering and a 4× upscale, and that viewport can host a 3D subscene, so
+`RealmTransitionManager`, `EntityStateManager` and the save format are all untouched by this entire
+section. That is the whole integration cost.
+
+Until the look question is answered, build it as a **standalone scene that is not wired into
+`Main`**. A prototype that nothing loads cannot redden a gate, cannot destabilise the 328 that pass
+today, and can be deleted without ceremony if the answer is "this does not read". Wire it into the
+Dream layer only once it has earned the place.
+
+**3. First-person movement — and a physics handler, which is a reversal.** Walk and look, plus
+manipulate. **Changed 2026-07-30:** the plan of record was observation-only with no physics handler,
+staged so the first Dream needed no new system. Jeremy has overruled it — *"There will actually be a
+physics handler because of the puzzles"* — and the puzzles are the reason, so the verb staging goes
+with them.
+
+**Say what that spends, because it was written down in advance precisely so it could be noticed.**
+`combat.md` §11 is an explicit complexity budget, and the puzzles note attached a caution to exactly
+this: puzzles as *content* reuse machinery that already exists and are free, but **3D physical
+manipulation is a new system** and should be counted honestly against the budget. It is now being
+counted. That is the budget working as intended rather than being breached — a caution that gets
+spent deliberately did its job; one that gets forgotten did not.
+
+The distinction that still holds and is worth keeping straight: a `CharacterBody3D` sliding along
+static collision is the *floor*, and it was never the thing being deferred. What arrives now is rigid
+bodies — pushing, dropping, blocking, and whatever the puzzles turn out to want.
+
+**Tune the walk speed in this step, and treat it as a design decision rather than a feel knob.**
+`combat.md` §14 records the real risk of going 3D and it is mechanical, not artistic: real-time
+movement adds a *reflex* requirement, and a player who cannot dodge is walled out of the sever route
+and forced into overkill — which is the difficulty slider invariant 1 exists to prevent.
+Ejection-on-touch keeps invariant 2 intact; the reflex requirement is the part that needs designing.
+So: deliberate rather than twitchy, slow, generous grab windows, readable telegraphs. Slower is also
+more frightening, so this is probably not a trade at all.
+
+**Step 6 turns out to be most of the answer to this, which is worth noticing.** If creatures are
+warded off by using the environment, the skill the Dream tests is *what you understood about the
+room*, not how fast you can sidestep — a knowledge test rather than a reflex one. That is the exact
+shape invariant 5 asks for ("all progression gates *access*"), and it means the walk speed stops
+having to carry the fairness argument by itself. It does not fully retire the concern — you still
+have to execute while something is coming — but it downgrades it from a design problem to a tuning
+one.
+
+**4. One quiet pocket, greyboxed.** A **knowledge pocket**, not a boss pocket — three reasons, in
+increasing order of importance. Observation-only is the first verb and a knowledge pocket is the one
+that wants it. A pursuer-free space isolates the *visual* question from the *chase* question, and
+mixing them would mean an unimpressive result had two possible causes. And the pocket format this
+step invents is what unblocks Dream room authoring, which is currently stalled on not having one.
+
+Author it with **one deliberately distinctive landmark**, because the pockets decision has a known
+failure mode and it is not the obvious one: uniform monochrome solves cohesion for free, so the risk
+is not that pockets read as disconnected levels but that they are **samey and disorienting**. With no
+minimap, no colour and 480×270, silhouette and structure carry every navigational cue there is.
+Testing whether that actually works is worth as much as testing whether it looks frightening.
+
+**The pocket format this step invents now has a spec, written 2026-07-30.** A knowledge pocket is
+entered by finding a Waking-world item tied to crafting (or another trigger), contains creatures with
+**no tracking — blind and mindless, anchored in place or wandering aimlessly** — and asks you to solve
+the puzzle and reach a **memory fragment** before Resolve runs out. A boss pocket is entered only by
+finding that boss's **conduit** item, and the boss **chases while you run**, with environmental
+elements so a less skilled player can still win. Full table in `combat.md` §15.
+
+Two things this settles that were open. **The two-versions split holds, but on a different axis than
+the one in doubt** — the line is not whether creatures can be warded off, it is *whether anything is
+hunting you*, and blind-versus-pursuing is a hard distinction no amount of counterplay softens. And
+**the BFS-fairness question leaves most of the Dream**: blind creatures do not pathfind, so pursuit
+tuning is confined to the three boss pockets. Step 4 builds a knowledge pocket, so the prototype needs
+**no pathfinding at all** — a random walk and a collision shape.
+
+**Re-entry — answered 2026-07-30.** The trigger item is **consumed on success, never on failure**, so
+a failed run costs time and nothing else. Consuming on entry would make failing a puzzle you do not
+yet understand cost you *access to the puzzle*, which is the dead-save shape invariant 12 exists to
+prevent. And free retry is not a leak here: the ordinary Dream is an **observation loop** (nothing
+material crosses over, puzzles are about noticing, a clock bounds the trip), so knowledge retained
+across retries is the progression rather than an exploit. The clock's job is to make one trip tense,
+not to ration how much of a pocket a player may ever see. Full reasoning in `combat.md` §15.
+
+Two things that follow, both of which constrain how a pocket gets authored in this step:
+
+- **A pocket is tense exactly once** — run one is exploration under pressure, run two is a known
+  errand. So **size a pocket so a good first run can finish it**; one that cannot be cleared in a
+  single Resolve bar by construction guarantees its fragment is collected on the boring run.
+- **One pocket, one thing — ratified 2026-07-30, and it was already the design.** A knowledge pocket
+  yields exactly one recipe; a boss pocket yields exactly one severed anchor; there is nothing else in
+  there and no reason to return. That closes the mirror risk (consuming the key can never strand
+  anything) and it also stops the Resolve clock from producing frantic exhaustive searching — with
+  exactly one objective, the clock pressures *route-finding* rather than *sweeping*, which is the
+  behaviour the observation-puzzle design wants. The fail state stays binary too, so the save needs
+  one flag per pocket rather than a set.
+
+  Two consequences for this step. **Pocket count is pinned to recipe *families*, not recipes** —
+  corrected 2026-07-30, and it is the largest workload saving available. Starting recipes cost no
+  pocket; the **base** recipe of a family is reclaimed from the Dream and costs one; **upgrades** are
+  Waking-world memory items gated on already holding the base, and cost none; the apothecary side
+  costs none. A family of three is one pocket instead of three. The gate that must not move: a *new
+  craftable thing* always comes from the Dream, and only refinement is found out here. Guard the word
+  *upgrade* — the model is Zelda tools, not Dark Cloud tiers, so an upgrade makes a **different**
+  thing (a different damage type is pure access) or a **cheaper** one, never a *better* one. Full
+  reasoning and the two authoring risks in `combat.md` §15.
+
+  And **grant the knowledge and consume the trigger in one atomic operation** — if they can be
+  separated, a crash between them eats the key without granting the recipe and the content is
+  unreachable, which is the lockout arriving through the back door.
+
+Note the catalyst rule in `combat.md` §6 is **not** in conflict: catalysts are charged on crossing
+into a **boss pocket**, which is the sever route and the thing invariant 1 prices. Knowledge pockets
+are the crafting track, not one of the two routes to killing a boss, so they carry no catalyst cost.
+
+**5. The enemy question, answered by looking at it.** Put the same creature in the same lit space
+twice — once as a Doom/Dusk-style billboard, once as a low-poly model — and look. This is a prototype
+question rather than an argument, which is the same reasoning that got the whole realm prototyped.
+
+| | Buys | Costs |
+|---|---|---|
+| **2D billboard** | no rigs, no animation blending, no 3D character art — this is the assumption that made 3D affordable at all, and the reason the old months-of-work estimate was wrong. It also lets a creature be *drawn* rather than modelled, which is a higher ceiling on a single memorable image | breaks down close up and from above, and cannot be circled |
+| **3D model** | survives any camera angle, which matters for anything you walk around | rigging and animation — the expense that made this "months of work" in the first place. At 480×270 monochrome, low-poly reads as style, which narrows the gap more than it usually would |
+
+**The discriminator is camera, not importance — and that cuts against the obvious answer.** The
+question to ask of each creature is *does the player orbit this thing, or flee it?* A pursuer seen
+mostly head-on while you run is a billboard's best case. An anchor boss you circle and study is a
+billboard's worst one.
+
+Which means the two hybrids point opposite ways and both have a real case, so this should be looked at
+rather than reasoned out:
+
+- **Models for bosses, billboards for the mindless things** — optimises *spatial legibility* for the
+  creature you move around, and spends the art budget where the camera is hardest.
+- **Billboards for bosses, models elsewhere** (Jeremy's instinct) — optimises *image quality* for the
+  creature the player looks at longest and remembers. A hand-drawn boss at 480×270 can be more
+  striking than anything low-poly, and bosses are the game's three or four signature images.
+
+The tie-breaker is probably how much of a boss fight is spent circling it. If the anchor encounter is
+a chase toward a fixed goal, the billboard case gets much stronger; if it is a study-the-thing
+encounter, it gets much weaker.
+
+#### Leaning 2026-07-30: billboards for bosses, models for the mindless — and the discriminator flipped
+
+Jeremy: *"I am thinking that only bosses will be 2.5D because it will make them look much more
+otherworldly and chaotic. But TBH…"* — so this is a lean, not a ruling, and the trailing "TBH" should
+be read as still open to a screenshot. But **two things now argue for it that did not before, and one
+of them is an argument I made against it.**
+
+**First, the reason is better than the one I attributed to him.** I had this hybrid down as optimising
+*image quality* — a drawn boss out-striking a low-poly one at 480×270. That is true but it is the
+weaker case. The real case is that **a billboard's defect is the boss's characterisation.** A sprite
+that always turns to face you does not obey the space; it reads as a cut-out pasted onto the world
+rather than a thing standing in it. For an ordinary creature that is a flaw to hide. For an intrusion
+into reality it is the entire point. Same trick as the dither: an artifact of the technique doing the
+narrative work, which is the cheapest kind of art direction there is.
+
+**Second, the camera discriminator now points the same way, which is a reversal of what is written
+above.** The objection to boss billboards was that you circle a boss and a billboard cannot be
+circled. But the pocket structure settled the same day says a boss **chases and you run** — which is a
+head-on or over-the-shoulder camera for nearly the whole encounter, the billboard's best case. And the
+mindless creatures are **anchored or wandering blindly**, meaning you walk around them at leisure with
+no pressure at all — the case that most demands a model. So the encounter designs answer the tie-breaker
+the paragraph above left open, and they answer it *for* the lean rather than against it. **The
+discriminator was right; the input to it was missing.**
+
+What still wants a screenshot: whether multi-angle billboards (Doom-style rotations) are needed at all
+given the chase camera, since they multiply the drawing cost per pose and the chase may make them
+unnecessary. Build one boss both ways in the lit space and look — that is cheaper than deciding.
+
+**6. Warding creatures off with the environment — widened 2026-07-30, and it is the other reversal.**
+The plan of record was *level mechanics that slow the pursuer down*, scoped to **boss pockets only**.
+Jeremy has widened it: *"There will be ways to use puzzles/environments to ward off boss and normal
+creatures alike."* So it covers the mindless wanderers too, and it stops being a boss-pocket feature
+and becomes the Dream's general verb.
+
+**This reopens something that was explicitly rejected, and that is worth stating rather than
+absorbing quietly.** On 2026-07-27 the option "the puzzle *is* the evasion" was considered and turned
+down, with the note that the nearest acceptable version would be boss encounters only. The new
+direction goes past that. Nothing about the earlier reasoning was wrong — it was a complexity
+argument — and the reason it can be overturned now is that the complexity is being bought anyway for
+step 3's physics handler. That is a legitimate reversal: *the thing that made it expensive is already
+on the bill.* The rejection should be read as spent, not as still standing.
+
+**The word "ward" collides with invariant 11 and the meaning does not.** Invariant 11 forbids any
+trap, item or ward that removes **regeneration or the Resolve drain** — the "poor man's sever" that
+would collapse the two-route economy. A Dream-side environmental ward that keeps a creature at a
+distance does neither of those things, so the door stays shut. Worth writing down because a future
+reader will hit the word before the meaning.
+
+Two things to watch as this gets discovered in play, offered as things to notice rather than rules —
+Jeremy's framing is *"we will explore and create as I build and play"*, and the roster should stay
+provisional the way the trap roster does while its columns are real:
+
+- **Warding must not deflate the pressure it is counterplay to.** The design has a deliberate
+  escalation — get touched, lose Resolve, the dither worsens, you see less, you get touched more. A
+  ward that is free and permanent replaces that spiral with a checklist. Local, temporary or paid-for
+  keeps both.
+- **It changes what the pockets are for.** A knowledge pocket where creatures can be handled is closer
+  to a boss pocket than the original split assumed, and the two-versions distinction is worth
+  re-checking once a pocket has actually been played.
+
+What it costs in code is unchanged and small: Dream-side interactables that act on creatures, landing
+in this pass rather than as a separate blocker.
+
+#### The two routes past a creature — ratified 2026-07-30, and this is what closes the reflex risk
+
+Jeremy: *"I think if you are really good at running and dodging you can get away from enemies or
+bosses. Enemies even easier of course. But I will create trap/puzzle environments for people who
+aren't as good. I feel like this is a fair way to do it."*
+
+**This is the answer to the fairness objection in step 3, and it answers it structurally rather than
+by tuning.** The objection was that real-time movement adds a reflex requirement, and a player who
+cannot dodge gets walled out of the sever route and pushed into overkill — the difficulty slider
+invariant 1 exists to prevent. Jeremy's answer removes the wall: **reflex is one route past a creature,
+not the route.** Fail at dodging and you are not ejected from the Dream, you are pointed at the
+environment instead.
+
+**It also rhymes with the game's central choice, which is a good sign rather than a coincidence.** Two
+ways past the same obstacle, paying different currencies — reflex costs risk, environment costs setup
+and attention — is structurally the same shape as sever-versus-overkill. The Dream's internal decision
+and the game's headline decision teach each other.
+
+**One thing to watch, and it is specific: the Resolve clock can quietly convert skill into currency.**
+If dodging is instant and free while the environmental route costs time, and time costs Resolve, then
+the skilled player pays less for the same outcome — and across many visits that compounds into exactly
+the difficulty slider the design is trying not to have. Two routes are only two routes while they cost
+comparably. So keep the environmental route **roughly Resolve-neutral against dodging**, or keep the
+gap small enough that it does not accumulate. The reverse failure is milder but worth knowing: if
+traps are reliable and dodging is risky, nobody ever dodges and the reflex layer is decorative. Which
+of those two you would rather have is a real question, and a play question.
+
+#### What this replaces, and what survives
+
+| | |
+|---|---|
+| `RoomData.DreamBackground` | **Dies.** A 2D texture per room means nothing in a 3D pocket. |
+| `EntityPlacement.DreamPosition` / `DreamScale` | Position becomes a `Vector3` under **either** enemy answer. `DreamScale` survives for billboards and stops meaning much for models — the one field the open question actually touches. |
+| the six `dream_way_*` rooms | Throwaway, and already recorded as such. They were prototype content and they did their job. |
+| the node-stealth heist | **Survives, and is not to be deleted until the 3D pocket beats it.** It answered "is being hunted frightening?" at low fidelity and the answer was yes, which is the evidence this whole section rests on. It is also the fallback if the 3D pocket does not read. |
+| `RealmTransitionManager`, `EntityStateManager`, `SaveService` | Untouched. None of them cares what the Dream looks like. |
+
+### Done 2026-07-30: the wound ledger (`CombatManager`, autoload #11)
+
+Built to `combat.md` §18. Registered **last**, after `CampManager`, for the same reason that one is:
+it asks other managers questions rather than answering them. It reads entity state and never writes
+it — severing stays `EntityStateManager`'s business, so exactly one place decides what a body *is*.
+**No `_Process`, and there must never be one:** a clock inside a fight would make turns stop being
+the only currency.
+
+What it owns, and the one non-obvious decision in each:
+
+- **`DamageAgainst(type, target, potency)`** — static, so a gate can call it with no scene tree. The
+  right type doubles, the wrong one halves, everything else stands. **Floored at 1**, because a
+  resisted hit that rounds to nothing is an *absolute* discovered at the low end of the scale, where
+  it looks like a bug rather than a rule — and §7 forbids absolutes outright.
+- **The ledger**, a sparse `instanceId → damage` dictionary. Absent means unwounded; there is
+  deliberately no second spelling. **Clamped at `Durability`**, so overkill is spent rather than
+  banked — an unclamped ledger would make the condition readout depend on how hard the *last* hit was.
+- **`SettleEngagement(instanceId)`** — the single place the persistence rule lives, and the reason it
+  is a method rather than a flag on the caller: **it takes no outcome parameter.** Won, fled or
+  collapsed, the *body's state* decides. Anchored bodies close their wounds; severed ones keep them.
+  Fleeing must not become a way to bank progress against something still regenerating. The state is
+  read when the engagement **ends**, not when the hit lands, so severing mid-fight keeps the work
+  that got you there — that ordering is gated.
+- **The condition ladder**, derived from remaining durability. Words are overridable per creature
+  (`EntityData.ConditionWords`, exactly four); **bands never are.** A wrong-length array falls back to
+  shared prose *in play* and fails the content sweep — the game stays readable, the suite does the
+  complaining.
+- **`SaveGame.Wounds`**, additive with no version bump, same argument as `Vitality` and
+  `ReturnCampRoomId`. That closes §13's save-format question, and the answer turned out to be small:
+  only the severed half can ever reach disk, because the anchored half is already gone by the time an
+  engagement is over.
+
+**39 new gates → 328**, all break-tested across seven runs. Worth recording *which* break each caught,
+because it says what the section is actually protecting: removing the damage floor reddened exactly
+one check; swapping the two multipliers reddened the ordering pair; deleting the overkill clamp and
+reversing the bottom rung reddened four, with the offender list naming the exact wound total where
+the ladder went backwards; inverting the severed check reddened five including the save round trip.
+
+Two honest notes on the section's limits:
+
+- The **first-hit** check (`a hit reports what it took off`) could not fail on its own — on a fresh
+  ledger "what it took off" and "the running total" are the same number. A second hit was added
+  specifically to separate them, and only that one goes red when `Wound` returns the total. Worth
+  generalising: *a check written against the first iteration of an accumulator is usually vacuous.*
+- The `wounds <= 0` guard in `ConditionOf` is **unfalsifiable at the current tuning** — a full bar
+  divides to 1.0 and falls through the comparisons correctly anyway. It is kept because it stops
+  being luck the moment `BleedingBelow` is retuned to 1.0, and its comment says so, but no gate
+  covers it and none can without gating the thresholds themselves.
+
+**What is left of combat: the encounter state machine.** Nothing can start a fight yet. That unit
+owns the turn loop over a *list* of bodies (the list exists from day one so Swarm is nearly free), the
+opt-in confirm step with §7's legibility readout naming both what the creature fears and what it
+deals, alternating turns, the turn-cost rule, traps firing per `TriggersItself`, guaranteed flee with
+a parting strike, the weak baseline attack that replaces `InteractionService`'s one-click Severed
+finish, and the boss aura draining Resolve while `Corrupted` only.
 
 ### Authoring a hazard into a room — done, and what it taught
 
@@ -243,7 +797,7 @@ collapse is now a real punishment rather than a dead end.
 
 ### Where the project stands
 
-M0–M3 plus the Dream heist, M4's crafting layer and camps, 279 automated gates. The playable loop,
+M0–M3 plus the Dream heist, M4's crafting layer and camps, 328 automated gates. The playable loop,
 with no art:
 
 ```
@@ -300,7 +854,9 @@ gated to a bench, and the collapse that loses what you can remake.
 - **Her cache** as a real place with finite named salves in it. The storage box exists as of
   2026-07-30; what is missing is the *authored* cache — a camp with her finite salves already in it,
   which is content rather than code.
-- **The item / trap / equipment vocabulary**, before any more recipes are authored. See §4.
+- ~~**The item / trap / equipment vocabulary**, before any more recipes are authored.~~ **Settled
+  2026-07-30 — `combat.md` §18.** What is left of it is code: two enums and a handful of `[Export]`s,
+  which must land before items or creatures are authored.
 
 ### Two decisions already made that affect how you build it
 
@@ -380,8 +936,10 @@ gates assert the result rather than re-deriving the condition.
 - ~~**Recovery from zero.**~~ ~~**The 0-Vitality consequence.**~~ **Both closed 2026-07-30 by
   camps.** `EventBus.VitalityDepleted` was described here as "the seam the camp respawn plugs into",
   and that is exactly what happened: `CampManager` subscribes to it and `VitalityManager` still knows
-  nothing about rooms or items. The one thing left is authoring — with no `Workbench` hotspot placed,
-  the collapse falls back to `GameConfig.StartingRoomId`.
+  nothing about rooms or items. ~~The one thing left is authoring~~ — **and that landed the same day:**
+  `waystation_shed` holds the first `Workbench`, so a collapse now wakes you at the bench rather than
+  falling back to `GameConfig.StartingRoomId`. The fallback still exists for a death before you have
+  reached any camp, and is still gated.
 - **Its interaction with the two-route economy.** Until something spends Vitality, **the two
   routes in `combat.md` §1 still cost the same thing**, so invariant 1 remains unexercised. The
   pool existing does not fix that; a damage source does.
@@ -416,7 +974,7 @@ Three standing rules that make this work, all learned the hard way:
   loaded. A malformed `Array[...]` line yields an empty collection and no error. The recipe added
   in Phase 1 is gated exactly this way.
 - **Run the gates unconditionally; add gates sparingly.** Settled 2026-07-30. Measured on
-  Jeremy's machine: a full run is **0.57 s** at 188 checks and has not moved measurably at 279, an
+  Jeremy's machine: a full run is **0.57 s** at 188 checks and has not moved measurably at 328, an
   incremental build 2.5 s, so the whole
   edit→verified loop is ~3 s and it sits in Claude's turn, not Jeremy's authoring loop. Deciding
   whether a change is "worth checking" costs more than checking — and gets it wrong precisely on
@@ -434,10 +992,29 @@ Three standing rules that make this work, all learned the hard way:
    resolution layer. ✅ *Claude's half is done — see §1.*
 2. **The panels.** Claude publishes the node contract and the manager beneath it; Jeremy builds the
    inventory grid and crafting panel as `.tscn`; Claude wires and gates them.
-3. **Camps.** ✅ *Claude's half is done — see §1.* Jeremy's half is one `Workbench` hotspot in
-   whichever room should be the first camp. It was the clean case of the division working: the
+3. **Camps.** ✅ *Both halves done — see §1.* It was the clean case of the division working: the
    mechanic was built and gated against synthetic rooms without waiting on the judged call, and the
-   suite is proven to survive the bench landing anywhere.
+   suite was proven to survive the bench landing anywhere. Jeremy's half turned out to be one value —
+   the shed's bench already existed as an `Interact`, and Jeremy's own "can't you make the existing
+   workbench a workbench?" was the whole design decision. Worth remembering: *the judged call had
+   already been made in the content; only the `Kind` had not caught up.*
+4. **Combat — and this is the widest the parallel has been.** `combat.md` §18 established that rig
+   sites hang off the creature rather than the room, so combat touches neither `RoomData` nor
+   `HotspotData`. Jeremy's half is therefore **every Waking-world room** — layout, navigation, examine
+   text, hazards, harvest nodes, the first bench — none of which the encounter loop can invalidate.
+   Claude's half is the data shapes first (so item and creature authoring can start too), then the
+   loop. ~~The two things still to hold back are **items and creatures**, until the shapes land, and
+   **Dream rooms**, until the 2.5D call.~~ *The shapes landed the same day; see the revised hold-off
+   list at the end of "Next".*
+5. **The 3D Dream — and the balance inverts.** Reordered ahead of the rest of combat on 2026-07-30;
+   see "The Dream in 3D". Worth flagging because **this is the first unit where Claude's half is the
+   smaller one.** Claude owns the renderer switch, the look shader, the first-person controller, the
+   `SubViewport` seam and whatever gates the seam earns — all of it provably-correct work with no
+   judgement in it. Jeremy owns everything the prototype actually exists to answer: how the dither
+   and posterise are tuned, whether the greybox pocket reads as frightening, whether its landmark is
+   legible, and the billboard-versus-model call. **Every open question in that section is one only he
+   can close, by looking at it.** So the useful thing Claude can do is get him to the looking as fast
+   as possible, and then stop having opinions.
 
 ### The panel node contract
 
@@ -483,10 +1060,13 @@ Three things worth knowing while laying these out:
 
 Input actions `inventory` (`I`) and `journal` (`J`) already exist in `project.godot`, unused.
 
-**The conversation to have at the end of Phase 2:** the item, trap and equipment-type vocabulary.
-`combat.md` §4's trap table and §7's type sketch are explicitly unratified. The plumbing does not
-care, but *recipes and items cannot be authored* until it is settled, so it will block Jeremy
-before it blocks anything else. Best had once there is an inventory grid on screen to look at.
+~~**The conversation to have at the end of Phase 2:** the item, trap and equipment-type
+vocabulary.~~ **Had on 2026-07-30, and settled — `combat.md` §18.** The prediction in this paragraph
+was right about *who* it would block (Jeremy, before anything else) and wrong about *when*: it was
+had before the crafting panel rather than after, because the vocabulary turned out to depend on the
+combat grammar and not on having an inventory grid to look at. What replaces it as the thing standing
+between Jeremy and authoring items is now code, not a decision — the data shapes in §18's final
+table.
 
 ---
 
@@ -503,15 +1083,17 @@ Things that *work* but are not the real implementation, or that will mislead you
 | the view, in gates | `RoomView` and `Hud` *are* live in a headless run and now have gates asserting the room they display — but only the room. Backdrops, overlays, tweens and hotspot rects are still unasserted, and `--shots` is the only thing that looks at a pixel. |
 | `ContentSeeder.cs:219` | The entry puzzle is a plain `Interact` hotspot ("search the cairn"). The minigame does not exist. |
 | `InteractionService.cs:136` | Finishing a `Severed` body is **one click**. This is where the turn-based item fight goes. |
-| **No camp is authored** | A camp is a room holding a `HotspotKind.Workbench` hotspot, and no `.tres` has one. So **crafting and the cache are unreachable in play** — every attempt returns `NotAtCamp` — and the collapse falls back to `GameConfig.StartingRoomId`. All of it is gated against synthetic `verify_` rooms, so the gates being green says nothing about this. One hotspot fixes it. |
+| ~~**No camp is authored**~~ | **Closed 2026-07-30.** `shed_bench` in `waystation_shed.tres` went from `Kind = 4` (Interact) to `Kind = 7` (Workbench) — a one-value edit to a hotspot that was already authored, labelled and positioned. Crafting, the cache and the respawn destination are live. Two gates now hold it: a camp exists, and it is walkable to from `StartingRoomId`. |
 | `ItemData.VitalityRestore` | Read at last, by `UseItem`. Only salves use it. |
 | Everywhere | **No audio at all.** Deliberately last — but see the note in `combat.md` §14. |
 | Everywhere | Craft / Physick / Attunement are designed, unbuilt. |
-| Everywhere | **Defence does not exist as a field.** Decided 2026-07-27 to be fixed per unit and unaffected by severing (`combat.md` §2). `EntityData` has no such property yet — do not reach for `CorruptionAura`, which carries regen and the Resolve drain instead. |
-| Everywhere | Traps are designed in detail, unbuilt. They need combat to resolve into, and the type vocabulary before they can be authored. |
+| Everywhere | **Defence will never exist as a field.** It was decided on 2026-07-27 to be fixed per unit; `combat.md` §18 then **deleted the number entirely** on 2026-07-30 in favour of a vulnerability and a resistance per creature (right type 2×, wrong type 0.5×). So do not add a `Defence` property, and do not reach for `CorruptionAura` either — that carries regen and the Resolve drain. |
+| Everywhere | Traps are designed in detail, unbuilt. They need combat to resolve into. ~~and the type vocabulary before they can be authored~~ ~~what is missing is `ItemCategory.Trap` and the fields beside it~~ — **both closed 2026-07-30.** The vocabulary is settled (`combat.md` §18) and the fields exist, so a trap can be *authored* now; what it still cannot do is *fire*, which is the encounter loop. |
+| Everywhere | ~~**No combat data shapes yet.**~~ **Built 2026-07-30.** `DamageType`, `EquipSlot`, `KnowledgeTrack`, `ItemCategory.Trap`/`.Equipment`, the combat `[ExportGroup]`s on `EntityData` and `ItemData`, and `GameConfig.RigSlotsPerFight`. **Item and creature authoring is open.** But the fields are *shapes only* — nothing reads them yet, so authoring a weapon does not make it swingable. Six content-sweep gates cover them and all six are **dormant** (no authored content sets a combat field), so their green means nothing until you author something. |
 | `RoomData.BaseCorruption` | **Not vestigial — an earlier entry here said it was, and that was wrong.** It no longer drives any drain (Waking rooms do not drain, Dream rates are per-heist), but `RoomView.cs:187` reads it as the placeholder backdrop's **fog density**: `fog: 0.35f + BaseCorruption * 0.65f`. Deleting it would visibly change every Waking room. Treat it as a look knob, not dead weight. |
 | ~~`RoomData.IsSanctuary`~~ | **Deleted 2026-07-30, not renamed.** It was going to become `IsCamp`; instead camp-ness is derived from the workbench hotspot, because a flag and a bench that must always agree are two copies of one fact. If you find the name in an old comment, that is why it is gone. |
 | `PlaceholderBackdrop`, `EntityOverlay` | All art is procedural. Every texture field is nullable and unset. |
+| `project.godot` `[rendering]` | **`renderer/rendering_method="gl_compatibility"`.** Reassessed 2026-07-30 and **probably fine to leave alone** — Compatibility has no volumetric fog, SDFGI, SSAO/SSIL or SSR, but at 480×270 through a posterise pass almost none of that survives anyway. See "The Dream in 3D" step 0. The one reopen condition is **many small lights in one pocket**, since Compatibility caps lights per object, and the player-carried lighting model makes that less likely rather than more. If it is ever switched, switch it *before* placing lights — lighting does not transfer between backends. |
 
 **When a bug reproduces in play but the gates are green, there are two things to suspect, in this
 order.** First, a **state the verifier normalises** — an active run, a live clock, a mid-sequence
@@ -556,6 +1138,18 @@ asserting "a camp is authored" was considered and rejected — it would sit red 
 the bench, which teaches him that red means ignore me. Missing content is reported in prose, here and
 in the table above. Gates assert what must be true, never what is merely wanted.
 
+**And then it was written, hours later, once the bench existed.** The rule did not bend — the same
+sentence is a to-do list before the content lands and an invariant after, and the deciding factor is
+*when you write it*, never what it says. The lesson worth carrying is the second-order one: **a
+rejected gate has an expiry date nobody writes down.** Re-examine it the moment the thing it would
+have complained about is done. Same shape as the item-vocabulary deferral that outlived its reason.
+
+The pair that went in is instructive about *which* half was worth having. "A camp is authored" is the
+obvious one and the weaker one; "and you can walk to one from where the game starts" is the one that
+earns its place, because a bench in a room with no door into it would remove crafting from the entire
+game while every other camp gate stayed green on its synthetic `verify_` rooms. Break-tested both
+ways: severing the bench reddens both, severing only the yard→shed door reddens the second alone.
+
 ---
 
 ## 4. Open questions, in the order they'll bite
@@ -563,21 +1157,52 @@ in the table above. Gates assert what must be true, never what is merely wanted.
 1. ~~**What shape is a hazard?**~~ **Answered 2026-07-29:** a `VitalityCost` on the existing hotspot
    kinds, charged per successful click, rather than a `HotspotKind.Hazard` or a per-room tax. Built
    and gated — see §1. What remains is authoring, not design.
-2. **The item, trap and equipment-type vocabulary** — to be discussed before crafting is built.
-   `combat.md` §4's trap table and §7's type sketch are both explicitly **unratified**: they were
-   written in a design pass, not decided, and one row (the salt line) was struck on 2026-07-27
-   for contradicting the tether rule. Nothing in them blocks M4's crafting *plumbing*, which is
-   content-agnostic — but do not implement that table as though it were a spec.
-2. ~~**`ResolveRestore` vs `VitalityRestore`**~~ **Answered 2026-07-29:** renamed to
+2. ~~**The item, trap and equipment-type vocabulary.**~~ **Answered 2026-07-30 — `combat.md` §18.**
+   Four damage types (**Edge, Blunt, Fire, Caustic**, the last taught only by the Physick side of the
+   journal), two equipment slots (one weapon carrying a type, one armour halving a type), three enemy
+   archetypes that need no field at all, and nothing that degrades. §4's trap roster is still
+   provisional *content* — the salt line stays struck — but its two right-hand columns are now real.
+3. ~~**`ResolveRestore` vs `VitalityRestore`**~~ **Answered 2026-07-29:** renamed to
    `VitalityRestore`; no item restores Resolve. See §1.
-3. **Trap placement** — authored sites per room, or free-form on a grid? Authored is far less work
-   and probably reads better on painted backgrounds. Nothing blocks on it.
-4. **The entry puzzle** is a placeholder, and is now the first real instance of Waking-world puzzle
+4. ~~**Trap placement** — authored sites per room, or free-form on a grid?~~ **Answered 2026-07-30:
+   neither. The rig sites come with the creature**, two of them, counted in `GameConfig`. This is the
+   answer that unblocked room authoring, because it means a room needs no trap data at all.
+5. **The entry puzzle** is a placeholder, and is now the first real instance of Waking-world puzzle
    content — so it sets the grammar for every puzzle after it.
-5. **The journal** must land before the first real observation puzzle, though it comes after
-   crafting. See the callout at the end of `combat.md` §15 for why.
-6. **Is the pure-BFS pursuer fair?** Never tested against a real player. Much smaller problem now
-   that it only runs inside boss pockets.
+6. **The journal** must land before the first real observation puzzle, though it comes after
+   crafting. See the callout at the end of `combat.md` §15 for why. Note that §18 gave it a second
+   job: **Caustic damage is Physick knowledge**, so her half of the journal is now a combat gate and
+   not only a medicine cabinet.
+7. **Is the pure-BFS pursuer fair?** Never tested against a real player. Much smaller problem now
+   that it only runs inside boss pockets — and the "level mechanics that slow the pursuer down" in
+   `combat.md` §15's boss pockets is a better answer than tuning the BFS would be.
+8. ~~**2.5D versus full 3D in the Dream.**~~ **Half-answered 2026-07-30, and the half that closed was
+   the one that mattered.** The Waking world is first-person in a 2D world; **the Dream is
+   first-person in a 3D world** — settled. What remains is only **whether the creatures in it are 2D
+   billboards or 3D models**, which is a prototype question rather than an argument and is answered
+   by looking at the two side by side (see "The Dream in 3D", step 5).
+
+   **Leaning by the end of 2026-07-30: billboards for bosses, models for the mindless creatures** —
+   Jeremy's call, with a trailing "TBH", so treat it as a lean awaiting a screenshot rather than a
+   ruling. Two things back it: a billboard that will not obey the space is *characterisation* for an
+   intrusion into reality rather than a defect, and the pocket structure settled the same day (bosses
+   chase, mindless creatures are blind and static) means bosses are seen head-on and the mindless
+   things are the ones you stroll around — so the camera discriminator, which used to argue against
+   this, now argues for it.
+
+   Three consequences of the restatement, because the old name was doing damage. It **no longer
+   blocks Dream rooms** *by decision* — they are blocked by not yet having a 3D pocket format, which
+   step 4 produces. It **no longer blocks creature data** — only creature art, since the call decides
+   sprite sheet versus mesh. And it **moved from third in the queue to first**, on Jeremy's ask and on
+   its own merits as the last architectural risk. Combat is still immune to it either way, which is
+   most of why combat went first.
+9. **Does Fire belong to Craft or to Physick?** §18 builds against three Craft types and Caustic
+   alone on her side, because the asymmetry matches §8's "few of her notes, far apart". Moving Fire
+   across makes it two and two and is a one-line change; recorded so the split is not mistaken for an
+   accident.
+10. **Does the fight need a defensive verb?** A shield is deferred, not rejected, and the version
+    worth building is *brace* — spend a turn, take much less. Unanswerable until three fights have
+    been played, and safe to defer because slots are an enum and an item declares its own.
 
 ---
 
@@ -704,4 +1329,7 @@ Do not re-derive these from the design doc:
 - The **Snap duel** is deleted. Resolve-empty and being-touched are the same ejection.
 - **Sanity** is gone as both a concept and a name; it is **Resolve**, and Vitality is separate.
 - The Pixel Realm is **stealth and theft**, not a tactical duel.
-- **"1st-Person"** means Myst-style perspective in the Waking world. The Dream is going 2.5D.
+- **"1st-Person"** means two different things and both are first-person. The **Waking world** is
+  first-person in a **2D** world — Myst-style, painted screens, click to move. The **Dream** is
+  first-person in a **3D** world. Settled 2026-07-30; the only thing left open is whether the
+  creatures are billboards or models.

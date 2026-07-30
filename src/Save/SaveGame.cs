@@ -44,4 +44,15 @@ public sealed class SaveGame
     /// spending the page you read does not unlearn the recipe.
     /// </summary>
     public List<string> DiscoveredBlueprints { get; set; } = new();
+
+    /// <summary>
+    /// Damage standing against severed bodies, per entity instance id. This is the whole of what
+    /// docs/combat.md §13 asked the save format to carry: anchored wounds close when the engagement
+    /// ends, so nothing about them ever reaches disk, and only the severed half needs storing.
+    ///
+    /// Absent from pre-combat saves, which deserialise to empty — the right answer for a world where
+    /// nothing had been fought yet. No version bump, for the same reason <see cref="Vitality"/> and
+    /// <see cref="ReturnCampRoomId"/> needed none.
+    /// </summary>
+    public Dictionary<string, int> Wounds { get; set; } = new();
 }

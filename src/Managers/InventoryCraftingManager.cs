@@ -127,6 +127,13 @@ public partial class InventoryCraftingManager : Node
     public IReadOnlyDictionary<string, RecipeData> Recipes => _recipes;
 
     /// <summary>
+    /// Every registered item. Sibling of <see cref="Recipes"/>, and it exists so the gates can sweep
+    /// the authored catalogue for combat fields that are set but inert — the same job
+    /// <c>GateAuthoredContent</c> already does for hotspots.
+    /// </summary>
+    public IReadOnlyDictionary<string, ItemData> Catalogue => _catalogue;
+
+    /// <summary>
     /// Register a recipe built in code. For the gates, which need to exercise rules — the blueprint
     /// gate especially — without inventing authored content to hang them on. Same role as
     /// <see cref="DreamRunManager.DebugSetPursuerRoom"/>. Not for gameplay.
@@ -209,6 +216,22 @@ public partial class InventoryCraftingManager : Node
     ///
     /// Reagents and catalysts are farmable and craftable, so losing those is pure cost with no
     /// permanence — which is exactly the sting the penalty is for.
+    ///
+    /// <para>
+    /// <b>Traps and equipment are destroyed too, and that is the ratified decision rather than an
+    /// oversight in the default arm</b> (docs/combat.md §18, 2026-07-30). Both are craftable, so the
+    /// rule above answers them without an exception. Jeremy's reason for wanting it that way:
+    /// recrafting is what keeps the trade relevant instead of one-and-done. It is not a softlock —
+    /// the baseline attack always exists and materials are harvestable — and it is what finally gives
+    /// the shared cache a real use, since banking a spare coat means choosing not to wear it.
+    /// </para>
+    ///
+    /// <para>
+    /// Keyed on category rather than a per-item flag on purpose: a new item cannot forget to declare
+    /// itself, and a new *category* inherits the destructive default, which is the safe direction to
+    /// fail in. Adding a category that must survive means adding an arm here — and the gates in
+    /// <c>SliceVerifier</c> assert both sides so the choice is never silent.
+    /// </para>
     /// </summary>
     public static bool SurvivesDeath(ItemCategory category) => category switch
     {

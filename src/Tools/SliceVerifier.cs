@@ -52,6 +52,11 @@ public static class SliceVerifier
         GateHeistMechanics();
         GatePersistence();
 
+        // Between the two on purpose. It runs its own save round trip, which would land the player
+        // somewhere GateCamps does not expect if it ran later — and it must not run *earlier* than
+        // persistence, whose round trip would then be carrying wounds it never meant to assert.
+        GateWoundLedger();
+
         // After persistence, because reaching a camp refills both pools and would clobber the
         // part-drained bar that gate saves. It leaves the player standing at a synthetic bench,
         // which is what lets the crafting gate below craft at all.
@@ -823,6 +828,228 @@ public static class SliceVerifier
         SaveService.DeleteSave(dreamPath);
     }
 
+    // ---- The wound ledger --------------------------------------------------
+
+    /// <summary>
+    /// <c>CombatManager</c>: what a hit is worth, what a body has taken, and which of those two
+    /// survives the engagement. No turn machine here — that is the next gate to be written.
+    ///
+    /// <para>Built on <see cref="EntityData"/> constructed in this method rather than on authored
+    /// creatures, and for a stronger reason than the camps gate's: not one authored creature has a
+    /// combat field set yet, so an authored-content version of this gate would be asserting
+    /// arithmetic against <c>VulnerableTo = None</c> and would pass no matter what the resolver did.
+    /// Synthetic bodies are the only way to assert the multiplier at all before the content pass.</para>
+    ///
+    /// <para>Every check below is written against <see cref="GameConfig"/>'s constants as
+    /// <i>relationships</i> — vulnerable beats neutral beats resistant — rather than against the
+    /// numbers themselves. Retuning 2× to 1.75× must not turn this section red; deleting the
+    /// distinction must.</para>
+    /// </summary>
+    private static void GateWoundLedger()
+    {
+        Section("wounds  what a hit is worth, and what survives the fight");
+
+        var combat = CombatManager.Instance;
+        var states = EntityStateManager.Instance;
+
+        Check("the manager is registered", combat != null);
+        if (combat == null) return;
+
+        combat.ResetAll();
+
+        const string Body = "verify_body_01";
+        const string Anchored = "verify_anchored_01";
+        const string Cut = "verify_cut_01";
+        const string Husk = "verify_husk_01";
+        const string Named = "verify_named_01";
+        const string Malformed = "verify_malformed_01";
+        const int Potency = 10;
+
+        var body = new EntityData
+        {
+            Id = "verify_body",
+            CorruptedName = "Verification Body",
+            Durability = 40,
+            VulnerableTo = DamageType.Fire,
+            ResistantTo = DamageType.Blunt,
+            Deals = DamageType.Edge,
+        };
+
+        // -- What a hit is worth --
+        var weak = CombatManager.DamageAgainst(DamageType.Fire, body, Potency);
+        var plain = CombatManager.DamageAgainst(DamageType.Edge, body, Potency);
+        var resisted = CombatManager.DamageAgainst(DamageType.Blunt, body, Potency);
+
+        Check("the type it fears hurts more than one it feels nothing about", weak > plain);
+        Check("and one it feels nothing about hurts more than the type it resists", plain > resisted);
+        Check("a type it neither fears nor resists lands exactly as thrown", plain == Potency);
+
+        // §7, and the reason CombatManager floors the result at 1: an absolute reads as a lock and
+        // sends players hunting a key instead of asking whether the fight is worth what it costs. A
+        // resisted hit that rounds to nothing is an absolute discovered at the low end of the scale,
+        // where it looks like a bug rather than a rule.
+        Check("the resisted type still lands for something, so half never reads as immune",
+            CombatManager.DamageAgainst(DamageType.Blunt, body, 1) >= 1);
+
+        Check("an untyped hit is not a hit at all",
+            CombatManager.DamageAgainst(DamageType.None, body, Potency) == 0);
+        Check("and neither is a hit with nothing behind it",
+            CombatManager.DamageAgainst(DamageType.Fire, body, 0) == 0);
+
+        // -- The ledger --
+        Check("an untouched body carries no wounds", combat.WoundsOn(Body) == 0);
+        Check("and is whole", combat.RemainingDurability(Body, body) == body.Durability);
+        Check("and is not spent", !combat.IsSpent(Body, body));
+        Check("and reads as unmarked", combat.ConditionOf(Body, body) == Condition.Unmarked);
+
+        var dealt = combat.Wound(Body, body, DamageType.Fire, Potency);
+        Check("a hit reports what it took off rather than the running total", dealt == weak);
+        Check("and the ledger holds it", combat.WoundsOn(Body) == weak);
+        Check("and what is left fell by exactly that much",
+            combat.RemainingDurability(Body, body) == body.Durability - weak);
+        Check("and one hit is not enough to be spent", !combat.IsSpent(Body, body));
+
+        // The check above cannot tell "what it took off" from "the running total" — on a fresh ledger
+        // those are the same number. A second hit is what separates them, and it is the one a fight
+        // narrates wrongly if the manager returns the wrong one.
+        var second = combat.Wound(Body, body, DamageType.Edge, Potency);
+        Check("a second hit reports itself, not the running total", second == plain);
+        Check("and the ledger is the sum of the two", combat.WoundsOn(Body) == weak + plain);
+
+        // Overkill costs materials, never buys a bigger number (§5). An unclamped ledger would also
+        // make the condition ladder depend on how hard the *last* hit was.
+        combat.Wound(Body, body, DamageType.Fire, body.Durability * 10);
+        Check("overkill is spent, not banked", combat.WoundsOn(Body) == body.Durability);
+        Check("and what is left bottoms out at nothing",
+            combat.RemainingDurability(Body, body) == 0);
+        Check("and the body is spent", combat.IsSpent(Body, body));
+
+        // -- The ladder: monotonic, total, and never wordless --
+        // Point by point across the whole bar, because the claim is about every wound total a fight
+        // can produce and not about the four the thresholds happen to name.
+        var backwards = new List<string>();
+        var wordless = new List<string>();
+        var rungs = new HashSet<Condition>();
+        var worst = Condition.Unmarked;
+
+        for (var taken = 0; taken <= body.Durability; taken++)
+        {
+            combat.ResetAll();
+            if (taken > 0) combat.Wound(Body, body, DamageType.Edge, taken);   // neutral: exact
+
+            var band = combat.ConditionOf(Body, body);
+            if (band < worst) backwards.Add($"{taken}/{body.Durability}: {worst}->{band}");
+            worst = band;
+            rungs.Add(band);
+
+            if (string.IsNullOrWhiteSpace(combat.DescribeCondition(Body, body)))
+                wordless.Add($"{taken}/{body.Durability}");
+        }
+
+        Check($"the ladder only ever gets worse as damage lands{Listing(backwards)}",
+            backwards.Count == 0);
+        Check($"and every point of damage on the bar has a word for it{Listing(wordless)}",
+            wordless.Count == 0);
+        Check("and the far end of it is collapsing", worst == Condition.Collapsing);
+
+        // A rung no wound total can reach is a word the player will never read, which means a
+        // threshold has collided with its neighbour. Distinct from the tuning of the thresholds
+        // themselves, which is deliberately ungated.
+        Check($"and no rung of the ladder is unreachable ({rungs.Count} of "
+            + $"{Enum.GetValues<Condition>().Length} reached)",
+            rungs.Count == Enum.GetValues<Condition>().Length);
+
+        // -- Words are overridable; bands are not --
+        var named = new EntityData { Id = "verify_named", Durability = body.Durability };
+        foreach (var w in new[] { "uncracked", "hairlined", "the crown is cracking", "coming apart" })
+            named.ConditionWords.Add(w);
+
+        // Two entries where four are the only count that can be right. It is a content-sweep failure
+        // (GateCombatShapes), and the fallback here is what keeps the *game* readable meanwhile.
+        var malformed = new EntityData { Id = "verify_malformed", Durability = body.Durability };
+        malformed.ConditionWords.Add("cracked");
+        malformed.ConditionWords.Add("crazed");
+
+        combat.ResetAll();
+        combat.Wound(Body, body, DamageType.Edge, 30);
+        combat.Wound(Named, named, DamageType.Edge, 30);
+
+        Check("a creature's own vocabulary replaces the shared one",
+            combat.DescribeCondition(Named, named) == "the crown is cracking");
+        Check("and is not the words anything else would have used",
+            combat.DescribeCondition(Named, named) != combat.DescribeCondition(Body, body));
+        Check("but it does not move the band those words describe",
+            combat.ConditionOf(Named, named) == combat.ConditionOf(Body, body));
+
+        // A short array is ignored *entirely*, not honoured as far as it reaches. Probed at both
+        // ends for that reason: the out-of-range rung would fall back under any implementation that
+        // merely avoids crashing, so it is the in-range rung that distinguishes "ignored" from
+        // "partly believed" — and partly believed is the version that ships a fight describing a
+        // dying creature with the word for a scratched one.
+        var partly = new List<string>();
+        foreach (var taken in new[] { 15, 38 })
+        {
+            combat.ResetAll();
+            combat.Wound(Body, body, DamageType.Edge, taken);
+            combat.Wound(Malformed, malformed, DamageType.Edge, taken);
+
+            var got = combat.DescribeCondition(Malformed, malformed);
+            if (got != combat.DescribeCondition(Body, body)) partly.Add($"{taken}: \"{got}\"");
+        }
+
+        Check($"a wrong-length vocabulary is ignored outright, at both ends of it{Listing(partly)}",
+            partly.Count == 0);
+
+        // -- What survives the engagement --
+        // The asymmetry is the whole reward for severing. If damage reset in both cases, severing
+        // would only remove regeneration from inside a fight and the design's two routes would
+        // collapse into one.
+        combat.ResetAll();
+        states.SetState(Anchored, EntityState.Corrupted);
+        states.SetState(Husk, EntityState.Severed);
+        states.SetState(Cut, EntityState.Corrupted);
+
+        combat.Wound(Anchored, body, DamageType.Edge, 20);
+        combat.Wound(Husk, body, DamageType.Edge, 20);
+        combat.Wound(Cut, body, DamageType.Edge, 20);
+
+        Check("wounds stand while the fight is still on",
+            combat.WoundsOn(Anchored) == 20 && combat.WoundsOn(Husk) == 20);
+
+        // Severed *after* the damage was done. The state has to be read when the fight ends, not when
+        // the hit lands, or cutting the anchor mid-fight would throw away the work that got you there.
+        states.Sever(Cut);
+
+        combat.SettleEngagement(Anchored);
+        combat.SettleEngagement(Husk);
+        combat.SettleEngagement(Cut);
+
+        Check("an anchored body closes its wounds when the engagement ends",
+            combat.WoundsOn(Anchored) == 0);
+        Check("and a severed one keeps them, so cleanup can be spread across visits",
+            combat.WoundsOn(Husk) == 20);
+        Check("and severing mid-fight keeps what the fight already cost",
+            combat.WoundsOn(Cut) == 20);
+
+        // -- Persistence --
+        // §13's save-format question. Only the severed half can ever reach disk, because the anchored
+        // half is already gone by the time an engagement is over.
+        const string path = "user://verify_wounds.json";
+
+        Check("a save carrying wounds writes", SaveService.Save(path));
+
+        combat.ResetAll();
+        Check("the ledger was actually cleared", combat.WoundsOn(Husk) == 0);
+
+        Check("and the save reads back", SaveService.Load(path));
+        Check("a severed body's wounds survive the file", combat.WoundsOn(Husk) == 20);
+        Check("and an anchored body's do not, because they never reached disk",
+            combat.WoundsOn(Anchored) == 0);
+
+        SaveService.DeleteSave(path);
+        combat.ResetAll();
+    }
+
     // ---- Camps -----------------------------------------------------------
 
     /// <summary>
@@ -999,6 +1226,16 @@ public static class SliceVerifier
         Check("so would a relic", InventoryCraftingManager.SurvivesDeath(ItemCategory.Relic));
         Check("a reagent would not", !InventoryCraftingManager.SurvivesDeath(ItemCategory.Reagent));
         Check("nor a catalyst", !InventoryCraftingManager.SurvivesDeath(ItemCategory.Catalyst));
+
+        // The two categories added on 2026-07-30 fall on the destructive side, and that is the
+        // ratified decision rather than the default arm happening to catch them: Jeremy's reason for
+        // cutting durability was that "losing items on death will make it so people may have to
+        // recraft, making his trade more impactful than one and done". Exempt equipment here and that
+        // reason evaporates — the recraft pressure is the *only* pressure left on the smithing side.
+        Check("a trap does not survive a collapse",
+            !InventoryCraftingManager.SurvivesDeath(ItemCategory.Trap));
+        Check("nor does the gear you were wearing",
+            !InventoryCraftingManager.SurvivesDeath(ItemCategory.Equipment));
 
         // -- Collapsing before you have ever found a camp --
         // Driven through the public method rather than the signal, so both entry points are covered.
@@ -1259,6 +1496,32 @@ public static class SliceVerifier
         Check("at least one hazard is authored", hazards > 0);
         Check("and at least one of them is reachable in the Waking world", biteableHazards > 0);
 
+        // -- Somewhere to craft, and a way to get there --
+        // Crafting, the shared cache and the respawn point are all gated on standing at a camp, and a
+        // camp is a room holding a Workbench hotspot — nothing else. So a world with no bench in it
+        // has no crafting *at all*, and no gate below would notice: every crafting rule would keep
+        // passing on the synthetic verify_ camps while the real game had nowhere to make anything.
+        var camps = rooms.Where(kv => CampManager.IsCamp(kv.Value)).Select(kv => kv.Key).ToList();
+        Check($"at least one authored room is a camp{Listing(camps)}", camps.Count > 0);
+
+        // And it has to be walkable to. Flag-gated doors count as open here — a bench behind a lock
+        // you have to earn is design; a bench in a room with no door into it is a typo.
+        var reached = new HashSet<string> { GameConfig.StartingRoomId };
+        var queue = new Queue<string>(reached);
+        while (queue.Count > 0)
+        {
+            if (!rooms.TryGetValue(queue.Dequeue(), out var room)) continue;
+            foreach (var h in room.Hotspots)
+            {
+                if (h is not { Kind: HotspotKind.Navigate }) continue;
+                if (!string.IsNullOrEmpty(h.TargetRoomId) && reached.Add(h.TargetRoomId))
+                    queue.Enqueue(h.TargetRoomId);
+            }
+        }
+
+        Check("and you can walk to one from where the game starts",
+            camps.Any(reached.Contains));
+
         // -- Fields that look set but do nothing --
         var blank = new List<string>();
         var inertFlagGate = new List<string>();
@@ -1308,6 +1571,113 @@ public static class SliceVerifier
             navNowhere.Count == 0);
         Check($"no HazardText is stranded on a costless hotspot{Listing(costNoText)}",
             costNoText.Count == 0);
+
+        GateCombatShapes(rooms);
+    }
+
+    /// <summary>
+    /// The same sweep, over the combat fields added on 2026-07-30 (docs/combat.md §18).
+    ///
+    /// <para>These are <b>dormant</b> today: no item or creature has a combat field authored yet, so
+    /// every one of them passes at zero offenders. That is the point of writing them now — the fields
+    /// exist precisely so authoring can begin, and a sweep added *after* the content pass would be
+    /// read against work already done rather than catching it as it lands.</para>
+    ///
+    /// <para>Every check here is a <i>relationship</i> between two authored values, never a value. A
+    /// gate on <c>Durability</c> or <c>Damage</c> would turn tuning red, which is how a suite teaches
+    /// people to stop running it.</para>
+    /// </summary>
+    private static void GateCombatShapes(Dictionary<string, RoomData> rooms)
+    {
+        var equipNoSlot = new List<string>();
+        var slotNotEquip = new List<string>();
+        var armedWithNothing = new List<string>();
+        var wardNotArmour = new List<string>();
+
+        foreach (var (id, item) in InventoryCraftingManager.Instance.Catalogue)
+        {
+            if (item == null) continue;
+
+            // Category says worn, slot says nowhere. Completely dead in play rather than merely odd:
+            // §18 sends equipment down UseBlock.NotUsable in the satchel *because* it is worn instead,
+            // so an unwearable piece of equipment has no remaining way to be interacted with at all.
+            if (item.Category == ItemCategory.Equipment && item.Slot == EquipSlot.None)
+                equipNoSlot.Add(id);
+
+            // The mirror: a slot on something the equip screen will never list.
+            if (item.Slot != EquipSlot.None && item.Category != ItemCategory.Equipment)
+                slotNotEquip.Add(id);
+
+            // A weapon or a trap whose whole purpose is a damage type, with no damage type. Traps are
+            // consumed win or lose (§13), so authoring an inert one spends the player's materials on
+            // nothing and looks like a resolver bug from the outside.
+            var mustDeal = item.Category == ItemCategory.Trap
+                || (item.Category == ItemCategory.Equipment && item.Slot == EquipSlot.Weapon);
+            if (mustDeal && item.Deals == DamageType.None) armedWithNothing.Add(id);
+
+            // Warding is the armour half of the pair. On a weapon it is a field someone filled in
+            // hopefully, and nothing reads it.
+            if (item.WardsAgainst != DamageType.None && item.Slot != EquipSlot.Armour)
+                wardNotArmour.Add(id);
+        }
+
+        Check($"no equipment is authored without a slot to wear it in{Listing(equipNoSlot)}",
+            equipNoSlot.Count == 0);
+        Check($"no non-equipment claims an equip slot{Listing(slotNotEquip)}",
+            slotNotEquip.Count == 0);
+        Check($"every weapon and trap deals some kind of harm{Listing(armedWithNothing)}",
+            armedWithNothing.Count == 0);
+        Check($"nothing but armour wards against a damage type{Listing(wardNotArmour)}",
+            wardNotArmour.Count == 0);
+
+        // -- Creatures, reached through their placements: there is no EntityData registry --
+        var bothWays = new List<string>();
+        var noAnswer = new List<string>();
+        var wrongWordCount = new List<string>();
+        var blankWord = new List<string>();
+        var seen = new HashSet<string>();
+
+        var rungs = Enum.GetValues<Condition>().Length;
+
+        foreach (var (_, room) in rooms)
+        {
+            foreach (var placement in room.Entities)
+            {
+                var e = placement?.Entity;
+                if (e == null || !seen.Add(e.Id)) continue;
+
+                // Double and half at once. The resolver would pick one arm and the fight would quietly
+                // behave as though the other field were blank.
+                if (e.VulnerableTo != DamageType.None && e.VulnerableTo == e.ResistantTo)
+                    bothWays.Add(e.Id);
+
+                // Something that fights back but has nothing it is weak to. §7 promises the confirm
+                // step names what the creature is weak to and what it deals, so this is an unanswerable
+                // fight dressed as an answerable one — and EntityData.VulnerableTo says why it must be
+                // set on *every* creature rather than only the armoured ones.
+                if (e.Deals != DamageType.None && e.VulnerableTo == DamageType.None)
+                    noAnswer.Add(e.Id);
+
+                // Empty means "use the shared vocabulary"; anything other than one word per rung is a
+                // typo. Counted against the enum rather than a literal four, so adding a rung to
+                // Condition makes this sweep demand the new word instead of quietly accepting the old
+                // length. CombatManager falls back to prose so play stays readable — the complaint
+                // belongs here, not in the fight.
+                var words = e.ConditionWords;
+                if (words == null || words.Count == 0) continue;
+
+                if (words.Count != rungs) wrongWordCount.Add($"{e.Id}({words.Count} of {rungs})");
+                else if (words.Any(string.IsNullOrWhiteSpace)) blankWord.Add(e.Id);
+            }
+        }
+
+        Check($"no creature is both vulnerable and resistant to the same type{Listing(bothWays)}",
+            bothWays.Count == 0);
+        Check($"every creature that hits back has something it is weak to{Listing(noAnswer)}",
+            noAnswer.Count == 0);
+        Check($"an overridden condition ladder has one word per rung{Listing(wrongWordCount)}",
+            wrongWordCount.Count == 0);
+        Check($"and none of those words is blank{Listing(blankWord)}", blankWord.Count == 0);
     }
 
     /// <summary>Appends the offenders to a check's description, so a failure says where to look.</summary>

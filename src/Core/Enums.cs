@@ -63,6 +63,98 @@ public enum HotspotKind
     Workbench = 7,
 }
 
+/// <summary>
+/// The four kinds of harm, ratified 2026-07-30 (docs/combat.md §18). Every creature has one type
+/// it is vulnerable to and one it resists — the right type does double, the wrong one half, and
+/// neither is ever zero. There is no Defence number; this pair replaced it.
+///
+/// Three of the four are the craftsman's own work and the fourth is his wife's, which is why
+/// <see cref="Caustic"/> is taught only by the Physick side of the journal
+/// (<see cref="KnowledgeTrack"/>). The split is 3-to-1 on purpose: §8 says Physick starts near zero
+/// and grows badly, so there is less of her in the vocabulary and it arrives late.
+/// </summary>
+public enum DamageType
+{
+    /// <summary>
+    /// Not a weapon. First so that a reagent, a relic or a piece of lore does not silently
+    /// default to dealing edge damage — the same reason <see cref="CraftBlock.None"/> is 0.
+    /// </summary>
+    None = 0,
+
+    /// <summary>Blades, spikes, snares.</summary>
+    Edge = 1,
+
+    /// <summary>Weights, falls, hammers.</summary>
+    Blunt = 2,
+
+    /// <summary>Oil, pitch, brands.</summary>
+    Fire = 3,
+
+    /// <summary>Her chemistry. Physick knowledge only.</summary>
+    Caustic = 4,
+}
+
+/// <summary>
+/// Where a piece of equipment is worn. Two slots on purpose (docs/combat.md §18): one weapon
+/// carrying a <see cref="DamageType"/>, one armour halving an incoming one.
+///
+/// A shield is deliberately absent rather than forgotten. Deferring it is safe precisely because
+/// this is an enum and an item declares its own slot, so adding a third value re-authors nothing —
+/// and the version worth building is a *verb* (brace, costing a turn) rather than a second passive
+/// stat, which cannot be judged until the encounter loop has been played.
+/// </summary>
+public enum EquipSlot
+{
+    /// <summary>Not equipment. Everything that is not worn.</summary>
+    None = 0,
+
+    /// <summary>Carries the damage type you deal. There are no weapon tiers (§11).</summary>
+    Weapon = 1,
+
+    /// <summary>Halves one incoming damage type. One at a time, never a set.</summary>
+    Armour = 2,
+}
+
+/// <summary>
+/// Which half of the journal a piece of knowledge belongs to. Both halves are *found* — recipe
+/// discovery is by pickup only, and trial-and-error brewing was rejected on 2026-07-30 — so this
+/// is a label on knowledge rather than a score.
+///
+/// Note that neither track is a number: per docs/combat.md §8 both are simply the *set* of recipes
+/// you know, and only Attunement is numeric. That is invariant 5 paying off — two thirds of
+/// progression cannot even be expressed as a multiplier.
+/// </summary>
+public enum KnowledgeTrack
+{
+    /// <summary>His own craft, stolen by the demon and reclaimed in the Dream.</summary>
+    Craft = 0,
+
+    /// <summary>His wife's notes, found in the Waking world. Teaches Caustic damage.</summary>
+    Physick = 1,
+}
+
+/// <summary>
+/// How wounded a body reads. §5's ladder, and the <b>only</b> readout a fight ever gives — the
+/// durability number exists for the resolver and is never shown.
+///
+/// Ordered from healthy to nearly dead so the ordinal is meaningful: a condition getting *worse* is
+/// an increasing value, which is what lets a UI compare two without a lookup table. Derived from
+/// remaining durability as fractions in <see cref="GameConfig"/>, never authored per creature —
+/// §18's reason is that an authored ladder lets a creature exist with no description for some band,
+/// and a content pass finds that hole at the worst possible moment.
+/// </summary>
+public enum Condition
+{
+    /// <summary>Untouched. Also what an unwounded body reports before any fight has happened.</summary>
+    Unmarked = 0,
+
+    Bleeding = 1,
+    Faltering = 2,
+
+    /// <summary>About to come apart. Not the same as dead — the resolver owns that.</summary>
+    Collapsing = 3,
+}
+
 /// <summary>How a Dream heist finished. Every ending is an ejection; only the price differs.</summary>
 public enum HeistOutcome
 {
@@ -167,6 +259,10 @@ public enum UseBlock
     /// <summary>
     /// Held, but not a thing you click. Reagents, lore and catalysts all land here — a catalyst is
     /// a Dream loadout spent by crossing, not something you use in a satchel.
+    ///
+    /// <b>Traps and equipment land here too, and for the same reason: they are spent somewhere else.</b>
+    /// A trap is rigged into a site before a fight and a weapon is worn, so neither is "used" from the
+    /// satchel — which keeps this refusal about the *satchel* rather than about usefulness.
     /// </summary>
     NotUsable = 3,
 

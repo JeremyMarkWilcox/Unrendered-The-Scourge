@@ -1,4 +1,5 @@
 using Godot;
+using Unrendered.Core;
 
 namespace Unrendered.Data;
 
@@ -19,6 +20,21 @@ public enum ItemCategory
 
     /// <summary>Readable. Feeds the journal.</summary>
     Lore = 4,
+
+    /// <summary>
+    /// A crafted trap. Rigged into a site before a fight, never "used" from the satchel — placement
+    /// is free and only acting during the fight costs a turn (docs/combat.md §18). Consumed always,
+    /// win or lose, which is why traps must be cheap and rebuildable from common materials (§13).
+    /// </summary>
+    Trap = 5,
+
+    /// <summary>
+    /// Worn. One weapon carrying a <see cref="Unrendered.Core.DamageType"/> and one armour halving
+    /// an incoming one — see <see cref="Unrendered.Core.EquipSlot"/>. Nothing degrades, deliberately:
+    /// death already destroys what you can remake, so decay would be a worse second copy of the same
+    /// pressure, and it taxes *use* where death-loss taxes *failure*.
+    /// </summary>
+    Equipment = 6,
 }
 
 [GlobalClass]
@@ -45,4 +61,61 @@ public partial class ItemData : Resource
 
     /// <summary>Placeholder swatch used by the inventory grid until icons exist.</summary>
     [Export] public Color PlaceholderColor { get; set; } = new("#6b7f5e");
+
+    // ---- Combat (docs/combat.md §18, ratified 2026-07-30) --------------------
+    //
+    // Authored ahead of the encounter loop on purpose. A system written later can read fields that
+    // already exist, but a field added later means reopening every .tres authored without it — so
+    // these land before the content pass, not alongside it.
+
+    /// <summary>
+    /// The harm this deals. Weapons and traps only; <see cref="DamageType.None"/> on everything else,
+    /// which is why <c>None</c> is the zero value — a reagent must not default to a weapon type.
+    ///
+    /// Against a creature that is vulnerable to it this does double, and against one that resists it
+    /// half. Those two multipliers are the entire difficulty surface, and they replaced the Defence
+    /// number the design used to have.
+    ///
+    /// Named <c>Deals</c> rather than <c>DamageType</c> so it does not shadow its own type name, and
+    /// because it pairs readably with <see cref="WardsAgainst"/> in the inspector.
+    /// </summary>
+    [ExportGroup("Combat")]
+    [Export] public DamageType Deals { get; set; } = DamageType.None;
+
+    /// <summary>
+    /// How hard it hits, or for armour how much it turns aside. Never displayed — §5's described
+    /// conditions are the only readout, and the number exists for the resolver alone.
+    /// </summary>
+    [Export] public int Potency { get; set; }
+
+    /// <summary>
+    /// Where it is worn, or <see cref="EquipSlot.None"/> for everything that is not equipment. One
+    /// weapon and one armour at a time; there is no set, because being unable to protect yourself
+    /// against everything is what makes the choice real.
+    /// </summary>
+    [Export] public EquipSlot Slot { get; set; } = EquipSlot.None;
+
+    /// <summary>
+    /// Armour only: the incoming type this halves. **Halves, never negates** — an immunity reads as a
+    /// lock and sends the player hunting for a key instead of weighing a trade (§7).
+    /// </summary>
+    [Export] public DamageType WardsAgainst { get; set; } = DamageType.None;
+
+    /// <summary>
+    /// Traps only: whether it goes off by itself when the creature acts, or waits for you to spend a
+    /// turn on it. Oil does not light itself; a snare closes on its own.
+    ///
+    /// This looks like a flag the player must memorise and deliberately is not one: the rule is
+    /// *placement is free, acting during the fight costs your turn*, and this value is always
+    /// guessable from what the object is. Do not author one that surprises — a snare that needed a
+    /// spark would break the only thing making the single-sentence rule work.
+    /// </summary>
+    [Export] public bool TriggersItself { get; set; } = true;
+
+    /// <summary>
+    /// Which half of the journal teaches this, for the panel's two sides. Only meaningful on
+    /// <see cref="ItemCategory.Lore"/> and on recipes; <see cref="KnowledgeTrack.Craft"/> is the
+    /// default because three of the four damage types are his.
+    /// </summary>
+    [Export] public KnowledgeTrack Track { get; set; } = KnowledgeTrack.Craft;
 }

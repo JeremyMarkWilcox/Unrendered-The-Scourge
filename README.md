@@ -4,7 +4,11 @@ Godot 4.7.1 (mono) / C#. A dual-realm survival-horror RPG: a cold high-res **Wak
 and a pixelated **Dream** realm, where severing a spirit's anchor in the Dream deforms its
 physical host in reality.
 
-Presentation is Myst-style — first-person perspective, 2D screen nodes, click to move.
+**Both realms are first-person, and that is the only thing they share.** The Waking world is
+first-person in a **2D** world — Myst-style, painted screen nodes, click to move. The Dream is
+first-person in a **3D** world, walked rather than clicked. Settled 2026-07-30; what is still open is
+whether the creatures in the Dream are 2D billboards or 3D models. **Only the Waking half is built** —
+the Dream is currently a graph of 2D rooms, which is prototype and going away.
 
 ## Running
 
@@ -100,6 +104,10 @@ the Dream layer fades in over it. Dream content renders into a `SubViewport` at 
 with nearest filtering and a 4× upscale — real pixels, not a post-process. All Dream art
 authors to that grid.
 
+That `SubViewport` is also the seam the 3D Dream drops into, which is why going 3D costs the
+architecture nothing: `RealmTransitionManager`, `EntityStateManager` and the save format do not care
+what the Dream looks like.
+
 ### Playable before any art exists
 
 Every texture field is nullable. When one is null, `PlaceholderBackdrop` / `EntityOverlay`
@@ -115,12 +123,14 @@ in real art one `.tres` field at a time.
 > One thing to know before you open the editor: the Dream's design changed substantially —
 > `docs/combat.md` gained sections **15–17** and one deliberate revision to section 6.
 
-M0–M3 complete, plus the Dream heist, M4's crafting layer with its inventory panel, and camps — 279
-automated checks, `-- --verify-slice`.
+M0–M3 complete, plus the Dream heist, M4's crafting layer with its inventory panel, camps, and
+combat's wound ledger — 328 automated checks, `-- --verify-slice`.
 
-The Waking world is a point-and-click adventure; the Pixel Realm is a stealth heist. Combat
-and progression are designed but unbuilt — see `docs/combat.md`, which is the source of truth
-for anything to do with fighting, Resolve, traps or proficiencies.
+The Waking world is a point-and-click adventure; the Pixel Realm is a stealth heist. Combat is
+**designed and half-built**: `docs/combat.md` §18 is the ratified fight design, `CombatManager`
+resolves damage and tracks wounds, and what is missing is the encounter state machine — so no fight
+can be started yet. Progression is designed but unbuilt. `docs/combat.md` is the source of truth for
+anything to do with fighting, Resolve, traps or proficiencies.
 
 **Two pools, and they are not interchangeable.** Resolve is nerve: it drains on a clock in the
 Dream, and an empty bar removes you from the confrontation. Vitality is the body: it has no
@@ -149,6 +159,7 @@ never decline a rest. Crafting and the shared cache only work at a bench, so **p
 with `CraftBlock.NotAtCamp` / `StashBlock.NotAtCamp`, which is a reason the crafting panel can print
 rather than a silent failure.
 
-Next: the crafting panel — the inventory panel is the worked example to copy. The item, trap and
-equipment vocabulary is still an open design conversation, and it gates authoring recipes rather than
-building systems, so it waits for the content pass.
+**Next: the 3D Dream prototype**, moved to the front of the queue on 2026-07-30. It is the last
+architectural risk and the first thing worth showing anyone, and those turn out to be the same build.
+`docs/handoff.md`, "The Dream in 3D", is the startup order. After it: the encounter state machine,
+then the crafting panel, then the journal.

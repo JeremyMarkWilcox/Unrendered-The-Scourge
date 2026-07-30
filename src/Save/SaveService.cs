@@ -29,6 +29,7 @@ public static class SaveService
             Stash = InventoryCraftingManager.Instance?.ExportStash() ?? new(),
             DiscoveredBlueprints = InventoryCraftingManager.Instance?.ExportDiscovered() ?? new(),
             ReturnCampRoomId = CampManager.Instance?.ReturnCampRoomId ?? "",
+            Wounds = CombatManager.Instance?.ExportWounds() ?? new(),
         };
 
         using var file = FileAccess.Open(path, FileAccess.ModeFlags.Write);
@@ -79,6 +80,12 @@ public static class SaveService
         // Restore state before navigating, so the room renders against the loaded world.
         WorldStateManager.Instance?.ImportState(data.Flags, data.ZonePhases);
         EntityStateManager.Instance?.ImportStates(data.EntityStates);
+
+        // After the states above, not before: the ledger's meaning depends on which bodies are
+        // severed, so restoring wounds against a world that still thinks everything is anchored
+        // would be a window where the two disagree.
+        CombatManager.Instance?.ImportWounds(data.Wounds);
+
         InventoryCraftingManager.Instance?.ImportStacks(data.Inventory);
         InventoryCraftingManager.Instance?.ImportStash(data.Stash);
         InventoryCraftingManager.Instance?.ImportDiscovered(data.DiscoveredBlueprints);
