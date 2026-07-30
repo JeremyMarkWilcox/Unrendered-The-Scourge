@@ -46,6 +46,33 @@ public partial class HotspotData : Resource
     /// <summary>Set once taken, so a node cannot be farmed twice. Auto-derived if blank.</summary>
     [Export] public string HarvestedFlag { get; set; } = "";
 
+    /// <summary>
+    /// Vitality taken when this hotspot is successfully used. Zero — the default, and almost
+    /// everything — is harmless.
+    ///
+    /// Deliberately a cost on the existing kinds rather than a <c>HotspotKind.Hazard</c> of its
+    /// own, because it then composes: a <see cref="HotspotKind.Navigate"/> with a cost is a route
+    /// you may take but will pay for, a <see cref="HotspotKind.Harvest"/> with a cost is thorns,
+    /// an <see cref="HotspotKind.Interact"/> with a cost is reaching into something you should
+    /// not have. No new enum, no new verb, no new rendering.
+    ///
+    /// **A cost only fires when the player chooses to click, which is what keeps it legal.**
+    /// `combat.md` §6 rejected ambient attrition for Resolve on the grounds that a drain the
+    /// player cannot act on teaches nothing; a per-click cost is discrete and avoidable by
+    /// construction. Authoring is what makes it *fair* — the label has to warn you.
+    ///
+    /// Not a **trap**. Traps are the player's own crafted tools (`combat.md` §4) and are blocked
+    /// on M4. This is a hazard: the world costing you something.
+    /// </summary>
+    [ExportGroup("Hazard")]
+    [Export] public float VitalityCost { get; set; }
+
+    /// <summary>Said when the cost lands. Blank falls back to a generic line.</summary>
+    [Export(PropertyHint.MultilineText)] public string HazardText { get; set; } = "";
+
+    /// <summary>True when using this costs the body something.</summary>
+    public bool IsHazard => VitalityCost > 0f;
+
     [ExportGroup("Text")]
     [Export(PropertyHint.MultilineText)] public string ExamineText { get; set; } = "";
 

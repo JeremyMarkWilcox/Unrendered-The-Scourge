@@ -50,6 +50,17 @@ public enum HotspotKind
 
     /// <summary>The anchor itself, at the far end of the maze. Taking it ends the heist.</summary>
     TakeAnchor = 6,
+
+    /// <summary>
+    /// The bench. Placing one of these is what *makes* a room a camp — there is no separate camp
+    /// flag, deliberately (`combat.md` §17). Jeremy: "the room you put the workbench in."
+    ///
+    /// Two facts that must always agree are better stored as one, and a `RoomData.IsCamp` bool
+    /// beside this would be the second one: a bench outside a camp, or a camp with no bench, are
+    /// both authoring mistakes that could not otherwise be prevented. So <see cref="Unrendered.Managers.CampManager"/>
+    /// derives camp-ness by looking for this kind, and the old `IsSanctuary` flag is gone.
+    /// </summary>
+    Workbench = 7,
 }
 
 /// <summary>How a Dream heist finished. Every ending is an ejection; only the price differs.</summary>
@@ -84,6 +95,86 @@ public enum BackdropStyle
 
     /// <summary>Pillars and a void sun. Used for every room's Dream layer.</summary>
     Dream = 2,
+}
+
+/// <summary>
+/// Why a recipe cannot be made. Exists so the crafting panel can grey a row and say which kind of
+/// "no" it is — not knowing how is a different sentence from being short of bitterroot, and the
+/// two should never be shown with the same words.
+/// </summary>
+public enum CraftBlock
+{
+    /// <summary>Nothing in the way; it can be made.</summary>
+    None = 0,
+
+    /// <summary>No such recipe, or it has no output. A content error rather than a player state.</summary>
+    NoSuchRecipe = 1,
+
+    /// <summary>The blueprint has not been found. Do not list the inputs — you do not know them.</summary>
+    Unknown = 2,
+
+    /// <summary>Known, but you are short of something.</summary>
+    MissingMaterials = 3,
+
+    /// <summary>
+    /// You know how and you have the materials, but there is no bench here. Crafting happens at
+    /// camps and nowhere else (`combat.md` §17) — that is what makes "what do I carry from camp to
+    /// the site" a decision instead of a formality.
+    ///
+    /// Ordered after <see cref="Unknown"/> on purpose: an unlearned recipe must not admit it exists
+    /// by complaining about the venue.
+    /// </summary>
+    NotAtCamp = 4,
+}
+
+/// <summary>
+/// Why the shared cache refused a transfer, or <see cref="None"/>. Same shape as
+/// <see cref="CraftBlock"/> and <see cref="UseBlock"/>, and it exists for the same reason: the
+/// panel that greys a button must ask the same question the action asks.
+/// </summary>
+public enum StashBlock
+{
+    /// <summary>Nothing in the way; the transfer would happen.</summary>
+    None = 0,
+
+    /// <summary>No such item in the catalogue. A content error rather than a player state.</summary>
+    NoSuchItem = 1,
+
+    /// <summary>The cache only opens at a camp. There is one cache, not one per camp.</summary>
+    NotAtCamp = 2,
+
+    /// <summary>Fewer than that many, on the side you are moving them from.</summary>
+    NotEnough = 3,
+}
+
+/// <summary>
+/// Why an item cannot be used from the satchel. The sibling of <see cref="CraftBlock"/>, and it
+/// exists for the same reason plus one: the inventory panel has to grey its Use button without
+/// deciding anything itself, and duplicating the rules into the panel would put game logic
+/// somewhere <c>--verify-slice</c> cannot reach.
+/// </summary>
+public enum UseBlock
+{
+    /// <summary>Nothing in the way; using it will do something.</summary>
+    None = 0,
+
+    /// <summary>No such item id. A content error rather than a player state.</summary>
+    NoSuchItem = 1,
+
+    /// <summary>Not in the satchel.</summary>
+    NotHeld = 2,
+
+    /// <summary>
+    /// Held, but not a thing you click. Reagents, lore and catalysts all land here — a catalyst is
+    /// a Dream loadout spent by crossing, not something you use in a satchel.
+    /// </summary>
+    NotUsable = 3,
+
+    /// <summary>
+    /// Usable, but there is no wound to treat. A refusal rather than a waste: her salves are finite
+    /// and uncraftable at the good end of the scale (invariant 7).
+    /// </summary>
+    NothingToTreat = 4,
 }
 
 /// <summary>Progress of a region through the cleansing arc.</summary>

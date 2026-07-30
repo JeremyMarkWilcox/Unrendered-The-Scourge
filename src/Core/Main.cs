@@ -57,7 +57,19 @@ public partial class Main : Node
     {
         if (@event.IsEcho() || !@event.IsPressed()) return;
 
-        if (@event.IsActionPressed("debug_panel"))
+        if (@event.IsActionPressed("inventory"))
+        {
+            _hud?.Inventory?.Toggle();
+            GetViewport().SetInputAsHandled();
+        }
+        // Only swallowed when there is something open to close, so cancel stays available to
+        // whatever wants it next.
+        else if (@event.IsActionPressed("cancel") && _hud?.Inventory?.IsOpen == true)
+        {
+            _hud.Inventory.Close();
+            GetViewport().SetInputAsHandled();
+        }
+        else if (@event.IsActionPressed("debug_panel"))
         {
             _hud.ToggleDebugPanel(_roomView);
             GetViewport().SetInputAsHandled();
@@ -65,6 +77,15 @@ public partial class Main : Node
         else if (@event.IsActionPressed("debug_cycle_entity"))
         {
             CycleEntityStates();
+            GetViewport().SetInputAsHandled();
+        }
+        else if (@event.IsActionPressed("debug_wound"))
+        {
+            // Until a hazard is authored into a room, this is the only way to watch the body
+            // move at all. Deliberately a *wound* rather than a set-to-value: it exercises the
+            // real path, including the collapse announcement at zero.
+            VitalityManager.Instance?.Damage(15f);
+            EventBus.Instance?.EmitNotify("[debug] took a wound");
             GetViewport().SetInputAsHandled();
         }
         else if (@event.IsActionPressed("debug_save"))

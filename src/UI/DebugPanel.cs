@@ -58,6 +58,7 @@ public partial class DebugPanel : PanelContainer
         var entities = EntityStateManager.Instance;
         var inv = InventoryCraftingManager.Instance;
         var resolve = ResolveManager.Instance;
+        var vitality = VitalityManager.Instance;
 
         sb.AppendLine($"room    {nav?.CurrentRoomId}   zone {nav?.CurrentRoom?.ZoneId}");
         sb.AppendLine($"realm   {RealmTransitionManager.Instance?.CurrentRealm}");
@@ -67,6 +68,26 @@ public partial class DebugPanel : PanelContainer
 
         if (resolve != null)
             sb.AppendLine($"resolve {resolve.Current:F1}/{resolve.Max:F0}   rate {resolve.CurrentRatePerSecond():+0.00;-0.00;0.00}/s");
+
+        // No rate beside this one, and there never will be: the body has no clock (combat.md §6).
+        if (vitality != null)
+            sb.AppendLine($"vitality{vitality.Current,7:F1}/{vitality.Max:F0}   {(vitality.IsEmpty ? "DOWN" : "")}");
+
+        // Hazards authored into *this* room, so an inspector edit can be confirmed without having
+        // to click into it — a VitalityCost you typed but did not save shows up here as an absence.
+        // Kept in the top block with the other room-scoped lines because the flag list below can
+        // grow past the bottom of the screen, and an authoring aid you cannot see is no aid.
+        var hazards = 0;
+        if (nav?.CurrentRoom != null)
+        {
+            foreach (var h in nav.CurrentRoom.Hotspots)
+            {
+                if (h is not { IsHazard: true }) continue;
+                if (hazards++ == 0) sb.AppendLine("hazards");
+                sb.AppendLine($"  {h.Id,-28} -{h.VitalityCost:F0}  {h.Kind}");
+            }
+        }
+        if (hazards == 0) sb.AppendLine("hazards  (none in this room)");
 
         sb.AppendLine();
         sb.AppendLine("entities");
@@ -90,7 +111,7 @@ public partial class DebugPanel : PanelContainer
         else
             sb.AppendLine("  (none)");
 
-        sb.Append("\n[F1] cycle state of every entity in room");
+        sb.Append("\n[F1] cycle state of every entity in room   [F2] take a wound (15)");
         return sb.ToString();
     }
 }

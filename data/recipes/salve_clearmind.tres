@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="RecipeData" format=3]
+
+[ext_resource type="Script" path="res://src/Data/RecipeIngredient.cs" id="1_ingr"]
+[ext_resource type="Script" path="res://src/Data/RecipeData.cs" id="2_recipe"]
+
+[sub_resource type="Resource" id="Resource_in1"]
+script = ExtResource("1_ingr")
+ItemId = "herb_bitterroot"
+Amount = 2
+
+[sub_resource type="Resource" id="Resource_in2"]
+script = ExtResource("1_ingr")
+ItemId = "rat_tallow"
+Amount = 1
+
+[resource]
+script = ExtResource("2_recipe")
+Id = "recipe_salve_clearmind"
+DisplayName = "Clearmind Salve"
+Inputs = Array[ExtResource("1_ingr")]([SubResource("Resource_in1"), SubResource("Resource_in2")])
+OutputItemId = "salve_clearmind"
+OutputAmount = 1

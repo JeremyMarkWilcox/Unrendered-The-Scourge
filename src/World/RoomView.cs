@@ -117,7 +117,8 @@ public partial class RoomView : Control
         // from inside this very emit — and the newer RoomEntered then arrives first, leaving
         // the stale one to land last. Trusting the payload there would draw the Dream room
         // you were just yanked out of, with the realm and the run already gone: no drain, no
-        // exits, and no way to tell what happened. See handoff.md 6.1.
+        // exits, and no way to tell what happened. See handoff.md, "Closed post-mortem: the
+        // ejection failure," and invariant 13.
         if (NavigationManager.Instance?.CurrentRoomId != roomId) return;
 
         _room = NavigationManager.Instance?.GetRoom(roomId);

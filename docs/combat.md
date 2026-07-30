@@ -354,6 +354,12 @@ actual list eventually, small enough to hold in the head and to read from a desc
 here is settled and none of it is built — treat the types implied by the trap table below as a
 sketch, not a spec. Genuinely open, and not a gate on M4.
 
+**Deliberately deferred, 2026-07-30.** The build order is now *every system first, then all content
+in one authored pass*, so this list is not needed until that pass begins — at which point it is the
+first thing the pass needs. Settling it early would mean settling it against systems that do not
+exist yet and re-settling it later. Systems are built against the *shape* of an item — a category, a
+cost, an effect hook — which `ItemData` already has.
+
 The reason overkill is ruinous: **the thing keeping you alive is the same finite thing that
 lets you win.** Her salves are both your healing and your ammunition.
 
@@ -759,3 +765,40 @@ Camps are also the single failure destination for both pools (Section 6). Being 
 lost fight is convenience rather than punishment — you have to rebuild there anyway, so it skips
 dead walking, and it does not weaken the packing decision, because you still walked out with a
 plan the first time.
+
+### Ratified 2026-07-30 — the whole mechanic, decided
+
+Jeremy's calls. **Everything happens automatically on arrival. There is no rest button.**
+
+- **Reaching a camp instantly refills both pools** — Resolve *and* Vitality. Not a rest action.
+  Rationale, in his words: a rest click is annoying when the player forgets it, and declining to heal
+  is never advantageous, so making it optional is bug-like behaviour rather than a decision. The
+  general rule this establishes: **if the player would never decline, do not ask.**
+- **Arriving also makes that camp the return point.** For the same reason — a picker whose answer is
+  the newest camp ~95% of the time is a confirmation step, not a choice. Camps are fully
+  interchangeable (below), so rebinding to the last one you stood in is never *worse*, only
+  occasionally farther. No claim interaction, no menu, no per-camp state to track.
+- **One shared cache — a Souls box.** Readable from any camp; the same contents everywhere. Per-camp
+  storage is deliberately rejected for now: it would make camps non-interchangeable, break the
+  "latest is fine" default, and reinvent hub backtracking as *walking back to fetch*. The real
+  decision this section protects is **what do I carry from camp to the site**, which is made at the
+  moment of departure. If chest-to-chest logistics ever look desirable, that is a deliberate later
+  change, not something to acquire by accident.
+- **Crafting only at a camp.** Not gated on anything further — being there is enough.
+- **`RoomData.IsSanctuary` is renamed `IsCamp`.** Its old doc comment ("restore Resolve instead of
+  draining it") described the ambient Resolve drain that no longer exists; drain is boss-only now.
+
+**Free healing does not devalue her salves — it protects them.** Jeremy's objection, and it is
+correct: salves matter *inside* a battle, so their scarcity is "how many can I carry into this
+fight," never "how do I get back to full afterwards." Section 10 wants her finite, uncraftable salves
+spent on choices that sting. Without free camp healing, players top off with them between fights —
+burning the irreplaceable thing on the boring use. So this decision **strengthens** invariant 7.
+
+**And it does not open a chip-and-run exploit, even for a camp adjacent to a dangerous room** —
+Section 3 already polices that from the other side. Anchored enemies regenerate to full between
+visits, so chipping converts supplies into nothing; severed ones do not regenerate and chipping them
+across visits is explicitly legitimate. Camps need no rule about it.
+
+The through-line: with healing free, a lost engagement costs you **your rigging and your
+consumables, not your HP bar** — which is Section 4's thesis stated in the economy. HP was never
+meant to be the scarce resource here.

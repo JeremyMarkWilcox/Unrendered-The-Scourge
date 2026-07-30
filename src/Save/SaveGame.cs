@@ -14,8 +14,34 @@ public sealed class SaveGame
     public int CurrentRealm { get; set; }
     public float Resolve { get; set; } = 100f;
 
+    /// <summary>
+    /// Absent from pre-Vitality saves, which deserialise to this default — a full bar, which is
+    /// the right answer for a save taken before the body could be wounded at all. No version
+    /// bump needed for that reason.
+    /// </summary>
+    public float Vitality { get; set; } = 100f;
+
+    /// <summary>
+    /// The camp you would wake at. Absent from pre-camp saves, which deserialise to blank — and
+    /// blank is the correct answer for a save taken before camps existed, since the player had never
+    /// reached one. No version bump, for the same reason <see cref="Vitality"/> needed none.
+    /// </summary>
+    public string ReturnCampRoomId { get; set; } = "";
+
     public Dictionary<string, bool> Flags { get; set; } = new();
     public Dictionary<string, int> ZonePhases { get; set; } = new();
     public Dictionary<string, int> EntityStates { get; set; } = new();
     public Dictionary<string, int> Inventory { get; set; } = new();
+
+    /// <summary>
+    /// The shared cache. One store for the whole game, not one per camp — see
+    /// <c>InventoryCraftingManager.Stash</c> for why.
+    /// </summary>
+    public Dictionary<string, int> Stash { get; set; } = new();
+
+    /// <summary>
+    /// Blueprints learned. Knowledge rather than an item, so it is stored apart from the satchel —
+    /// spending the page you read does not unlearn the recipe.
+    /// </summary>
+    public List<string> DiscoveredBlueprints { get; set; } = new();
 }

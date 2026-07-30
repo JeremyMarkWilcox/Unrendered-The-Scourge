@@ -30,11 +30,22 @@ public static class GameConfig
     // Resolve only moves inside a Dream heist, and each heist owns its own rates.
     // See DreamHeistData.DrainPerSecond / NearDrainPerSecond.
 
+    // ---- Vitality --------------------------------------------------------
+
+    /// <summary>
+    /// The body's pool. There is deliberately no rate beside it: Vitality has no clock and
+    /// never ticks — it moves only when something wounds you or you treat a wound
+    /// (docs/combat.md §6). Max rises through rare items, never levels, so this is the
+    /// starting ceiling rather than a permanent one.
+    /// </summary>
+    public const float VitalityMax = 100f;
+
     // ---- Content paths ---------------------------------------------------
 
     public const string RoomDataDir = "res://data/rooms";
     public const string EntityDataDir = "res://data/entities";
     public const string ItemDataDir = "res://data/items";
+    public const string RecipeDataDir = "res://data/recipes";
     public const string ZoneDataDir = "res://data/zones";
     public const string HeistDataDir = "res://data/heists";
 

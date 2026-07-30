@@ -9,7 +9,7 @@ Presentation is Myst-style — first-person perspective, 2D screen nodes, click 
 ## Running
 
 ```sh
-GODOT="C:/Users/Owner/Desktop/Game Dev Tools/Godot/Godot_v4.7.1-stable_mono_win64/Godot_v4.7.1-stable_mono_win64.exe"
+GODOT="C:/Users/Owner/Desktop/Game Dev/Godot/Godot_v4.7.1-stable_mono_win64/Godot_v4.7.1-stable_mono_win64.exe"
 
 dotnet build                                    # C# assembly
 "$GODOT" --path .                               # play
@@ -26,9 +26,12 @@ content correctly; once you begin editing rooms in the inspector, stop running i
 | Key | |
 |---|---|
 | `Tab` | Toggle spectral vision (Waking ⇄ Pixel Realm) |
-| Left click | Interact with a hotspot |
-| `F3` | Debug panel + hotspot outlines |
+| Left click | Interact with a hotspot, or select a slot in the satchel |
+| `I` | Satchel — held stacks, what a thing is, and using it |
+| `Esc` | Close the open panel |
+| `F3` | Debug panel (pools, hazards in room, entities, inventory, flags) + hotspot outlines |
 | `F1` | Cycle every entity in the room through its states |
+| `F2` | Take a debug wound (15 Vitality) |
 | `F5` / `F9` | Save / load |
 
 ## Architecture
@@ -40,20 +43,29 @@ scene, no new code.
 ```
 src/
   Core/       Enums, EventBus, GameConfig, EntityPresentation, Boot, Main
-  Managers/   8 autoloads (see below)
+  Managers/   10 autoloads (see below)
   Data/       [GlobalClass] resources authored as .tres
   World/      RoomView, Hotspot, EntityOverlay, PlaceholderBackdrop, InteractionService
-  UI/         Hud, ResolveMeter, DebugPanel
+  UI/         Hud, ResolveMeter, VitalityMeter, DebugPanel, InventoryPanel
   Save/       JSON round-trip of the manager state
   Tools/      ContentSeeder, SliceVerifier, ScreenshotTool
-data/         rooms/ entities/ items/ zones/ heists/   <- the game's content
+data/         rooms/ entities/ items/ recipes/ zones/ heists/   <- the game's content
 scenes/       Boot, Main, RoomView
+scenes/ui/    InventoryPanel + the shared PanelTheme.tres
 ```
+
+**Panels are scenes; the HUD is not.** `Hud.cs` is built in code because its layout never changes.
+Grids and slots are layout you tune by eye, so they are authored as `.tscn` against a published
+node-name contract (see the handoff): the scene owns layout, the script owns behaviour, and the
+script only knows `%UniqueName`s — so a panel can be restyled freely without touching code.
 
 ### Autoloads
 
 `EventBus` · `WorldStateManager` · `EntityStateManager` · `RealmTransitionManager` ·
-`InventoryCraftingManager` · `ResolveManager` · `NavigationManager` · `DreamRunManager`
+`InventoryCraftingManager` · `ResolveManager` · `VitalityManager` · `NavigationManager` ·
+`DreamRunManager` · `CampManager`
+
+`CampManager` is registered last because it asks the others questions rather than answering them.
 
 Managers publish to the `EventBus`; views subscribe. Nothing holds a hard reference to
 anything else, so one state change ripples to every backdrop, overlay and HUD element.
@@ -103,10 +115,40 @@ in real art one `.tres` field at a time.
 > One thing to know before you open the editor: the Dream's design changed substantially —
 > `docs/combat.md` gained sections **15–17** and one deliberate revision to section 6.
 
-M0–M3 complete, plus the Dream heist — 99 automated checks, `-- --verify-slice`.
+M0–M3 complete, plus the Dream heist, M4's crafting layer with its inventory panel, and camps — 279
+automated checks, `-- --verify-slice`.
 
 The Waking world is a point-and-click adventure; the Pixel Realm is a stealth heist. Combat
 and progression are designed but unbuilt — see `docs/combat.md`, which is the source of truth
 for anything to do with fighting, Resolve, traps or proficiencies.
 
-Next: M4 inventory and crafting, which traps, catalysts and her cache all depend on.
+**Two pools, and they are not interchangeable.** Resolve is nerve: it drains on a clock in the
+Dream, and an empty bar removes you from the confrontation. Vitality is the body: it has no
+clock at all and moves only when something wounds you or you treat a wound, and it must never
+appear in the Dream. Vitality is spent by **hazards** — a `VitalityCost` on any hotspot, charged
+only on a successful click, and refused outright in the Dream — and restored by salves. Emptying it
+collapses you: **death destroys what you can remake and keeps what you cannot.** Reagents and
+catalysts are gone, salves, lore and relics survive, the cache is untouched, and you wake at the
+last camp.
+
+**Hazards are not traps.** Traps are the player's own crafted tools and are blocked on M4; a hazard
+is the world costing you the body.
+
+The HUD keeps whichever pool can currently move on top and fades the other — Vitality is uppermost
+out here, Resolve inside a heist. That keys off a live Dream run rather than the current realm,
+because spectral vision flips the realm constantly without Resolve moving at all, and peeking is a
+look rather than a place: your body is still out here and can still be hurt. Resolve is never
+faded, and Vitality dims rather than disappearing, because a readable bar is how the HUD states
+that nothing in the Dream can kill you.
+
+**Camps are the safe ground, and a room is a camp precisely when it holds a `Workbench` hotspot.**
+There is no camp flag to keep in sync — the camp is the room you put the bench in. Arriving refills
+both pools and silently becomes your return point; there is nothing to click, because a player would
+never decline a rest. Crafting and the shared cache only work at a bench, so **placing that first
+`Workbench` hotspot is what turns crafting back on in play** — until then every attempt is refused
+with `CraftBlock.NotAtCamp` / `StashBlock.NotAtCamp`, which is a reason the crafting panel can print
+rather than a silent failure.
+
+Next: the crafting panel — the inventory panel is the worked example to copy. The item, trap and
+equipment vocabulary is still an open design conversation, and it gates authoring recipes rather than
+building systems, so it waits for the content pass.

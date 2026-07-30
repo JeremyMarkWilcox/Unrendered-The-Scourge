@@ -84,6 +84,18 @@ public partial class NavigationManager : Node
 
     public IReadOnlyDictionary<string, RoomData> Rooms => _rooms;
 
+    /// <summary>
+    /// Register a room built in code. For the gates, and specifically so camps can be asserted
+    /// without an authored camp existing — which room is a camp is a judged call Jeremy makes in the
+    /// editor, and the mechanic must be provable before he makes it. Same role as
+    /// <see cref="InventoryCraftingManager.DebugRegisterRecipe"/>. Not for gameplay.
+    /// </summary>
+    public void DebugRegisterRoom(RoomData room)
+    {
+        if (room == null || string.IsNullOrEmpty(room.Id)) return;
+        _rooms[room.Id] = room;
+    }
+
     // ---- Navigation ------------------------------------------------------
 
     public bool GoToRoom(string roomId)

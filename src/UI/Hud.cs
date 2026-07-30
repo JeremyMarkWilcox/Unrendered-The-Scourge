@@ -6,8 +6,8 @@ using Unrendered.World;
 namespace Unrendered.UI;
 
 /// <summary>
-/// Screen furniture: where you are, which realm you are in, how much Resolve is left, what
-/// the cursor is over, and the last thing that happened.
+/// Screen furniture: where you are, which realm you are in, how much Resolve and Vitality are
+/// left, what the cursor is over, and the last thing that happened.
 ///
 /// Built in code rather than authored as a scene tree. M4 replaces this with a designed
 /// HUD; until then, code keeps the whole thing in one readable place and out of the way.
@@ -20,13 +20,49 @@ public partial class Hud : CanvasLayer
     private Label _notifyLabel;
     private Label _dreadLabel;
     private ResolveMeter _resolve;
+    private VitalityMeter _vitality;
+    private VBoxContainer _poolColumn;
+    private VBoxContainer _resolveGroup;
+    private VBoxContainer _vitalityGroup;
     private DebugPanel _debug;
+    private InventoryPanel _inventory;
 
     private float _notifyTimer;
     private const float NotifyHoldSeconds = 5f;
 
+    /// <summary>
+    /// Opacity of the pool that cannot currently move. Recessive but still readable — see
+    /// <see cref="RefreshPools"/> for why it is dimmed rather than hidden.
+    /// </summary>
+    private const float InertPoolAlpha = 0.45f;
+
     /// <summary>The room name on screen. For the gates; see <see cref="RoomView.DisplayedRoomId"/>.</summary>
     public string DisplayedRoomName => _roomLabel?.Text ?? "";
+
+    /// <summary>
+    /// The satchel panel, or null if its scene failed to load. Exposed so <c>Main</c> can toggle it
+    /// and the gates can drive it — a null here is itself worth failing a gate over, since a
+    /// mistyped scene path would otherwise cost nothing until someone pressed <c>I</c>.
+    /// </summary>
+    public InventoryPanel Inventory => _inventory;
+
+    /// <summary>Opacity of the Vitality caption and bar as drawn. For the gates.</summary>
+    public float VitalityOpacity => _vitalityGroup?.Modulate.A ?? 1f;
+
+    /// <summary>Opacity of the Resolve caption and bar as drawn. Should always be 1. For the gates.</summary>
+    public float ResolveOpacity => _resolveGroup?.Modulate.A ?? 1f;
+
+    /// <summary>
+    /// Which pool is drawn uppermost — "RESOLVE" or "VITALITY". Exposed for the gates, so the
+    /// ordering rule in <see cref="RefreshPools"/> is asserted rather than assumed. Reads the
+    /// caption actually on screen rather than recomputing the condition, which would only prove
+    /// the condition agrees with itself.
+    /// </summary>
+    public string TopPoolLabel =>
+        _poolColumn?.GetChildCount() > 0 && _poolColumn.GetChild(0) is VBoxContainer top &&
+        top.GetChildCount() > 0 && top.GetChild(0) is Label caption
+            ? caption.Text
+            : "";
 
     public override void _Ready()
     {
@@ -42,8 +78,11 @@ public partial class Hud : CanvasLayer
         bus.Notify += OnNotify;
         bus.ItemAcquired += OnItemAcquired;
         bus.PursuerProximityChanged += OnPursuerProximityChanged;
+        bus.HeistStarted += OnHeistStarted;
+        bus.HeistEnded += OnHeistEnded;
 
         OnRealmChanged((int)(RealmTransitionManager.Instance?.CurrentRealm ?? GameRealm.Waking));
+        RefreshPools();
     }
 
     public override void _ExitTree()
@@ -57,6 +96,8 @@ public partial class Hud : CanvasLayer
         bus.Notify -= OnNotify;
         bus.ItemAcquired -= OnItemAcquired;
         bus.PursuerProximityChanged -= OnPursuerProximityChanged;
+        bus.HeistStarted -= OnHeistStarted;
+        bus.HeistEnded -= OnHeistEnded;
     }
 
     // ---- Construction ----------------------------------------------------
@@ -83,19 +124,22 @@ public partial class Hud : CanvasLayer
         _realmLabel = MakeLabel("", 20, new Color("#9aa6b2"));
         topLeft.AddChild(_realmLabel);
 
-        // -- Top right: Resolve --
-        var topRight = new VBoxContainer { Name = "TopRight", MouseFilter = Control.MouseFilterEnum.Ignore };
-        topRight.SetAnchorsPreset(Control.LayoutPreset.TopRight);
-        topRight.Position = new Vector2(-460, 32);
-        topRight.Alignment = BoxContainer.AlignmentMode.End;
-        root.AddChild(topRight);
-
-        var resolveCaption = MakeLabel("RESOLVE", 18, new Color("#9aa6b2"));
-        resolveCaption.HorizontalAlignment = HorizontalAlignment.Right;
-        topRight.AddChild(resolveCaption);
+        // -- Top right: the two pools, live one on top and undimmed. See RefreshPools. --
+        _poolColumn = new VBoxContainer { Name = "Pools", MouseFilter = Control.MouseFilterEnum.Ignore };
+        _poolColumn.SetAnchorsPreset(Control.LayoutPreset.TopRight);
+        _poolColumn.Position = new Vector2(-460, 32);
+        _poolColumn.Alignment = BoxContainer.AlignmentMode.End;
+        root.AddChild(_poolColumn);
 
         _resolve = new ResolveMeter { Name = "ResolveMeter" };
-        topRight.AddChild(_resolve);
+        _resolveGroup = MakePoolGroup("ResolveGroup", "RESOLVE", new Color("#9aa6b2"), _resolve);
+        _poolColumn.AddChild(_resolveGroup);
+
+        _vitality = new VitalityMeter { Name = "VitalityMeter" };
+        _vitalityGroup = MakePoolGroup("VitalityGroup", "VITALITY", new Color("#a89a8c"), _vitality);
+        _poolColumn.AddChild(_vitalityGroup);
+
+        RefreshPools();
 
         // -- Bottom centre: hover target and notifications --
         var bottom = new VBoxContainer { Name = "Bottom", MouseFilter = Control.MouseFilterEnum.Ignore };
@@ -132,6 +176,73 @@ public partial class Hud : CanvasLayer
 
         _debug = new DebugPanel { Name = "DebugPanel", Visible = false };
         root.AddChild(_debug);
+
+        // Added last so it draws over the screen furniture, including the debug panel. Authored as
+        // a scene rather than built here, per handoff §2 — grids and slots are layout you need to
+        // see while tuning, and this is the first of three panels.
+        var scene = ResourceLoader.Load<PackedScene>("res://scenes/ui/InventoryPanel.tscn");
+        if (scene == null)
+        {
+            GD.PushError("Hud: could not load InventoryPanel.tscn — the satchel will not open.");
+            return;
+        }
+
+        _inventory = scene.Instantiate<InventoryPanel>();
+        root.AddChild(_inventory);
+    }
+
+    /// <summary>
+    /// A caption above its bar, so the pair can be moved and faded as one thing — the group's
+    /// <c>Modulate</c> carries down to both children.
+    /// </summary>
+    private static VBoxContainer MakePoolGroup(string name, string caption, Color colour, Control meter)
+    {
+        var group = new VBoxContainer { Name = name, MouseFilter = Control.MouseFilterEnum.Ignore };
+
+        var label = MakeLabel(caption, 18, colour);
+        label.HorizontalAlignment = HorizontalAlignment.Right;
+        group.AddChild(label);
+        group.AddChild(meter);
+
+        return group;
+    }
+
+    /// <summary>
+    /// Puts whichever pool is currently at risk on top, and fades the one that cannot move.
+    ///
+    /// **Keyed on a live Dream run, deliberately not on the current realm.** Spectral vision
+    /// flips <c>CurrentRealm</c> to Dream on every <c>Tab</c> press while Resolve does not move
+    /// at all — there is no ambient drain (combat.md §6) — so keying on realm would make both
+    /// bars jump position and change opacity every time the player peeked at the other world.
+    /// Worse, it would be *wrong*: spectral vision is a look, not a place (invariant 4), so you
+    /// are still standing in the Waking world with a body that can still be hurt. Entering a
+    /// heist, by contrast, is a deliberate transition that already changes the room and locks the
+    /// realm, so a reflow there reads as part of that transition.
+    ///
+    /// **Resolve is never faded, by decision** — inside a heist it is the clock you are playing
+    /// against, and out here it still tells you what you have to cross with. Only the body dims,
+    /// and only to say "not this, not in here": invariant 2 promises nothing in the Dream can
+    /// kill you, and a visible-but-recessive bar states that promise instead of leaving the
+    /// player to infer it from an absence.
+    ///
+    /// The opacity is snapped rather than tweened on purpose. <c>_Process</c> does not tick
+    /// meaningfully in a headless run, so a tween would leave the gates asserting an intended
+    /// value rather than the one on screen. Inside a heist transition the snap is invisible.
+    ///
+    /// When Waking boss fights land, Resolve becomes live out here too while the tether is
+    /// unbroken (`Corrupted` drains, `Severed` does not), and this condition widens to include
+    /// them. It is asking "which pool can move right now?", which is the question that survives.
+    /// </summary>
+    private void RefreshPools()
+    {
+        if (_poolColumn == null) return;
+
+        var inDreamRun = DreamRunManager.Instance?.IsRunning == true;
+
+        _poolColumn.MoveChild(inDreamRun ? _resolveGroup : _vitalityGroup, 0);
+
+        _vitalityGroup.Modulate = new Color(1f, 1f, 1f, inDreamRun ? InertPoolAlpha : 1f);
+        _resolveGroup.Modulate = Colors.White;
     }
 
     private static Label MakeLabel(string text, int size, Color colour)
@@ -196,6 +307,13 @@ public partial class Hud : CanvasLayer
     /// The only readout the player gets on the thing hunting them: distance as language,
     /// never a number and never a minimap. Being unsure where it is doing the work.
     /// </summary>
+    // Both just reorder the pools. Safe to call either way round: HeistStarted is emitted after
+    // ActiveHeist is set and HeistEnded after it is cleared, so IsRunning already reads correctly
+    // by the time we are called — no need to trust the payload (invariant 13).
+    private void OnHeistStarted(string heistId) => RefreshPools();
+
+    private void OnHeistEnded(string heistId, int outcome) => RefreshPools();
+
     private void OnPursuerProximityChanged(int roomsAway)
     {
         _hoverLabel.Text = "";

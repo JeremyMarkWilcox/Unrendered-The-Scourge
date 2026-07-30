@@ -1,13 +1,13 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene format=3 uid="uid://8l1jhbjj61k5"]
 
-[ext_resource type="Script" path="res://src/Core/Main.cs" id="1_main"]
+[ext_resource type="Script" uid="uid://d3eeomdhqy2vk" path="res://src/Core/Main.cs" id="1_main"]
 [ext_resource type="PackedScene" path="res://scenes/RoomView.tscn" id="2_roomview"]
-[ext_resource type="Script" path="res://src/UI/Hud.cs" id="3_hud"]
+[ext_resource type="Script" uid="uid://ieai6c6kri6l" path="res://src/UI/Hud.cs" id="3_hud"]
 
-[node name="Main" type="Node"]
+[node name="Main" type="Node" unique_id=1387285295]
 script = ExtResource("1_main")
 
-[node name="RoomView" parent="." instance=ExtResource("2_roomview")]
+[node name="RoomView" parent="." unique_id=518264188 instance=ExtResource("2_roomview")]
 
-[node name="Hud" type="CanvasLayer" parent="."]
+[node name="Hud" type="CanvasLayer" parent="." unique_id=93601168]
 script = ExtResource("3_hud")

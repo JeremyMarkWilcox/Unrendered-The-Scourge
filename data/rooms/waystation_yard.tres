@@ -1,9 +1,9 @@
-[gd_resource type="Resource" script_class="RoomData" format=3]
+[gd_resource type="Resource" script_class="RoomData" format=3 uid="uid://43ru304afhv8"]
 
-[ext_resource type="Script" path="res://src/Data/EntityPlacement.cs" id="1_sxx4p"]
+[ext_resource type="Script" uid="uid://c4nlnfkcu2a6u" path="res://src/Data/EntityPlacement.cs" id="1_sxx4p"]
 [ext_resource type="Resource" path="res://data/entities/beast_giant_rat.tres" id="2_l2ica"]
-[ext_resource type="Script" path="res://src/Data/HotspotData.cs" id="3_jweqx"]
-[ext_resource type="Script" path="res://src/Data/RoomData.cs" id="4_s6w4h"]
+[ext_resource type="Script" uid="uid://b0jetcphiy2cm" path="res://src/Data/HotspotData.cs" id="3_jweqx"]
+[ext_resource type="Script" uid="uid://v0juosv2w310" path="res://src/Data/RoomData.cs" id="4_s6w4h"]
 
 [sub_resource type="Resource" id="Resource_sxx4p"]
 script = ExtResource("1_sxx4p")
@@ -13,7 +13,7 @@ WakingPosition = Vector2(940, 880)
 DreamPosition = Vector2(238, 205)
 IsZoneLieutenant = true
 
-[sub_resource type="Resource" id="Resource_l2ica"]
+[sub_resource type="Resource" id="Resource_ilhdc"]
 script = ExtResource("3_jweqx")
 Id = "yard_to_shed"
 Label = "The Shed"
@@ -22,6 +22,7 @@ Region = Rect2(1420, 470, 330, 400)
 TargetRoomId = "waystation_shed"
 BlockedText = "It lifts its head before you have finished deciding. Not while that thing holds the road."
 BlockedByEntityId = "waystation.rat_01"
+metadata/_custom_type_script = "uid://b0jetcphiy2cm"
 
 [sub_resource type="Resource" id="Resource_jweqx"]
 script = ExtResource("3_jweqx")
@@ -31,7 +32,7 @@ Region = Rect2(250, 520, 210, 330)
 Visibility = 1
 ExamineText = "Six names carved into the post, and a seventh scratched out so hard the wood split."
 
-[sub_resource type="Resource" id="Resource_s6w4h"]
+[sub_resource type="Resource" id="Resource_l2ica"]
 script = ExtResource("3_jweqx")
 Id = "yard_dream_door"
 Label = "A Door That Is Not There"
@@ -57,7 +58,11 @@ Label = "Disturbed Cairn"
 Kind = 4
 Region = Rect2(300, 880, 300, 170)
 Visibility = 1
+VitalityCost = 10.0
+HazardText = "Ouch!"
 ExamineText = "The stones have been re-stacked by something with the wrong number of fingers. Underneath, a hollow, and in the hollow something that hums."
+RequiredFlag = "waystation.relic_found"
+RequiredFlagValue = false
 SetsFlag = "waystation.relic_found"
 
 [sub_resource type="Resource" id="Resource_yw8uu"]
@@ -76,5 +81,5 @@ Id = "waystation_yard"
 DisplayName = "The Forgotten Waystation Yard"
 ZoneId = "waystation"
 BaseCorruption = 0.45
-Hotspots = Array[ExtResource("3_jweqx")]([SubResource("Resource_l2ica"), SubResource("Resource_jweqx"), SubResource("Resource_s6w4h"), SubResource("Resource_i21dh"), SubResource("Resource_wg72h"), SubResource("Resource_yw8uu")])
+Hotspots = Array[ExtResource("3_jweqx")]([SubResource("Resource_ilhdc"), SubResource("Resource_jweqx"), SubResource("Resource_l2ica"), SubResource("Resource_i21dh"), SubResource("Resource_wg72h"), SubResource("Resource_yw8uu")])
 Entities = Array[ExtResource("1_sxx4p")]([SubResource("Resource_sxx4p")])

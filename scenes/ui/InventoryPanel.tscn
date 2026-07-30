@@ -1,0 +1,136 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://src/UI/InventoryPanel.cs" id="1_script"]
+[ext_resource type="Theme" path="res://scenes/ui/PanelTheme.tres" id="2_theme"]
+
+[node name="InventoryPanel" type="Control"]
+visible = false
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("2_theme")
+script = ExtResource("1_script")
+
+[node name="Dim" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.55)
+
+[node name="Center" type="CenterContainer" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Frame" type="PanelContainer" parent="Center"]
+custom_minimum_size = Vector2(1080, 600)
+layout_mode = 2
+
+[node name="Body" type="VBoxContainer" parent="Center/Frame"]
+layout_mode = 2
+theme_override_constants/separation = 18
+
+[node name="Title" type="Label" parent="Center/Frame/Body"]
+layout_mode = 2
+text = "SATCHEL"
+theme_override_font_sizes/font_size = 26
+
+[node name="Columns" type="HBoxContainer" parent="Center/Frame/Body"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 28
+
+[node name="SlotContainer" type="GridContainer" parent="Center/Frame/Body/Columns"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 1
+columns = 5
+theme_override_constants/h_separation = 12
+theme_override_constants/v_separation = 12
+
+[node name="SlotTemplate" type="Control" parent="Center/Frame/Body/Columns/SlotContainer"]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(112, 112)
+layout_mode = 2
+
+[node name="SlotBack" type="Panel" parent="Center/Frame/Body/Columns/SlotContainer/SlotTemplate"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="SlotSwatch" type="ColorRect" parent="Center/Frame/Body/Columns/SlotContainer/SlotTemplate"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 11.0
+offset_top = 11.0
+offset_right = -11.0
+offset_bottom = -11.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.42, 0.498, 0.369, 1)
+
+[node name="SlotCount" type="Label" parent="Center/Frame/Body/Columns/SlotContainer/SlotTemplate"]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -44.0
+offset_top = -34.0
+offset_right = -8.0
+offset_bottom = -6.0
+grow_horizontal = 0
+grow_vertical = 0
+mouse_filter = 2
+text = "0"
+horizontal_alignment = 2
+
+[node name="Detail" type="VBoxContainer" parent="Center/Frame/Body/Columns"]
+custom_minimum_size = Vector2(360, 0)
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="ItemName" type="Label" parent="Center/Frame/Body/Columns/Detail"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Nothing selected"
+theme_override_font_sizes/font_size = 22
+
+[node name="ItemDescription" type="Label" parent="Center/Frame/Body/Columns/Detail"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+autowrap_mode = 3
+text = ""
+
+[node name="UseButton" type="Button" parent="Center/Frame/Body/Columns/Detail"]
+unique_name_in_owner = true
+layout_mode = 2
+disabled = true
+text = "Use"
+
+[node name="Footer" type="HBoxContainer" parent="Center/Frame/Body"]
+layout_mode = 2
+alignment = 2
+
+[node name="CloseButton" type="Button" parent="Center/Frame/Body/Footer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Close"

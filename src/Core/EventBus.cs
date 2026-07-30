@@ -48,6 +48,17 @@ public partial class EventBus : Node
 
     [Signal] public delegate void ResolveChangedEventHandler(float current, float max);
 
+    // ---- Vitality --------------------------------------------------------
+
+    [Signal] public delegate void VitalityChangedEventHandler(float current, float max);
+
+    /// <summary>
+    /// The body gave out. Fires once per emptying, not once per hit at zero. <c>CampManager</c>
+    /// listens and carries out §6's consequence: you wake at the last camp having lost what you can
+    /// remake and kept what you cannot.
+    /// </summary>
+    [Signal] public delegate void VitalityDepletedEventHandler();
+
     // ---- Dream heist -----------------------------------------------------
 
     [Signal] public delegate void HeistStartedEventHandler(string heistId);
@@ -65,6 +76,17 @@ public partial class EventBus : Node
 
     [Signal] public delegate void ItemAcquiredEventHandler(string itemId, int amount);
     [Signal] public delegate void InventoryChangedEventHandler();
+
+    /// <summary>Something was made at the bench. Payload is the output item, not the recipe.</summary>
+    [Signal] public delegate void ItemCraftedEventHandler(string itemId, int amount);
+
+    [Signal] public delegate void ItemUsedEventHandler(string itemId);
+
+    /// <summary>
+    /// A blueprint became known, which is what unlocks the recipes gated on it. The journal will
+    /// subscribe to this rather than owning the knowledge itself.
+    /// </summary>
+    [Signal] public delegate void BlueprintDiscoveredEventHandler(string blueprintId);
 
     // ---- Feedback --------------------------------------------------------
 
@@ -97,6 +119,12 @@ public partial class EventBus : Node
     public void EmitResolveChanged(float current, float max)
         => EmitSignal(SignalName.ResolveChanged, current, max);
 
+    public void EmitVitalityChanged(float current, float max)
+        => EmitSignal(SignalName.VitalityChanged, current, max);
+
+    public void EmitVitalityDepleted()
+        => EmitSignal(SignalName.VitalityDepleted);
+
     public void EmitHeistStarted(string heistId)
         => EmitSignal(SignalName.HeistStarted, heistId);
 
@@ -111,6 +139,15 @@ public partial class EventBus : Node
 
     public void EmitInventoryChanged()
         => EmitSignal(SignalName.InventoryChanged);
+
+    public void EmitItemCrafted(string itemId, int amount)
+        => EmitSignal(SignalName.ItemCrafted, itemId, amount);
+
+    public void EmitItemUsed(string itemId)
+        => EmitSignal(SignalName.ItemUsed, itemId);
+
+    public void EmitBlueprintDiscovered(string blueprintId)
+        => EmitSignal(SignalName.BlueprintDiscovered, blueprintId);
 
     public void EmitNotify(string text)
         => EmitSignal(SignalName.Notify, text);

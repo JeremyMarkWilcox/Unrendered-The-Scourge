@@ -21,10 +21,14 @@ public static class SaveService
             CurrentRoomId = NavigationManager.Instance?.CurrentRoomId ?? "",
             CurrentRealm = (int)(RealmTransitionManager.Instance?.CurrentRealm ?? GameRealm.Waking),
             Resolve = ResolveManager.Instance?.Current ?? GameConfig.ResolveMax,
+            Vitality = VitalityManager.Instance?.Current ?? GameConfig.VitalityMax,
             Flags = WorldStateManager.Instance?.ExportFlags() ?? new(),
             ZonePhases = WorldStateManager.Instance?.ExportZonePhases() ?? new(),
             EntityStates = EntityStateManager.Instance?.ExportStates() ?? new(),
             Inventory = InventoryCraftingManager.Instance?.ExportStacks() ?? new(),
+            Stash = InventoryCraftingManager.Instance?.ExportStash() ?? new(),
+            DiscoveredBlueprints = InventoryCraftingManager.Instance?.ExportDiscovered() ?? new(),
+            ReturnCampRoomId = CampManager.Instance?.ReturnCampRoomId ?? "",
         };
 
         using var file = FileAccess.Open(path, FileAccess.ModeFlags.Write);
@@ -76,7 +80,14 @@ public static class SaveService
         WorldStateManager.Instance?.ImportState(data.Flags, data.ZonePhases);
         EntityStateManager.Instance?.ImportStates(data.EntityStates);
         InventoryCraftingManager.Instance?.ImportStacks(data.Inventory);
+        InventoryCraftingManager.Instance?.ImportStash(data.Stash);
+        InventoryCraftingManager.Instance?.ImportDiscovered(data.DiscoveredBlueprints);
+
+        // Before the navigation below, so that if the loaded room happens to be a camp, arriving
+        // there rebinds a return point that already agrees with the file rather than clobbering it.
+        CampManager.Instance?.ImportReturnCamp(data.ReturnCampRoomId);
         ResolveManager.Instance?.SetTo(data.Resolve);
+        VitalityManager.Instance?.Import(data.Vitality);
 
         var roomId = data.CurrentRoomId;
         var realm = (GameRealm)data.CurrentRealm;

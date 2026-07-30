@@ -58,6 +58,56 @@ public static class InteractionService
             return false;
         }
 
+        // Sampled before the action, because the action itself can move you: a CrossToDream
+        // relic puts you in the Pixel Realm mid-call, and the wound belongs to the Waking-world
+        // choice you just made rather than to where that choice landed you.
+        var realmAtClick = RealmTransitionManager.Instance?.CurrentRealm ?? GameRealm.Waking;
+        var runAtClick = DreamRunManager.Instance?.IsRunning == true;
+
+        var performed = Perform(data);
+
+        // Only a *successful* action wounds you. Otherwise a stripped-bare harvest node or a
+        // refused door would let you grind yourself down on something that did nothing.
+        if (performed) ApplyHazard(data, realmAtClick, runAtClick);
+
+        return performed;
+    }
+
+    /// <summary>
+    /// Takes the Vitality a hotspot costs. Silently does nothing for the overwhelming majority
+    /// of hotspots, which cost nothing.
+    ///
+    /// **Invariant 2 is enforced here, in code, not left to authoring.** Vitality must never
+    /// appear in the Dream — every ending in there is an ejection priced in Resolve, and if the
+    /// body could be hurt inside a heist the two-pool split collapses along with the reason the
+    /// two routes cost different currencies. So a cost is refused if you were looking through
+    /// spectral vision or standing inside a live run when you clicked. Authoring a Dream-side
+    /// hazard is therefore harmless rather than dangerous: it simply will not bite.
+    /// </summary>
+    private static void ApplyHazard(HotspotData data, GameRealm realmAtClick, bool runAtClick)
+    {
+        if (data is not { IsHazard: true }) return;
+        if (realmAtClick != GameRealm.Waking || runAtClick) return;
+
+        var vitality = VitalityManager.Instance;
+        if (vitality == null) return;
+
+        var before = vitality.Current;
+        vitality.Damage(data.VitalityCost);
+
+        // Nothing to say if the bar was already on the floor — VitalityManager announces the
+        // collapse itself, and repeating it every click would read as a new injury each time.
+        if (Mathf.IsEqualApprox(vitality.Current, before)) return;
+
+        EventBus.Instance?.EmitNotify(string.IsNullOrEmpty(data.HazardText)
+            ? "That cost you. You can feel it settling in."
+            : data.HazardText);
+    }
+
+    /// <summary>The action itself, with no hazard accounting. Split out so the caller can tell
+    /// success from refusal before deciding whether to charge for it.</summary>
+    private static bool Perform(HotspotData data)
+    {
         switch (data.Kind)
         {
             case HotspotKind.Navigate:
@@ -84,6 +134,17 @@ public static class InteractionService
                 if (DreamRunManager.Instance is not { IsRunning: true }) return false;
                 SetFlagIfAny(data.SetsFlag);
                 DreamRunManager.Instance.TakeAnchor();
+                return true;
+
+            // The bench. Its real job is passive — merely being in the room with it is what makes
+            // this a camp, refills both pools and sets where you wake, all handled by CampManager on
+            // arrival with nothing to click. Clicking it will open the crafting panel; until that
+            // panel exists, say so rather than pretending the click did nothing.
+            case HotspotKind.Workbench:
+                SetFlagIfAny(data.SetsFlag);
+                EventBus.Instance?.EmitNotify(string.IsNullOrEmpty(data.ExamineText)
+                    ? "Your tools are laid out here. [the crafting panel is not built yet]"
+                    : data.ExamineText);
                 return true;
 
             default:

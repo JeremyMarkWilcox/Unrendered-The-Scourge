@@ -30,8 +30,12 @@ public partial class RoomData : Resource
     [ExportGroup("Atmosphere")]
     [Export(PropertyHint.Range, "0,1,0.05")] public float BaseCorruption { get; set; } = 0.3f;
 
-    /// <summary>Rooms flagged as sanctuaries restore Resolve instead of draining it.</summary>
-    [Export] public bool IsSanctuary { get; set; }
+    // `IsSanctuary` used to sit here, unused, reserved for camps. Deleted 2026-07-30 rather than
+    // renamed to IsCamp: a room is a camp precisely when it contains a
+    // Core.HotspotKind.Workbench hotspot, so a flag beside that would be the same fact stored
+    // twice and able to disagree with itself. Ask CampManager.IsCamp. Its doc comment was also
+    // stale — it promised Resolve restoration "instead of draining", and the ambient drain it
+    // referred to no longer exists.
 
     /// <summary>Which procedural scene to draw while <see cref="WakingBackground"/> is unset.</summary>
     [Export] public Core.BackdropStyle PlaceholderStyle { get; set; } = Core.BackdropStyle.Wilderness;
