@@ -9,6 +9,48 @@ equipment vocabulary that the rest of that document defers, and it deletes Defen
 `README.md`; Claude runs `--verify-slice` before and after code changes, so there is no start-of-
 session ritual to perform.
 
+**Newest change, 2026-07-31: the whole item and crafting economy was redesigned, and it is docs-only
+so far.** `combat.md` **§19** is the new authority on crafting, materials, salves, stations and the
+catalyst; it supersedes the material economy assumed by §4, §6, §10, §11 and §17, and **reverses two
+things §18 ratified** (equipment is no longer destroyed on death; Fire is now fused rather than his).
+Every superseded section carries a revision note pointing at §19 rather than being left to be
+discovered. **No code has changed and the suite is still 328, exit 0** — the code pass is the next
+thing, and §19's last table is the list.
+
+The short version, because it is a large section: **crafting is knowledge, not logistics.** A recipe
+is learned by solving a logic puzzle **once**, at a station, and every craft after that is instant.
+Materials are a **tally that takes no slots** — eight nouns in the whole game, six common and two
+scarce, gated by story milestone with two refills. **Carry limits are deleted** (§18's rig cap already
+made that decision, and made it better — informed, in front of the creature, instead of blind at
+camp), so the caps are two traps and two salves per fight and nothing else. Her two combat salves are
+**ingredients for his traps** rather than things you throw, which makes Fire and Caustic fused damage
+types and puts the love story in the tech tree. And her salves are **found first, learned last**: you
+ration a finite cache all game and late on earn the right to make them, which is the best single beat
+in the design.
+
+**What reversed and why it is worth reading before building anything:** the reason this conversation
+happened at all was Jeremy noticing that *"advanced crafting could kill my project with scope creep
+and honestly not be as interesting."* §19 opens with the sharper form of that — **crafting depth is
+paid for in content forever, a puzzle is paid once** — and every decision in the section falls out of
+it. Two things also got *deleted* along the way that had already been designed: the carry-slot economy
+with its upgrades, and a per-region Resolve-drain flag. Both were replaced by rules that already
+existed, which is the pattern worth noticing.
+
+**Then the whole roster was written the same day: [`items.md`](items.md).** Every material, salve, trap,
+weapon, coat and tool, named and costed, with per-chapter availability and the scarce budget. It closed
+the last blocking item in M4 — no station can be authored until the material list exists, because every
+station is balanced against it. **The chapters are a woodland, a village and a dark mine**, and the
+roster prices the Dream at **10 pockets** (7 knowledge, 3 boss), accepted as the authoring bill.
+
+**And the ending is designed: `combat.md` §20.** In the last Dream pocket **the anchor is Iris**, and
+there are three routes past the final boss paying three different currencies — sever her (guilt),
+refuse and overkill (difficulty), or **build the exorcism engine** (three chapters of thoroughness, and
+the good ending). The one thing to read there before touching combat code is *why the engine does not
+break invariant 11*: the rule says cutting the tether is the only way to remove regeneration, and never
+said the **Dream** was the only way to cut a tether. The engine is a severing by a third route, not a
+trap buying the aura off — and it stays legal only while it is a unique authored object rather than an
+`ItemCategory.Trap`.
+
 **Newest change: the 3D Dream is walkable.** `scenes/dream/DreamProbe.tscn` — open it, press **F6**,
 click to look, `WASD` to walk, and scrub the look with the keys listed in "Done: unit 1 — the probe"
 at the end of §1's Dream section. It is the look shader, the 480×270 3D viewport, the first-person
@@ -228,10 +270,26 @@ moved from last to first**, for the reasons in §1a:
    with the severed/anchored split, the condition ladder, the save round trip*; then the **encounter
    state machine** — the only piece left, and the details are at the end of the wound-ledger section
    below.
-3. **The crafting panel** against the published contract — the same job as the inventory panel with
-   nothing new in it. Note that it now has a third state to draw: `CraftBlock.NotAtCamp`, "you need a
-   bench for this". Its manager half is already done and its `.tscn` is in the editor pass.
-4. **The journal's knowledge model**, then its UI. **Audio last** (see memory).
+3. **The station layer, then the crafting panel.** ~~The same job as the inventory panel with nothing
+   new in it.~~ **Changed 2026-07-31 by `combat.md` §19, and this item grew.** The panel is no longer a
+   recipe browser — it is a **station screen**, and the manager work in front of it is now the larger
+   half:
+   - **The shapes first**, per §19's last table: `HotspotKind.Station`, `RecipeData.RequiresStation` /
+     `RequiresBothTracks` / `SetsFlag`, `CraftBlock.NotAtCamp` → `NotAtStation`, `ItemCategory.Reagent`
+     → `Component` with key items unified, `CountsAgainstSlots(ItemCategory)` as a static sibling of
+     `SurvivesDeath`, `SurvivesDeath` gaining `Equipment`, and a salve cap beside `RigSlotsPerFight`.
+   - **Then the puzzle seam**, which is deliberately thin: solving a puzzle writes to
+     `DiscoveredBlueprints` and nothing else, so `Craft(recipeId)` is unchanged and `--verify-slice`
+     never touches a puzzle. **Keep it that way** — a score crossing that seam would put a game rule in
+     the one layer the gates cannot reach.
+   - **Then the panel**, in the editor pass with the others.
+
+   Good news for sequencing: **materials being a tally rather than slot items makes this smaller than
+   the old plan**, and deleting carry limits deletes slot logic, slot upgrades and the stash UI outright.
+4. **The journal's knowledge model**, then its UI. **Audio last** (see memory). Note §19 gives the
+   journal a second job it did not have: fused recipes need **both** knowledge tracks, so the two sides
+   now interact instead of running parallel, and the panel has a third state to draw — *known on one
+   side only*.
 
 **What moving the Dream to the front costs, stated so it is not discovered later.** `CombatManager`
 sits with no caller until item 2 lands, so the arithmetic of a fight stays unexercised by anything
@@ -265,6 +323,26 @@ or `HotspotData`, so none of that can be invalidated by items 2–3. **Items and
 open too** — the shapes landed, so a `.tres` written today will not need reopening; fill in
 `VulnerableTo`, `ResistantTo`, `Deals` and `Durability` on a creature and `Deals`/`Slot`/
 `WardsAgainst` on a weapon or trap, and the content sweep will tell you if a combination is inert.
+
+> **One placement rule, ratified 2026-07-31, and it cannot be gated so it has to be remembered.** The
+> traps that deal **Fire and Caustic are not craftable until chapter 3** ([`items.md`](items.md)), so:
+>
+> **In chapters 1–2, a Fire- or Caustic-vulnerable creature guards something *optional*. Never the
+> critical path.**
+>
+> On an optional route it is a **locked door you can see through** — fight it expensively if you like
+> (the wrong type halves damage and never zeroes it, and flight is guaranteed), or note it and come back.
+> That reads as anticipation. On the critical path the same creature reads as friction; Jeremy's own word
+> for the risk was *"annoying"*, and annoying is a smell rather than a difficulty setting.
+>
+> **It also earns the backtrack.** Restocking chapter 1 after the chapter 2 boss was a walk through
+> cleared ground with nothing in it. Now the creatures you could not kill are still standing there and
+> you can — **the restock trip and the come-back-later trip are the same trip.** Neither was designed to
+> make the other work.
+>
+> No gate can check this: "is this creature on the critical path" is a judgement about level design, not
+> a property of a `.tres`. It belongs in the same category as the unfalsifiable guards §5 says to
+> document rather than gate.
 
 Two things still to hold off on, and the reasons are now different from each other:
 
@@ -1059,10 +1137,24 @@ gated to a bench, and the collapse that loses what you can remake.
 **Left:**
 
 - **The crafting panel** — Phase 2, authored as a scene. See "The panel node contract" in §2. The
-  inventory panel is the worked example to copy.
+  inventory panel is the worked example to copy. **Now a station screen rather than a recipe browser —
+  `combat.md` §19.**
 - **Her cache** as a real place with finite named salves in it. The storage box exists as of
   2026-07-30; what is missing is the *authored* cache — a camp with her finite salves already in it,
-  which is content rather than code.
+  which is content rather than code. **Promoted 2026-07-31 from a nice-to-have to a load-bearing beat:**
+  §19 makes her two fused salves **found first and learned last**, so this cache is the thing the player
+  rations for most of the game. It is also where the tutorial's free burning oil salve comes from.
+- ~~**The eight material names**, and especially the scarce pair.~~ **Done 2026-07-31 —
+  [`items.md`](items.md) is the whole roster**, and it was the one genuinely blocking item in M4.
+  Materials, salves, traps, weapons, armour, tools, the two repair scales, per-chapter availability and
+  the scarce budget, all named and costed. Two of the eight materials (**Bitterroot**, **Tallow**)
+  already exist as authored `.tres` items and `salve_clearmind` is already `2 Bitterroot + 1 Tallow`, so
+  existing content validates the vocabulary instead of needing rework.
+
+  Three things in it that a code reader needs to know, because they are not obvious from the tables:
+  **Fire and Caustic are trap-only** (no weapon deals them, and no armour wards Fire), **her two combat
+  salves are `Component` rather than `Salve`** despite their names, and **the roster prices the Dream at
+  10 pockets** — 7 knowledge, 3 boss — which Jeremy accepted as the authoring bill.
 - ~~**The item / trap / equipment vocabulary**, before any more recipes are authored.~~ **Settled
   2026-07-30 — `combat.md` §18.** What is left of it is code: two enums and a handful of `[Export]`s,
   which must land before items or creatures are authored.

@@ -180,6 +180,18 @@ from what you are fighting rather than where.
 Note what the last column is doing: it is not a property the player memorises per trap, it is
 readable from the object. Oil waits for a brand; a snare closes on its own. See §18.
 
+> **Amended by §19 (2026-07-31) — the *inputs* column is now decided, and it splits the roster in
+> two.** Edge and Blunt traps are pure Craft, made from common materials. **Fire and Caustic traps are
+> fused**: they need her burning oil or her corrosive salve as an ingredient, so they cannot be built
+> without both knowledge tracks, and they are built at the camp bench rather than at a field station.
+> The oil slick row above is therefore a fused trap, not a Craft one. Traps are still **consumed
+> always** — §19 leans on that harder than this section did, because after equipment stopped being
+> destroyed on death, a rigged trap became the only thing a fight can take from you.
+>
+> Permanent traps were requested and **rejected** in the same conversation: they would collapse
+> overkill's cost to turns and salves while severing still cost a Dream run, which inverts invariant 1.
+> See §19, "Equipment survives death".
+
 #### Only severing touches the aura
 
 **The salt line is struck** (2026-07-27), and the rule it broke is worth stating positively,
@@ -258,6 +270,17 @@ It moves in exactly those two places. **There is still no ambient drain** — no
 corrupted-ground pressure, no bleed for standing near something anchored, nothing outside an
 actual confrontation. Normal enemies never touch it: they have no aura and cannot be severed,
 so a drain there would teach the player nothing.
+
+> **Sharpened by §19 (2026-07-31) — inside the Dream, suppressing your spirit light is now the *only*
+> drain.** There is no base drain either, so the bar moves only while you are actively hiding. This is
+> not a reversal of the paragraph above but its logical end: a drain the player cannot act on teaches
+> nothing, and a drain that exists only while you hold a verb down is the most actionable version
+> there is. It also makes the clock appear only in boss pockets and not in knowledge pockets, with no
+> flag on any region — see §19, "Resolve: suppression is the only drain".
+>
+> The Vitality row's "her salves (finite), crude substitutes (poor)" is reshaped by §19 into a
+> four-recipe apothecary: two healing tiers you craft, and two of hers that are ingredients rather
+> than consumables.
 
 **And within a boss fight it is conditional, not automatic** (decided 2026-07-27): only an
 **unbroken tether** drains. Fight the boss with its anchor intact and the aura works on your
@@ -342,6 +365,15 @@ because you stopped before pouring them all in. Same loss, very different bill.
 > routes to killing a boss, so taxing it buys no balance and only taxes the observation loop that
 > Section 15 is built to encourage. Re-entry to a knowledge pocket costs time and nothing else, and
 > its trigger item is consumed on success only. See Section 15's re-entry subsection.
+>
+> **Reversed 2026-07-31 by §19 — the catalyst is no longer a price at all. It is what severing an
+> anchor gives you**, and it grants abilities in the Dream. Entry costs finding a pocket's object of
+> interest and nothing more. The objection this whole block was built on — *failing a heist costs
+> nothing but time* — is answered rather than ignored: a material cost on retry does not prevent a
+> grind, it adds a gathering trip to one. Time was always the real currency. What replaces the toll is
+> a gradient rather than a gate, so nobody can be priced out, and pocket **length** becomes the
+> balance parameter instead. Full reasoning, plus the rule that killing a boss must not delete its
+> pocket, in §19, "Catalysts flip from price to reward".
 >
 > Also note the "thirty free retries" worry above was aimed at the wrong target: retries are a grind
 > when the pocket is a *task*, and the ordinary Dream's pockets are **observation loops**, where
@@ -512,6 +544,24 @@ second route would quietly stop existing.
 her stock outclasses your work *"for most of the game"*) means brewing your own near-equals
 under your own names. You learn her craft; you never duplicate her hand.
 
+> **Reversed 2026-07-31 by §19, and the reversal is the payoff rather than a loss.** Her two salves are
+> **found first and learned last**: a finite authored cache in your hands from the first hour, crafted
+> only late, once enough Craft is reclaimed and enough of her notes are found. Section 8's *"for most
+> of the game"* is preserved exactly — it is true for most of the game, and the moment it stops being
+> true is the emotional payoff of the entire crafting system. Learning her recipe reads as resurrection
+> rather than a tier unlock.
+>
+> It also fixes a problem this section could not see: a late-game recipe normally means a late-game
+> *item*, barely used and barely felt. Inverted, the item is present throughout and only the *making*
+> of it is late.
+>
+> Two details from §19 that belong here. Her salves are **ingredients, not consumables** — burning oil
+> and corrosive go inside his traps, so they are `Component` in code despite being called salves, and
+> they never take a combat slot. And the hoarding problem this section's "spending one should sting"
+> invites is authored around rather than ruled around: **hand the player one in the first tutorial
+> fight** and make the use unmistakable, so they learn what spending her work feels like before they
+> start saving it forever.
+
 ---
 
 ## 11. Complexity budget
@@ -539,6 +589,22 @@ sense). Also rejected: puzzles built on spatial reconfiguration, which would hav
 system rather than new content.
 
 Small enough to finish, deep enough to have opinions about.
+
+> **Revised 2026-07-31 by §19, and the net is a reduction.** Added: **stations** (one `HotspotKind`),
+> and **one logic puzzle per knowledge track**, played once per recipe rather than once per craft.
+> Removed: the material economy this budget assumed. Gone are stackable raw reagents as inventory
+> (materials are a tally that takes no slots), the carry-slot economy and its upgrades (§18's rig cap
+> already made that decision, better and later), the shared cache's purpose, and the catalyst as a
+> crafted entry toll.
+>
+> **The line to keep is the reason for the trade:** crafting depth is paid for in content forever,
+> while a puzzle is paid once. That is what makes twenty-five hand-authored puzzles cheaper over the
+> life of the project than a material economy with ten nouns in it. The vocabulary ceiling — **eight
+> materials, two of them scarce** — is the version of this budget that applies to items.
+>
+> One addition worth naming against the "no damage multipliers" rule above: **fused recipes** (§19)
+> require both knowledge tracks and produce Fire and Caustic. They are not stronger, they are the only
+> route to those types, so they are access rather than power and the rule holds.
 
 ---
 
@@ -626,14 +692,26 @@ stays cheap.
   declares its own, so a third re-authors nothing. The version worth building is *brace*, a verb
   costing a turn, and whether the turn economy needs it can only be judged after the loop exists.
 
+- ~~**Whether Fire belongs to Craft or to Physick.**~~ **Answered 2026-07-31 by §19: Fire is fused, so
+  the split is two and two.** A Fire trap needs her burning oil, and the oil is chemistry while the
+  ignition is mechanism — so neither track owns Fire and it cannot be built without both. This was not
+  chosen for symmetry; it fell out of deciding that her combat salves are trap *ingredients* rather
+  than thrown consumables. The recorded worry that three-and-one matched §8's "few of her notes, far
+  apart" is answered by volume instead: she has four recipes against the Craft side's many, so her
+  contribution stays sparse while being load-bearing.
+- ~~Can traps be recovered after a fight?~~ Still **consumed, always** — the answer above stands, and
+  §19 depends on it more heavily than §13 did. Once equipment stopped being destroyed on death, a
+  rigged trap became the only thing a fight can take from you.
+
 **Still open:**
 
-- **Whether Fire belongs to Craft or to Physick.** §18 builds against three Craft types and Caustic
-  alone on her side, because the asymmetry matches §8's "few of her notes, far apart". Moving Fire
-  across would make it two and two and is a one-line change; it is recorded here so the choice is not
-  mistaken for an accident.
 - **Whether the encounter needs a defensive verb at all.** See the shield note above. Unanswerable
   until three fights have been played, and cheap either way.
+- **The eight material names**, and especially the scarce pair — §19 sets the ceiling but not the
+  nouns, and a station cannot be authored until they exist.
+- **What Dream abilities a catalyst grants** (§19). Deliberately left open: they will be discovered as
+  the 3D pockets get built. What is settled is that they are lateral rather than compounding, and that
+  invariant 11 forbids any that touch the Resolve drain or a boss's regeneration.
 
 ---
 
@@ -928,9 +1006,24 @@ visit. **The extension is what is now retired; the original is untouched.**
 | | **Knowledge pocket** | **Boss pocket / heist** |
 |---|---|---|
 | Why you are here | reclaim craft knowledge — the progression track, not the combat economy | **sever an anchor** — this *is* the sever route |
-| Catalyst on crossing | **no** | **yes**, as Section 6 decided |
-| What a failed run costs | time, and nothing else | a catalyst, so a gathering trip |
+| Catalyst on crossing | **no** | ~~**yes**, as Section 6 decided~~ — **no, see below** |
+| What a failed run costs | time, and nothing else | ~~a catalyst, so a gathering trip~~ — **time, and nothing else** |
 | Trigger item | consumed on success only | consumed on success only |
+
+> **Revised 2026-07-31 by §19 — the two columns now agree on cost, and the split survives anyway.**
+> The catalyst is no longer charged on crossing *anywhere*; it is what severing an anchor **gives** you.
+> So a failed boss-pocket run costs time and nothing else, exactly like a knowledge pocket.
+>
+> **What still separates them is the row above it — and that was always the real distinction.** §15's own
+> argument is that the axis is *whether anything is hunting you*, which no change to the economy touches.
+> Two things replace the catalyst as the boss pocket's price: **the run itself is dangerous** (a pursuer
+> that chases on sight, and Resolve burning the whole time because suppression is mandatory there — §19),
+> and **pocket length is now the balance parameter**, since time is the entire cost of failure.
+>
+> One thing this table should gain: **a boss pocket you enter after killing its boss is empty.** No
+> pursuer, no chase, walk to the fragment and collect the catalyst you would have earned. That closes the
+> lockout where overkilling a boss would delete its pocket forever, and it makes the reward identical on
+> both routes while the costs stay different — invariant 1 rather than an exception to it. See §19.
 
 The reason the split is clean rather than a compromise: **invariant 1 is an argument about the two
 routes to killing a boss, and a knowledge pocket is not one of them.** Pricing entry to a puzzle that
@@ -1103,6 +1196,28 @@ across visits is explicitly legitimate. Camps need no rule about it.
 The through-line: with healing free, a lost engagement costs you **your rigging and your
 consumables, not your HP bar** — which is Section 4's thesis stated in the economy. HP was never
 meant to be the scarce resource here.
+
+> **Two revisions from §19 (2026-07-31). The camp is untouched as a mechanism; two of the bullets above
+> change.**
+>
+> **"Crafting only at a camp" widens to "crafting only at the right station."** Field stations — the
+> mortar, the anvil, the trapper's stump — make single-track things wherever Jeremy authors them, and
+> `CraftBlock.NotAtCamp` becomes `NotAtStation`. **`HotspotKind.Workbench` remains the only thing that
+> makes a room a camp**, so the derivation this section fought for survives intact and `CampManager`
+> needs no change: a station is not a camp, or every herb patch would refill both pools. In exchange
+> the bench gains an exclusive job — **fusion happens at the camp bench and nowhere else** — which is
+> thematically better than the storage monopoly it is losing, since fusion is the two of them working
+> together and the camp is their home.
+>
+> **The shared cache is retired.** §18 gave it its purpose (banking a spare coat against a bad night)
+> and §19 removed that purpose by letting equipment survive death. The paragraph above is still right
+> about *why* per-camp storage was rejected, and the "what do I carry from camp to the site" decision
+> it protects has moved to §18's rig cap, where it is made in front of the creature instead of blind at
+> camp. **The code and its gates stay green and unused until the content pass**, then come out in one
+> clean sweep if nothing has claimed them.
+>
+> Note that "free healing protects her salves" gets *stronger* under §19, not weaker: her salves are no
+> longer even healing items, so there is nothing left to burn on the boring use.
 
 ---
 
@@ -1287,6 +1402,21 @@ paragraph above is asking for. Three notes on it:
 - **Death is entirely avoidable**, because flight is guaranteed. Making the avoidable failure
   expensive is fair in a way that making an unavoidable one expensive would not be.
 
+> **Reversed 2026-07-31 by §19: equipment survives death.** Jeremy's call — *"I think this reduces
+> scope and is better for the player"* — so nothing degrades **and** nothing is lost. Equipment becomes
+> a Zelda tool in full: crafted once from a reclaimed memory plus materials, owned for good.
+>
+> **What that costs, stated here rather than discovered later: death is now cheap.** It takes the traps
+> you had rigged and the walk back from camp, and nothing else. That is defensible on this section's own
+> logic — flight is guaranteed, so death is avoidable, and a cheap price on an avoidable failure is a
+> different bargain from a cheap price on an unavoidable one. But it is thinner than what this section
+> designed, and it should be re-checked in play rather than assumed.
+>
+> Two knock-ons. The **cache loses the purpose the second bullet above gave it** (see §17's revision
+> note), and **traps become the only thing a fight can take from you**, which is what keeps §1's
+> overkill column honest — the route paid for in finite supplies is still paid for in finite supplies.
+> Permanent traps were requested in the same conversation and rejected for exactly that reason.
+
 ### The condition ladder is derived
 
 §5's *unmarked → bleeding → faltering → collapsing* is computed as **fractions of durability**, with
@@ -1312,3 +1442,551 @@ content will be poured into, and a field added after the pass means reopening ev
 
 `RoomData` and `HotspotData` gain **nothing**, which is the whole reason room authoring is free to
 start.
+
+> **§19 adds a second shapes table (2026-07-31), and it does touch `HotspotData`** — stations are a new
+> `HotspotKind`. Room *layout* is still safe, but a room that wants a station needs that member to exist
+> first, so the two tables should be built together before the content pass. See §19, "What must exist in
+> code before any station is authored".
+
+---
+
+## 19. Stations, and crafting as knowledge — ratified 2026-07-31
+
+**This section supersedes the material economy assumed by §4, §6, §10, §11 and §17, and reverses two
+things §18 ratified.** Where it disagrees with an earlier section, it wins; every place that happens
+is marked in the earlier section rather than left to be discovered.
+
+Jeremy's reason for opening it, and it is the one that should be read first: *"I realized that advanced
+crafting could kill my project with scope creep and honestly not be as interesting."* That instinct is
+correct, and the reason is sharper than the amount of work involved:
+
+> **Crafting depth is paid for in content forever. Puzzle-crafting is paid once.** A material economy
+> needs every new recipe balanced against every existing one, every drop rate retuned, every new
+> area's nodes priced. A puzzle is authored once and is then finished permanently. This section is not
+> cutting a feature — it is swapping an ongoing cost for a fixed one.
+
+### The loop
+
+```
+[FIND A RECIPE]  →  [SOLVE IT ONCE, AT A STATION]  →  [GATHER]  →  [CRAFT, INSTANTLY, FOREVER]
+```
+
+Four verbs, and the third is the only one that repeats.
+
+### The puzzle *is* the recipe — solved once, never again
+
+**A logic puzzle has one answer, so it can only be played rarely.** Play-until-you-succeed is the
+right interaction and per-craft is the wrong frequency: the fortieth mashing of the same herbs is the
+first thing in this game that would feel like padding.
+
+> **The puzzle is solved once per recipe, not once per craft. Solving it *is* learning the recipe.**
+
+The first time you work out a Clearmind Salve you are at the mortar solving it, and that act writes
+the recipe into `DiscoveredBlueprints`. Every craft after that is instant. Four things follow, and all
+four are why this is the shape rather than a compromise:
+
+- **The authoring budget is finite and small.** Twenty-five hand-made puzzles played once each is
+  Myst-sized. The same twenty-five played three hundred times is the failure mode.
+- **It deletes the quality scalar, which protects the no-ladder rule.** A mini-game that produced a
+  *better* salve on a good run would have reintroduced a power ladder through the back door —
+  precisely what §11 and §18 spend their length preventing. A binary outcome cannot.
+- **It is headless-safe for free.** There is no score to pass across the seam. `Craft(recipeId)` gates
+  on `DiscoveredBlueprints` exactly as it does today, so `--verify-slice` never touches a puzzle and
+  no game rule ends up in the one layer the gates cannot reach.
+- **Learning becomes an event with a place attached.** Today picking up an `ItemCategory.Lore` item
+  silently teaches a recipe. Now the found page or the Dream fragment gives you the *problem*, and you
+  walk to the forge to understand it. **The puzzle happens at the station, not on pickup** — finding
+  the page and understanding it are different acts, and the walk between them is the game.
+
+**One mini-game per knowledge track, never per recipe.** `KnowledgeTrack { Craft, Physick }` already
+exists: Physick gets one interaction, Craft gets one, and a recipe varies the *parameters* — more
+steps, tighter logic — never the interaction itself.
+
+**The Dream gets no mini-games.** Its verb is observation, and a timing or logic interaction in there
+would collide with both the Resolve economy and §15's "nothing material crosses over".
+
+### Stations, and what a camp is for now
+
+A **station** is a new `HotspotKind`: the mortar, the anvil, the trapper's stump, the herb bank.
+Authored anywhere, in any number.
+
+**`HotspotKind.Workbench` remains the only thing that makes a room a camp.** §17's derivation is
+untouched and `CampManager` needs no change — a station is not a camp, or every herb patch would
+refill both pools and the body economy would be gone in one move. `CraftBlock.NotAtCamp` widens to
+**`NotAtStation`**, and `RecipeData` gains a `RequiresStation` field so **each recipe declares where
+it is made**. That converts a hard-coded rule into content Jeremy authors, which is the direction
+this project keeps going in — camp-ness from the bench, `SurvivesDeath` from the category, and now
+venue from the recipe.
+
+**Camps keep resting, respawn, and one exclusive job: fusion happens at the bench and nowhere else**
+(below). Field stations make single-track things. That is a mechanical monopoly the camp had lost when
+the cache was retired, and this one is thematically earned — their home, their shared work.
+
+**Craftsman's tools are always available and are never inventory.** A tool you can leave behind is a
+trip back to camp for nothing, which is §17's "if the player would never decline, do not ask" wearing
+travel boots.
+
+**The world itself can be a station.** A collapsed bridge is a station whose output is a *flag* rather
+than an item: same hotspot, same recipe check, one extra field for what it sets. **World repair costs
+key items and a reclaimed memory, never materials** — a bridge is a one-time authored event, so a
+unique found object makes it a puzzle where a timber cost would make it a budget line. It also lands
+squarely on invariant 5: a Dream memory becomes a road you can walk down, which is the first time the
+Dream's payoff is visible out here.
+
+*Rejected, and Jeremy's reason is the right one:* finding broken things in the world to **learn** from.
+It contradicts §15's gate that a new craftable thing always comes from the Dream and only refinement is
+found out here.
+
+### The material vocabulary — eight nouns, and only two of them matter
+
+The thing that creeps is not the quantity beside an item, it is the **vocabulary**: ten herbs crossed
+with six ores crossed with forty recipes, where every addition has to be balanced against everything
+already there. Quantity is a number; vocabulary is a multiplication. So the ceiling goes on the part
+with the balance cost:
+
+> **Cap the scarce list, not the total. Eight materials in the whole game, six common and two scarce
+> — one scarce per track. A common must never be the reason a craft is refused.**
+
+That last clause has teeth: **a common that can block you is a scarce material in disguise**, and that
+is exactly where grind comes from. If the player is ever short of timber, timber was misclassified.
+
+| | Count | Contents |
+|---|---|---|
+| **Physick** | 3 | a herb, a binder, and one scarce |
+| **Craft** | 5 | timber, metal, stone, leather, and one scarce |
+
+**Commons may be pool-separated by track for flavour; the two scarce materials must be shared across
+recipes.** That is not tidiness — it is where the only real decision in the material economy lives. If
+timber only made traps and metal only made armour there would be nothing to weigh; the scarce ones
+being contested is what makes *spend it on the trap or the coat* a question.
+
+**Start below the ceiling — two or three — but treat the ceiling as hard.** "Start small and keep
+adding" is precisely how a vocabulary creeps, one reasonable material at a time. A ninth material
+wanting to exist is a signal that a *recipe* wants redesigning.
+
+**The line that makes a small list feel large:** *knowledge is the gate, materials are the pacing.*
+You cannot make the coat because you do not know how; once you know how, materials decide *when*.
+Eight nouns carry twenty-five recipes without the game feeling thin, because the variety was never in
+the nouns.
+
+### Materials are a tally, not an inventory
+
+They occupy **no slots**, are never sorted, dropped or arbitrated, and are not what the satchel is for.
+Five or eight counters in a strip — arrows and rupees, not a bag. In code that is a static
+**`CountsAgainstSlots(ItemCategory)`**, the exact sibling of `SurvivesDeath`, keyed on the category so
+a new material cannot forget to declare itself.
+
+`ItemCategory.Reagent` is redefined and renamed to **`Component`**: a named station input rather than a
+generic raw material. `RecipeIngredient` survives, and quantities survive with it — the earlier claim
+that a recipe input could always be a singular unique object does not survive contact with a
+regenerating herb bank, and was wrong.
+
+**Key items are one category**, covering story objects, gate keys and world-repair components. They
+survive death, never take a slot, and are the low-stress discovery layer: searching a drawer and
+finding *the tanner's awl* is point-and-click gameplay, where finding `3x bitterroot` is arithmetic.
+Author as many as flavour wants; none of them creates an economy.
+
+### The chapter resource arc, and the two refills
+
+**Scarce materials are gated by story milestone, never by a clock or a step counter.** A real-time
+regeneration would need a clock the project has deliberately refused twice (`VitalityManager` and
+`CombatManager` both carry "no `_Process`, and there must never be one") and would reward idling.
+
+> **Each chapter has its own resource arc.** You arrive flush, spend down through the chapter, and
+> fight its boss on whatever your exploration earned you. **Chapters 1 and 2 both refill when the
+> chapter 2 boss falls. Chapter 3 is terminal.** Two refills in the whole game, and no game+.
+
+Thoroughness in chapter 1 is paid out in chapter 1's boss fight rather than banked forever, and a
+chapter never has to be balanced against any other chapter. That is the whole reason to do it this
+way.
+
+**With no carry limit, the milestone schedule is the only throttle on the entire consumable economy**
+— it is a balance-critical number rather than a flavour detail, and it is the lever that gives Jeremy
+the exact control he asked for.
+
+**The backtrack is an option, not a lap.** Restocking chapter 1 after chapter 2 means walking back
+through cleared ground, which is a chore — but only a player who burned through their supply ever needs
+to, so it is a recovery path rather than required content. It also has its own answer already built:
+*"zone cleanses, sun comes out"* is in the playable loop today, so a cleansed chapter 1 is visibly a
+different place. **Author something into a cleansed zone that was not there before**, even if it is
+only light and one line of text.
+
+**Save-scumming to re-farm a depleted node is not defended against.** Single-player, their game, and
+any measure against it costs more than the exploit.
+
+#### Why depleting a chapter is not a dead end
+
+This is the biggest risk in the schedule and it has a structural answer rather than a tuned one:
+
+> **The sever route costs only time. It can never be priced out.**
+
+Deplete the chapter, burn every salve, fail the overkill, flee (guaranteed), walk into the Dream, take
+the anchor — and come back to a boss that no longer regenerates and no longer drains Resolve. Nothing
+on that path requires a material. §10's "crude substitutes must be *sufficient*" is the same guarantee
+one layer down, and it still holds.
+
+**One correction to the tempting reading of this**, because it matters to how `SettleEngagement` is
+understood: the damage from the failed overkill is **not** banked. The boss was *anchored* during that
+fight, so its wounds closed. What carries forward is not progress on the body but the fact that the
+second fight is against something that cannot heal or drain you. The failed attempt costs supplies and
+teaches you the creature; the sever is what changes the arithmetic.
+
+**Extended from §13: no fight may require a consumable to win.** The baseline attack always exists, so
+a player who spends everything before the boss faces a harder fight, never an impossible one.
+
+### No carry limit — and why the rig cap is the better copy of that choice
+
+**Deleted 2026-07-31, and it was redundant rather than merely expensive.** An earlier draft of this
+section had a tight satchel with slot upgrades and the retired cache as overflow. §18 already ratified
+`GameConfig.RigSlotsPerFight`, so **the loadout choice already existed at the fight** — a carry limit
+was a second copy of the same decision, made one layer earlier and made worse:
+
+> A carry limit forces the choice **blind**, at camp, before you know what you are facing. The rig cap
+> forces it **informed**, in front of the creature, with §7's readout naming what it fears and what it
+> deals. Two limits enforcing one decision, and the redundant copy is the one that removes information
+> from the player.
+
+So the satchel is unlimited, and the caps live at the fight: **two traps and two salves.** Note how
+that multiplies with §5's 3–6 turn length rather than overlapping it — using a salve costs a turn, so
+carrying two means up to two of your turns are spent not killing. The cap and the clock price each
+other.
+
+**Slot upgrades go with it.** Permanent Vitality and Resolve maxima remain the ratified thoroughness
+rewards, and two sinks do not need a currency.
+
+**The shared cache is retired, not deleted.** §17 built it and §18 gave it its purpose — banking a
+spare coat against a bad night — and equipment surviving death removes that purpose. The code and its
+gates stay green and unused until the content pass; if nothing has claimed it by then, it and its gates
+come out in one clean pass. Ripping out working gated code to make a design point buys an afternoon of
+red for no gameplay.
+
+### The four salves, and her cache inverted
+
+**Four recipes, total.** Two healing, two of hers, and that is the whole apothecary side.
+
+| | Track | Inputs | Role |
+|---|---|---|---|
+| **Lesser healing salve** | Physick | commons only | the floor — always makeable |
+| **Greater healing salve** | Physick | commons + scarce | the good one, chapter-budgeted |
+| **Burning oil salve** | **fused** | commons + scarce | **an ingredient**, not a consumable |
+| **Corrosive salve** | **fused** | commons + scarce | **an ingredient**, not a consumable |
+
+**Two healing tiers work and three would not.** The lesser one would normally be dead content the
+moment the greater exists — with a two-salve cap you always bring two of the better — except the
+chapter budget makes the scarce material genuinely finite, so the lesser salve is what you make when it
+is spent. That is the floor, the same shape as the baseline attack. A third tier adds a rung that is
+dominated by one of its neighbours in every situation the game can produce.
+
+#### Her salves are found first and learned last — the inversion, and it is the best thing here
+
+**Jeremy's call, and it repairs a problem nobody had named.** The fused salves are the ones **she left
+you**: a finite authored cache, unrepeatable, in your hands from the first hour. You craft the weak
+ones for most of the game, and late — with enough Craft reclaimed and enough of her notes found — you
+learn to make hers.
+
+> A late-game recipe normally means a late-game *item*: barely used, barely felt. Inverted, **the item
+> is present for the whole game and only the making of it is late.** Learning her recipe reads as
+> resurrection rather than a tier unlock.
+
+It also kills the ladder objection outright — the fused salve was never an upgrade you grow into, it is
+a thing you were rationing and finally earn the right to reproduce. And it is the authored cache §10
+describes and M4 still lists as missing content, extended into an arc.
+
+**This reverses §10's "her named salves stay uncraftable."** The sentence it was protecting —
+*you learn her craft, you never duplicate her hand* — is not deleted so much as given a scene: for most
+of the game it is exactly true, and the moment it stops being true is the payoff.
+
+**The Elixir problem, and it is authored around rather than ruled around.** Players hoard finite
+best-items and finish games having never spent one. The reluctance is intended here (§10: *burning her
+work must always be a choice*), so do not fix it with a mechanic — fix it with placement. **Hand the
+player one burning oil salve in the first tutorial fight and make the use unmistakable**, so they learn
+what spending her work feels like. Better still, have them *craft the trap with it* rather than handing
+over a finished one: her ingredient, his mechanism, a typed creature, all taught in one beat. After
+that, hoarding is their choice and it is the right one to have offered.
+
+### Fusion — and it was already in the vocabulary
+
+Jeremy: *"You need to fuse your crafting and her herblore for the most powerful resource in the game.
+It is a symbol for their love."*
+
+**The symbol costs nothing to build, because §18 already implies it.** Traps are Craft objects —
+vessels, mechanisms, things you build. Caustic is hers. So:
+
+> **A trap carrying her chemistry cannot be made by either track alone.** Her oil or her acid inside
+> his mechanism. `KnowledgeTrack` needs no third member; a recipe simply needs to be able to require
+> **both**, and fusion happens at the bench.
+
+| | |
+|---|---|
+| **Edge / Blunt traps** | pure Craft — commons only |
+| **Fire / Caustic traps** | **fused** — need burning oil or corrosive salve |
+
+**This closes §13's last open question: Fire is fused, not purely his.** The oil is chemistry and the
+ignition is mechanism, so Fire lands two-and-two across the couple rather than three-and-one. Half the
+damage coverage in the game runs through her, on four recipes — load-bearing rather than decorative,
+while every trap is still his object.
+
+**A fused item must never be simply stronger.** It is the only route to a damage type some creature is
+vulnerable to, which is **access, not power**, and keeps §11's no-multipliers rule intact. Keep the
+fused list at the four recipes above: a symbol used six times is a mechanic.
+
+**Bookkeeping that is easy to get wrong:** burning oil and corrosive are *called* salves and are
+mechanically **`Component`**, not `ItemCategory.Salve` — they restore no Vitality and are crafting
+inputs. Both static predicates key off the category, and both land correctly: Components survive death,
+which is what her irreplaceable ones need.
+
+**Which cap does an offensive salve count against? Neither — the question is void.** Her combat salves
+are never carried into a fight at all; they are consumed at the bench making traps. **Salve slots are
+two healing items. Trap slots are two traps.** No overlap and nothing to arbitrate.
+
+Note the ramp this produces on its own: early on the scarce Physick material has exactly one sink
+(greater healing), and gains two more the moment her recipes come back. The material becomes contested
+precisely when her work returns.
+
+### Equipment survives death — reversing §18
+
+**§18 ratified that equipment is destroyed on death**, argued as the recraft pressure that replaces
+durability. That is reversed 2026-07-31, on Jeremy's call: *"I think this reduces scope and is better
+for the player."*
+
+So **nothing degrades and nothing is lost.** Equipment is a Zelda tool — crafted once from a reclaimed
+memory plus materials, owned for good. It is also what retires the cache's stated purpose (above).
+
+**State the consequence plainly rather than discovering it later: death is now cheap.** It costs the
+traps you had rigged and the walk back from camp, and nothing else — salves are only "lost" by being
+spent, which is consumption rather than a penalty. That is defensible, because §18's flight guarantee
+makes death entirely avoidable and making an avoidable failure cheap is a different bargain from making
+an unavoidable one cheap. It is thinner than what §18 designed, and it is worth re-checking in play
+rather than assuming.
+
+**Traps remain consumed, always** — §13's answer stands and this section leans on it. They are now the
+only thing a fight can take from you, which is what keeps §1's overkill column honest: the route paid
+for in finite supplies is still paid for in finite supplies. Permanent traps were considered and
+**rejected**: they would have collapsed overkill's cost to turns and salves while severing still cost a
+Dream run, inverting invariant 1. The fantasy behind the request — *I own the fire tool forever* — is
+served by equipment, which is permanent and grants damage types already.
+
+### Catalysts flip from price to reward
+
+**§6 made a catalyst the price of crossing.** Reversed 2026-07-31: **a catalyst is what severing an
+anchor gives you**, and it grants abilities in the Dream. Entry to a pocket costs finding its object of
+interest and nothing more.
+
+That restores the GDD line the system was named for — *real-world crafting items catalyse abilities in
+the Pixel Realm* — which §6 had narrowed into an entry toll. **An entry fee is a tax; an ability is a
+loadout decision at the same price.** It also produces a rhyme worth having: rig two traps for a Waking
+fight, spend a catalyst on a Dream boss.
+
+**What §6 gave as its reason has to be answered rather than ignored.** It objected that without a
+catalyst, *failing a heist costs nothing but time*, and that thirty free retries turn an unsettling
+place into a grind. Jeremy's rebuttal is accepted and is the stronger argument: a material cost on
+retry does not prevent the grind, it **adds a gathering trip to** the grind. Time was always the real
+currency and the catalyst only taxed it. What replaces the toll:
+
+> **A gradient, not a gate.** The first anchor is severed with no abilities at all, and each one taken
+> makes the next pocket easier. Fail a run and you lose time; skip severing and you do every remaining
+> pocket the hard way.
+
+That is a soft gate, so nobody can be locked out — which suits invariant 12 better than the toll did —
+and the incentive to sever becomes positive rather than punitive. **Keep the abilities lateral**, not
+compounding: new perception, new ward, a new way through, never *stronger*, or the last pocket is
+trivial and the first is brutal. Invariant 11 still binds — no ability that slows the Resolve drain or
+touches a boss's regeneration.
+
+**Because time is now the entire cost of failure, pocket length becomes a balance parameter rather than
+a pacing preference.** Failing at minute two of a three-minute pocket is a shrug; failing at minute
+eleven of twelve is the worst feeling the game can produce. Ratified ramp: **early pockets 2–5 minutes,
+late ones up to 15 — and the long ones must be the ones where failure is least likely.**
+
+#### Killing a boss must not delete its pocket
+
+The lockout Jeremy spotted: overkill the boss, its pocket vanishes, its catalyst is gone forever —
+missable content, and it punishes the route that was already the expensive one.
+
+> **Find the object of interest after the boss is dead and you get the catalyst free, with no trial.
+> The pocket still opens; it is simply empty.** No pursuer, no chase — walk to the fragment and take
+> it.
+
+This makes the **reward identical on both routes and the cost different**, which is invariant 1 rather
+than an exception to it: severing pays a Dream run and buys an easier fight, overkill pays a much harder
+fight and collects afterwards. Severing does not become pointless, because what it buys is the *fight*.
+
+Three things it gets for free. The lore justifies the mechanic — the trial is gone because the mind
+holding it up is gone. It costs one flag check on whether to spawn the boss, reusing a pocket already
+built. And it is a **falling-action room by construction**: a dead thing's dream with nothing left in
+it but what you came for.
+
+### Resolve: suppression is the only drain
+
+**Ratified 2026-07-31, and it deletes a feature rather than adding one.** An intermediate design gave
+regions a no-drain flag so a pocket could have a calm tail. Jeremy: *"Suppressing spirit light is the
+only drain, so when you get past enemies you can stop using it and solve the puzzles at your pace."*
+
+> **There is no base drain in the Dream. Resolve moves only while you are suppressing your spirit
+> light.** No regional flag, no bool to author, no chance of putting a safe room in the wrong place.
+
+The clock stops being a timer and becomes **resource management with a verb attached** — you choose,
+continuously, between being seen and being hidden, and only one of those costs.
+
+**And it makes the clock appear exactly where the design already wanted it, with no authoring at all:**
+
+| | |
+|---|---|
+| **Knowledge pockets** | blind creatures drawn to light. Show your light and they drift toward you; hide and the bar burns. You may stand and think for as long as you are willing to be seen. **Paced observation, no clock.** |
+| **Boss pockets** | the boss is *always* drawn to the light, chases on sight, and needs line of sight broken for ten seconds. Showing your light means being hunted permanently, so suppression is effectively mandatory. **The bar becomes a hard clock.** |
+
+That is §15's two-versions split arriving as a *consequence* of one rule rather than as a flag on every
+region. It also leaves the two ratified readings intact: Resolve capacity still means *how long you can
+stay hidden*, and §5's "never a digit" still holds, because **the world is the readout** — suppressed
+means the near field goes dark, and that teaches faster than any warning. Sound and UI nags are
+deliberately **not** built; revisit only if a played pocket shows a player getting caught out. Jeremy:
+*"I find those warnings super annoying."*
+
+Tuning note: keep the suppression drain slow enough that cautious over-hiding is a waste rather than a
+death. The *visible* cost — being half-blind — is what teaches the player to come back up.
+
+### Two principles worth quoting, because they settle future arguments
+
+**"More memorable than challenging."** Jeremy, 2026-07-31, about pocket design. Where a decision could
+go either way, this is the tie-breaker.
+
+**Falling action after the challenge, never before it.** *"The worst games I've played you go through a
+challenging maze and then at the end something even worse is there. Instead challenge the player and
+have a falling action activity that feels productive and they can revel in their previous victory."*
+Two things it decides immediately: **the memory fragment goes after the hard part, not behind it** —
+chase or hazard early, calm traverse to the fragment after, so taking it is the exhale. And keep the
+tail **short**, a minute rather than five, since a long exhale turns back into pressure.
+
+Boss counterplay follows the same rule: *"We will make solutions for the bosses to help so it is not
+really difficult but is memorable"* — which is §15's environmental route past a creature, already
+ratified, pointed at difficulty rather than at fairness.
+
+### What must exist in code before any station is authored
+
+The §18 discipline applied again: shapes first, so a field added later does not reopen every `.tres`.
+
+| | |
+|---|---|
+| `HotspotKind` | gains **`Station`**. `Workbench` keeps its camp meaning and gains fusion. |
+| `RecipeData` | `RequiresStation`, `RequiresBothTracks`, and an optional `SetsFlag` for world repair |
+| `CraftBlock` | `NotAtCamp` → **`NotAtStation`** |
+| `ItemCategory` | `Reagent` → **`Component`**; key items unified into one member |
+| `InventoryCraftingManager` | **`CountsAgainstSlots(ItemCategory)`**, static, sibling of `SurvivesDeath`; `SurvivesDeath` gains `Equipment` |
+| `GameConfig` | a salve cap beside `RigSlotsPerFight`, and the material milestone schedule |
+
+**And one thing to name before any station exists, because everything downstream is balanced against
+it: the eight materials.** ~~Two or three at first, but named~~ — **done 2026-07-31, and the whole
+roster went with it: [`items.md`](items.md).** Every material, salve, trap, weapon, coat and tool,
+named and costed, with the per-chapter availability table and the scarce budget. Two of the eight
+turned out to already exist as authored `.tres` items, which is the strongest evidence available that
+eight is the right size.
+
+---
+
+## 20. The last boss — three routes, and the good ending
+
+**Jeremy's reveal, 2026-07-31.** In the final Dream pocket, **the anchor is Iris.** She asks you to
+destroy her, and severing her weakens the boss exactly as any sever does.
+
+| Route | The fight | Iris | Ending |
+|---|---|---|---|
+| **Sever her** | weakened, no aura drain | **destroyed** | the loss — and you may never learn it was avoidable |
+| **Refuse, and overkill** | full strength, anchor intact, Resolve draining throughout | freed | **good** |
+| **Exorcise** | weakened — the engine *releases* the anchor instead of destroying it | freed | **good** |
+
+> **Revised 2026-07-31, and the revision simplifies it: this is two routes, not three.** An earlier
+> draft gave the good ending to the engine alone and called overkill "grim". Jeremy's correction —
+> *"option 2 killing the boss gives you the good ending as well, because it would be a hard battle"* —
+> makes the structure **sever her, or refuse**, where **the refuse route has two ways to survive it:
+> raw skill, or the engine.**
+>
+> That is not a new shape. It is §15's ratified *two routes past a creature* — reflex or environment —
+> arriving at the climax, and it is the fairness principle Jeremy stated when that rule was made:
+> *"I will create trap/puzzle environments for people who aren't as good. I feel like this is a fair way
+> to do it."* **So the engine is not a third route; it is the accessibility ramp on the hard one.** It is
+> strictly dominant — easier fight *and* the good ending — and that is correct, because it costs three
+> chapters of thoroughness that nothing else in the game requires.
+
+**This is the two-route economy becoming the theme, which is the best thing a mechanic can do.** §1's
+sever-versus-overkill has been teaching one lesson for three chapters — two ways past the same
+obstacle, paying different currencies — and at the end the currencies become **her, skill, or
+preparation.** The last of those is the game's own thesis: §4's *"you do not out-fight it, you out-build
+it"* turns out to be what saves her.
+
+### The tether has two ends — which is what the engine actually cuts
+
+**This is the detail the earlier draft got wrong, and it matters to the fiction as much as the rules.**
+If the engine merely "severed the tether", it would destroy the anchor — and the anchor is Iris, so the
+engine would kill her exactly as the Dream route does.
+
+> **Severing in the Dream destroys the anchor. The engine releases it.** Same tether, cut from the other
+> end.
+
+So the engine weakens the boss *and* frees her, which is why it is the best outcome available, and
+invariant 11 is satisfied more literally than before rather than less: cutting the tether is still the
+only way to remove regeneration, and it turns out there are two ends to cut.
+
+### The Graveflower hoard is the foreshadowing
+
+**Severing her is now the outcome where you did what she asked and lost her anyway**, and a player who
+never engaged with crafting may finish the game never knowing it was avoidable. That is only fair if the
+game hinted, and [`items.md`](items.md) turns out to have been hinting for three chapters without being
+designed to:
+
+- **Graveflower you cannot spend on anything**, accumulating from every screen you restore.
+- **Her notes turning up in unrelated places**, because the demon dropped them as worthless.
+- **Three locked recipes in a cache** you can hold but not reproduce.
+
+All three say *her work can still do something.* A player who paid attention has the hint; a player who
+did not, does not — which is what "rewards effort" means when it is real rather than decorative. Worth
+recording because the hoard was designed as an economy and turned out to be structure.
+
+### The exorcism engine does not violate invariant 11 — it satisfies it
+
+This needs stating carefully, because the instinct is that it cannot be legal. §4 **struck the salt
+line** to enforce invariant 11, and the rule reads:
+
+> *Cutting the tether is the only way to remove regeneration or the Resolve drain. No trap, item, ward
+> or consumable does either, in whole or in part.*
+
+**It says cutting the tether is the only way. It does not say the Dream is the only way to cut the
+tether.** So an engine that severs from the Waking side is not a trap buying the anchor's effects off —
+**it is a severing, by a third route.** The invariant is untouched.
+
+Two conditions keep it that way, and both are cheap:
+
+- **It is a unique authored object, never `ItemCategory.Trap`.** One recipe, one encounter,
+  unrepeatable. The moment it is a trap category it teaches the player that traps can do this, and the
+  salt line is back through the front door.
+- **It cuts the tether; it does not "suppress the aura."** Same effect, different claim, and §4 spent a
+  page on precisely that difference.
+
+### Why three routes and not two with a skin on
+
+**The real risk here is not the invariant, it is choice architecture.** If exorcism were mechanically
+equal to severing but morally cheaper, nobody would ever sever her — that is not three choices, it is
+one choice and two mistakes. So the three bills above must stay genuinely different, and the load is
+carried by **exorcism giving you no sever**: you fight the boss at full strength with its anchor intact,
+and the engine is what you spent the whole game earning instead of a discount on the fight.
+
+**The fusion pays off here and nowhere else does it matter as much.** The engine needs **her physick to
+purify and his craft to contain**, so it cannot be built from one track. Jeremy: *"ironic that both
+trades will be its downfall."* The demon stole his knowledge and discarded hers as worthless
+([`items.md`](items.md) §9) — and the two together are what undoes it. That is mechanically true, not
+only thematically true.
+
+### Two guarantees already in the design make this safe
+
+Neither was designed for this and both hold, which is usually a sign the structure is right:
+
+- **Flight is guaranteed (§18), so a player who reaches the finale without the engine can walk away and
+  go build it.** The good ending is never irrecoverably lost — only not yet earned. That keeps
+  invariant 12 intact at the one place a three-ending structure would most easily break it.
+- **Chapters 1 and 2 refill and stay reachable** (§19), so going back to do the optional work is
+  supplied rather than a scavenge.
+
+### Left open on purpose
+
+**Whether refusing to sever her leaves her alive-but-corrupted or takes her with the boss.** That is
+writing rather than mechanics, it blocks nothing, and it is better decided when the scene is being
+written than now.
