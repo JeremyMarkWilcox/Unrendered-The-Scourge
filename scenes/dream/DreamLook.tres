@@ -1,0 +1,19 @@
+; The look pass as a shared material rather than a subresource inside the probe scene.
+;
+; Deliberate: the probe is throwaway but this is not. When the seam is wired up, `RoomView.tscn`'s
+; `DreamContainer` assigns *this file* and the look arrives with no second implementation to keep
+; in sync. Building it inline would have meant building it twice and discovering the divergence
+; from a screenshot.
+;
+; The values here are placeholders in the only sense that matters — they are the starting point for
+; scrubbing, not a decision. Whatever the keys land on in the probe gets written back here.
+[gd_resource type="ShaderMaterial" load_steps=2 format=3]
+
+[ext_resource type="Shader" path="res://scenes/dream/DreamLook.gdshader" id="1_shader"]
+
+[resource]
+shader = ExtResource("1_shader")
+shader_parameter/levels = 2
+shader_parameter/white_clamp = 0.4
+shader_parameter/signal_chroma = 0.04
+shader_parameter/dither_strength = 0.75

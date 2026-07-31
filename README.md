@@ -7,8 +7,9 @@ physical host in reality.
 **Both realms are first-person, and that is the only thing they share.** The Waking world is
 first-person in a **2D** world — Myst-style, painted screen nodes, click to move. The Dream is
 first-person in a **3D** world, walked rather than clicked. Settled 2026-07-30; what is still open is
-whether the creatures in the Dream are 2D billboards or 3D models. **Only the Waking half is built** —
-the Dream is currently a graph of 2D rooms, which is prototype and going away.
+whether the creatures in the Dream are 2D billboards or 3D models. The Waking half is built and
+playable; the Dream's 3D half is **walkable but not wired in** (`scenes/dream/DreamProbe.tscn`). The
+graph of 2D Dream rooms still in `data/rooms/` is the old prototype and is going away.
 
 ## Running
 
@@ -20,6 +21,9 @@ dotnet build                                    # C# assembly
 "$GODOT" --headless --path . -- --verify-slice  # assert every milestone gate (exit 0 = pass)
 "$GODOT" --path . -- --shots                    # capture the slice to .shots/
 "$GODOT" --headless --path . -- --seed-content  # regenerate data/*.tres from ContentSeeder
+
+"$GODOT" --path . scenes/dream/DreamProbe.tscn                  # the 3D Dream probe (or F6 in the editor)
+"$GODOT" --path . scenes/dream/DreamProbe.tscn -- --probe-shot  # one labelled frame to .shots/, then exit
 ```
 
 `--seed-content` **overwrites** everything under `data/`. It exists to bootstrap the starting
@@ -38,6 +42,13 @@ content correctly; once you begin editing rooms in the inspector, stop running i
 | `F2` | Take a debug wound (15 Vitality) |
 | `F5` / `F9` | Save / load |
 
+The **Dream probe** is a separate scene with its own keys: `WASD` walks, click captures the mouse and
+`Esc` releases it; `[ ]` greys, `; '` white clamp, `- =` dither, `, .` light radius; `5 6` creature
+line thickness, `7 8` line density, `9 0` crawl rate, `K` whether creatures reach white; `O P` light
+flicker and `N M` its speed; `F4` hides the readout and `F12` saves a frame named after the values
+that produced it. Holding a key scrubs. **[`docs/dream-probe.md`](docs/dream-probe.md) is the guide to
+driving it**, including where the lighting and material settings live in the editor.
+
 ## Architecture
 
 **Content is data, not scenes.** One `RoomView.tscn` renders every screen in the game; each
@@ -51,11 +62,13 @@ src/
   Data/       [GlobalClass] resources authored as .tres
   World/      RoomView, Hotspot, EntityOverlay, PlaceholderBackdrop, InteractionService
   UI/         Hud, ResolveMeter, VitalityMeter, DebugPanel, InventoryPanel
+  Dream/      the 3D probe's walker and look tuner   <- wired into nothing; see the handoff
   Save/       JSON round-trip of the manager state
   Tools/      ContentSeeder, SliceVerifier, ScreenshotTool
 data/         rooms/ entities/ items/ recipes/ zones/ heists/   <- the game's content
 scenes/       Boot, Main, RoomView
 scenes/ui/    InventoryPanel + the shared PanelTheme.tres
+scenes/dream/ DreamProbe.tscn + the look shader and its material
 ```
 
 **Panels are scenes; the HUD is not.** `Hud.cs` is built in code because its layout never changes.
@@ -159,7 +172,12 @@ never decline a rest. Crafting and the shared cache only work at a bench, so **p
 with `CraftBlock.NotAtCamp` / `StashBlock.NotAtCamp`, which is a reason the crafting panel can print
 rather than a silent failure.
 
-**Next: the 3D Dream prototype**, moved to the front of the queue on 2026-07-30. It is the last
-architectural risk and the first thing worth showing anyone, and those turn out to be the same build.
-`docs/handoff.md`, "The Dream in 3D", is the startup order. After it: the encounter state machine,
-then the crafting panel, then the journal.
+**The 3D Dream is walkable, in a scene wired into nothing.** `scenes/dream/DreamProbe.tscn` is the
+look shader, the 480×270 3D viewport, a first-person controller and the lighting model — the last
+architectural risk and the first thing worth showing anyone, which turned out to be the same build.
+It touches no autoload, no save format and not `RoomView`, so the suite is unchanged at 328.
+
+**Next: the greybox pocket** — one quiet knowledge pocket with a distinctive landmark, and a capsule
+beside a billboard so the creature question can be answered by looking rather than argued. Then the
+seam into `Main` with its gates, then the encounter state machine, the crafting panel and the journal.
+`docs/handoff.md`, "The Dream in 3D", has the order and what unit 1 already taught.

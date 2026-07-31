@@ -9,7 +9,15 @@ equipment vocabulary that the rest of that document defers, and it deletes Defen
 `README.md`; Claude runs `--verify-slice` before and after code changes, so there is no start-of-
 session ritual to perform.
 
-**Newest change: the Dream's direction is settled, and it moved to the front of the queue.** The
+**Newest change: the 3D Dream is walkable.** `scenes/dream/DreamProbe.tscn` — open it, press **F6**,
+click to look, `WASD` to walk, and scrub the look with the keys listed in "Done: unit 1 — the probe"
+at the end of §1's Dream section. It is the look shader, the 480×270 3D viewport, the first-person
+controller and the lighting model, in one scene **wired into nothing**, so the suite is still **328,
+exit 0**. What it is for is being looked at: the ramp's numbers are yours to settle by eye, and
+nothing about them is decided. Steps 4–6 — the greybox pocket, the creatures and environmental
+warding — are still plan.
+
+**Before that, the Dream's direction was settled, and it moved to the front of the queue.** The
 **Waking world is first-person in a 2D world** and the **Dream is first-person in a 3D world** —
 that part is closed. The only thing still open is whether the *creatures* in it are 2D billboards or
 3D models. See **"The Dream in 3D"** in §1 for the startup order, which is what Jeremy asked to have
@@ -271,8 +279,26 @@ Two things still to hold off on, and the reasons are now different from each oth
 
 ### The Dream in 3D — the startup order
 
-Written 2026-07-30, at Jeremy's request, when the direction settled. **Nothing below is built.** This
-is the plan and the sequence, not a record.
+Written 2026-07-30, at Jeremy's request, when the direction settled. ~~**Nothing below is built.**~~
+**Unit 1 is built** — steps 1, 2 and 3's floor, plus the lighting model, as one scene. See
+"Done: unit 1 — the probe" at the end of this section. Steps 4–6 are still plan.
+
+**The steps below are the right order and the wrong grouping, which is worth knowing before
+following them.** Numbered 0–6 they read as seven deliverables; three of them cannot be delivered
+separately, because a posterise pass with nothing behind it, a viewport with nothing in it and a
+walker in an unlit void are each unlookable-at. The regrouping actually used:
+
+| | | |
+|---|---|---|
+| **unit 1** | steps 1 + 2 + step 3's floor + the lighting model | ✅ built |
+| **unit 2** | step 4, and a throwaway step 5 inside it | next |
+| **unit 3** | the seam into `Main`, its gates, the atomic grant-and-consume | |
+| **unit 4** | rigid bodies + step 6, once a puzzle names one | |
+
+Two of those regroupings are judgement calls rather than tidying, and both are argued where they
+land: **the lighting model is half the look** and so cannot follow the shader (below, before step 1),
+and **step 5 is cheap and gates someone else's work**, so a throwaway version belongs inside unit 2
+rather than after it (below, at step 5).
 
 **The settled part, in one line:** the Waking world is first-person in a 2D world; the Dream is
 first-person in a 3D world. The open part is whether the creatures in it are 2D billboards or 3D
@@ -416,6 +442,13 @@ uses — a camp is the room with the bench, and `SurvivesDeath` is keyed on cate
 - **Compatibility gets safer, not riskier.** One light on the player is trivial in any backend, and
   *sparse* placed lights stay under the per-object cap. The reopen condition stated above — a dozen
   small lights in one pocket — is now a thing to watch during authoring rather than a hypothetical.
+
+> **Therefore the lighting ships with the shader, in the same unit — added 2026-07-30 while building
+> it.** This section sits before step 1 and reads like context for a later authoring pass, but the
+> decision inside it makes that impossible: *falloff owns distance*, so all value separation comes
+> from where the lights are. Posterise tuned against a flatly ambient-lit greybox would be tuned
+> against an image the game is never going to show. It is not a fifth step either — a player light
+> and two placed ones is about six lines of scene, which is the whole point of choosing that model.
 
 **1. The look shader — the highest-impact thing in this list.** A screen-space pass on the Dream
 `SubViewport` doing greyscale, posterise and dither. The art direction already settled the pipeline
@@ -604,6 +637,16 @@ What still wants a screenshot: whether multi-angle billboards (Doom-style rotati
 given the chase camera, since they multiply the drawing cost per pose and the chase may make them
 unnecessary. Build one boss both ways in the lit space and look — that is cheaper than deciding.
 
+> **A throwaway version of this belongs *inside* step 4, not after it — added 2026-07-30.** The
+> stated reason to defer it is that a pursuer-free space isolates the visual question from the chase
+> question, and that reason is sound. But it defers the wrong thing: billboard-versus-model is not
+> the *frightening* question, it is the *legibility in space* question, and a quiet room is where
+> that is best tested. Meanwhile this is **the only open call in the whole section that gates another
+> person's work** — an artist cannot be briefed without being told whether the deliverable is a
+> sprite sheet or a mesh, and briefing an artist is one of the two reasons this section jumped the
+> queue. A capsule and a white-on-black quad in an already-lit room costs almost nothing. Keep the
+> careful version of step 5 for later; put the cheap one where it unblocks somebody.
+
 **6. Warding creatures off with the environment — widened 2026-07-30, and it is the other reversal.**
 The plan of record was *level mechanics that slow the pursuer down*, scoped to **boss pockets only**.
 Jeremy has widened it: *"There will be ways to use puzzles/environments to ward off boss and normal
@@ -665,6 +708,172 @@ comparably. So keep the environmental route **roughly Resolve-neutral against do
 gap small enough that it does not accumulate. The reverse failure is milder but worth knowing: if
 traps are reliable and dodging is risky, nobody ever dodges and the reflex layer is decorative. Which
 of those two you would rather have is a real question, and a play question.
+
+#### Done 2026-07-30: unit 1 — the probe
+
+`scenes/dream/DreamProbe.tscn`. Open it and press **F6** (not F5 — that runs `Boot.tscn`). Or:
+`godot --path . scenes/dream/DreamProbe.tscn -- --probe-shot` writes one labelled frame to `.shots/`
+and exits, which is how the look can be re-checked after any shader change without playing it.
+
+**[`dream-probe.md`](dream-probe.md) is the driving guide** — the keys, getting around the 3D editor,
+and which node holds which lighting and material setting. Written for a first go at Godot 3D, and
+separate from this file because it is *which button* rather than *why*.
+
+**Wired into nothing, deliberately.** `Main.tscn` does not know the file exists, so it cannot redden
+a gate and can be deleted without ceremony. `RoomView.tscn`'s `disable_3d = true` is untouched; the
+suite is **still 328, exit 0**. The consequence to state plainly: for the first time there is a piece
+of this repo with no gates on it at all, and that is correct rather than an oversight — the unit's
+entire success criterion is whether a room reads, and `--verify-slice` cannot have an opinion about
+that. Gates arrive with unit 3, when the seam does.
+
+Five files: the shader, the material, the two scripts, the scene.
+
+- **`scenes/dream/DreamLook.gdshader`** — greyscale, posterise, 8×8 ordered dither, and the
+  three-tier ramp *enforced* rather than requested. Above `signal_threshold` a pixel is snapped to
+  pure white and never dithered; everything else is quantised into `levels` bands across
+  `[0, white_clamp]` and so physically cannot reach the top. Same move as camp-ness from the bench.
+- **`scenes/dream/DreamLook.tres`** — the material as a *file*, which is the one piece of unit 1
+  that is not throwaway. Unit 3 assigns this to `RoomView`'s `DreamContainer` and the look arrives
+  with no second implementation to keep in sync. Inlining it as a subresource would have meant
+  building it twice and finding out from a screenshot.
+- **`src/Dream/DreamLookTuner.cs`** — the knobs, the readout, `F12` capture. **The deliverable of
+  this unit is knobs, not values**; whatever the keys settle on gets written back into the `.tres`.
+- **`src/Dream/DreamProbeWalker.cs`** — `CharacterBody3D` on CSG collision at 2.2 m/s. No jump, no
+  rigid bodies: the complexity budget stays attached to a consumer, and unit 4 has the consumer.
+
+**The starting values are `levels 6`, `white_clamp 0.82`, `dither 0.70`, `signal_threshold 0.90`,
+player light `range 7.0`.** Keys: `[ ]` greys, `; '` clamp, `- =` dither, `9 0` signal threshold,
+`, .` light radius, `F4` hide the readout, `F12` shoot. Holding a key scrubs.
+
+**What the first frame taught, and it is the thing this section predicted about itself.** The
+pipeline was right immediately and the *composition* was wrong: a 16×16 room lit by a 6-unit radius,
+with the placed lights high enough to wash the ceiling instead of revealing anything, and the
+landmark parked in pitch black so its own test could not be run. The temptation is to reach for the
+ramp. **The ramp was never touched — `levels` stayed at 6 through both frames.** The fix was an 11×11
+room, a 7-unit radius, and the placed lights moved down onto the objects they are pointing at. That
+is exactly the warning already written above — *treat a creeping level count as a symptom; the cause
+is almost always light placement* — arriving on the first screenshot rather than after a pocket was
+authored. Worth trusting the next time the instinct is to add greys.
+
+**Two authoring rules fell out, both cheap now:**
+
+- **The ceiling wants its own darker material.** With both ends of the ramp reserved the world has a
+  compressed value band, and a large flat ceiling at the same value as the floor eats the frame and
+  doubles the dither noise. Dark ceiling / mid floor / mid walls separates them inside the band and
+  is horror-native anyway.
+- **Specular has to be off on materials *and* lights.** Not a taste call: a highlight pushes a wall's
+  luminance past `signal_threshold` and the wall flashes white, which breaks the white reservation
+  from the inside — the reserve defeated by the renderer rather than by an authoring mistake.
+
+**Four technical findings, all of them things that would have cost an afternoon to rediscover:**
+
+- **There is no `MODULATE` built-in in a `canvas_item` shader here** (Godot 4.7.1, Compatibility) —
+  the first version used it and failed to compile. The fix is better than the original: on entry
+  `COLOR` *already is* the texture times the modulate chain, so reading it gets the alpha for free.
+  Which means the pass survives `RoomView` cross-fading the realms with no change, and the modulate
+  only touches alpha, so luminance is unaffected.
+- **The dither must be indexed off viewport pixels, not `FRAGCOORD`.** The pass runs on the container,
+  after the 4× upscale, so `FRAGCOORD` is in 1920×1080 screen pixels — a Bayer index off it is four
+  times too fine and reads as noise rather than as texture. `floor(UV * textureSize(TEXTURE, 0))`
+  puts the pattern back on the 480×270 grid.
+- **A capture must be of the window, not the `SubViewport`.** The look lives on the container, so a
+  `SubViewport` capture silently saves the raw 3D image with no posterise, dither or clamp in it —
+  a screenshot that looks fine and shows none of the thing it exists to show. The 4× nearest upscale
+  comes along and that is correct; the pixels are still legible as 4×4 blocks.
+- **Dither-rising-with-distance is doubly dead, and the second reason is new.** The lighting decision
+  retired it because falloff owns distance. Independently, a `canvas_item` pass over a `SubViewport`
+  has no depth buffer to have done it with, so it was also the expensive parameter of the five.
+  Recorded so nobody adds it back casually on the grounds that it "was in the plan".
+
+**What unit 1 does not answer.** Whether the room is *frightening* — it is a lit box with a capsule
+in it. Whether the landmark idea works, which needs two pockets to be confused between. And the
+creature reads beautifully as a black hole against a lit wall but vanishes past the light radius,
+exactly as this section predicted — the rim light is unbuilt, and it belongs with unit 2's creatures.
+
+#### Decided 2026-07-30: the spirit light, and what Resolve is actually for
+
+The Dream's light is **the player's own spirit**, not a torch — Jeremy's lore correction, and it changed
+the mechanic rather than the word. A torch attracting monsters is a convention; a living spirit's light
+in a realm of spirits drawing what lives there is simply what would happen.
+
+**Because the light is you, its default is ON, and you suppress it rather than switch it on.**
+
+| | You are | Cost |
+|---|---|---|
+| **Spirit shown** | seen, and you can see | creatures come to you |
+| **Spirit suppressed** | hidden, and half-blind | Resolve burns faster |
+
+One axis with a price at each end, not two costs for one action — the player always pays something and
+chooses which. **This is what finally gives §5's Resolve clock a cause:** it used to drain because you
+were in the Dream, which is arbitrary; it now drains because you are holding your own spirit down.
+Jeremy expects suppression to become a puzzle verb rather than only a stealth toggle — TBD.
+
+**Boss senses, same conversation:** always drawn to the light, acquire by proximity, noise or light,
+chase on sight, and **line of sight must stay broken for 10 seconds** before the chase ends. This
+retires open question 7 — the pure-BFS chase is replaced by something with diegetic, learnable
+counterplay, and *anything that blocks sight is now the environmental ward* the design wanted. It also
+lands the first hard constraint on boss-pocket authoring: **a boss pocket cannot be an open room**,
+because staying unseen for ten seconds requires geometry to break sight with.
+
+**Permanent pool upgrades, also decided:** Vitality and Resolve maxima grow across the game as a reward
+for thoroughness. `Max` is not `Current`, so the settled "no item restores Resolve" rule is intact — the
+guard is that upgrades must be **permanent, never consumable**, or a cheaper-suppression consumable
+becomes a Resolve restore wearing a hat. Two consequences: Resolve capacity now means *how long you can
+stay hidden*, and since nothing material leaves the Dream, a Resolve maximum increase cannot be an item
+found in there — **it is Attunement**, which has been designed as "grows by surviving the Dream" and
+never had a mechanic until now. Vitality maxima are Waking-world finds. Each pool upgrades in the realm
+it serves.
+
+#### Next in the probe — the queue, and the criterion that ordered it
+
+Agreed 2026-07-30. These are built **in the test room**, not in a pocket: Jeremy's call — *"I think we can
+keep adding features in this test room and build things we know that we want to."* Right, because each
+one is cheaper to get wrong here than inside a format that then copies the mistake into every pocket.
+
+**The criterion is information per hour, not features per hour.** Anything that tests an unproven
+decision outranks anything that adds content, because only the first kind can invalidate other work.
+That is why the list below is not in the order the systems will eventually be used.
+
+1. **The spirit light toggle, plus a throwaway Resolve bar.** The inverted default — shown by
+   construction, suppressed at a cost — is the newest and most load-bearing decision in the design and
+   **nobody has felt it for one second.** It governs every moment of play, so if it reads badly a great
+   deal downstream changes. Cheap: a key, two radii, and a *fake local* bar. **Do not wire the real
+   `ResolveManager` in** — that would spend the probe's wired-into-nothing property, which is what keeps
+   it from being able to redden a gate.
+2. **Interaction — look at a thing, get a prompt, activate it.** Every pocket needs it: the memory
+   fragment, the anchor, climb points, puzzle elements, doors are all one verb. It also carries the
+   architecture decision that **is** most of the pocket format: the Waking world already does this in 2D
+   with `HotspotData` and `InteractionService`, so does the Dream reuse them with a 3D position or get
+   its own? Deciding before the first pocket means every pocket inherits it; deciding after means
+   retrofitting all of them.
+3. **The blind wanderer, and light attraction.** Cheap and already specified — random walk plus a
+   collision shape, no pathfinding. It ranks this high for one reason: **without something that reacts
+   to your light, suppression has no visible cost.** Items 1 and 3 together are the core loop; either
+   alone is half an experiment.
+4. **One pushable rigid body — as a *look*, not a system.** Answers a five-minute question: does a moving
+   object read at 480×270 through two greys, and does its dither hold up in motion? **The physics system
+   stays deferred** — rigid bodies designed with no puzzle in hand get designed against imagined puzzles
+   and then rebuilt. Wait for a puzzle that names what it wants. Keeping the *risk check* and the
+   *system* separate is the whole point of this entry.
+5. **The objective, and finishing.** A memory fragment you walk to, take, and the run ends — the smallest
+   complete pocket. Last of the five only because it depends on 2.
+
+**Deliberately not yet: boss sight, chase and the ten-second search.** The largest of the creature
+behaviours, it applies to three pockets only, and it depends on the light and noise senses being settled
+first. Building it now is building against inputs that are still moving — the specific mistake this file
+keeps catching.
+
+**Recommended start: 1 and 3 together, then 2.** That produces a room where the player chooses between
+seeing and hiding with something that responds to the choice — the Dream's loop in miniature, and the
+last thing that could still invalidate the direction.
+
+> **Why the probe is being polished rather than replaced, stated because it is easy to mistake for
+> gold-plating.** Jeremy: *"I switched to 3D so it would be 'real' and she wouldn't think 'yeah okay,
+> right'."* The prototype's job is **credibility with a collaborator**, not only de-risking — an artist
+> cannot be recruited to a text document, and a greybox that plays badly is worse than none. So time
+> spent making the room *feel* like the game is on the critical path to the artist conversation, which is
+> a few days out. **The look values are frozen until after it** so she sees a considered thing and her
+> opinion lands on something settled rather than mid-flight.
 
 #### What this replaces, and what survives
 
@@ -1176,11 +1385,31 @@ ways: severing the bench reddens both, severing only the yard→shed door redden
 7. **Is the pure-BFS pursuer fair?** Never tested against a real player. Much smaller problem now
    that it only runs inside boss pockets — and the "level mechanics that slow the pursuer down" in
    `combat.md` §15's boss pockets is a better answer than tuning the BFS would be.
-8. ~~**2.5D versus full 3D in the Dream.**~~ **Half-answered 2026-07-30, and the half that closed was
-   the one that mattered.** The Waking world is first-person in a 2D world; **the Dream is
-   first-person in a 3D world** — settled. What remains is only **whether the creatures in it are 2D
-   billboards or 3D models**, which is a prototype question rather than an argument and is answered
-   by looking at the two side by side (see "The Dream in 3D", step 5).
+8. ~~**2.5D versus full 3D in the Dream.**~~ **CLOSED 2026-07-30 — 3D models for everything, no
+   billboards.** Both halves are answered. The Waking world is first-person in a 2D world and the
+   Dream is first-person in a 3D world; and the creatures in it are **models**. Jeremy, having looked
+   at a camera-facing quad beside two 3D capsules in the probe: *"It will probably be best to just
+   commit to 3d models so the feel is the same."*
+
+   **His reason is better than the one the analysis below reaches for, and it is the one to keep.**
+   Everything written under step 5 optimises *per creature* — image quality here, spatial legibility
+   there — and lands on a hybrid. He is optimising the **coherence of the space**: mixed techniques
+   would make bosses feel imported from a different game, and not deliberately. Consistency beats
+   per-unit optimisation when the player's sense of place is the product. The lesson generalises past
+   this decision.
+
+   **What made it affordable was the screen-space line pattern, and that is worth understanding
+   because it is why the earlier reasoning expired.** The billboard's whole case was *it does not
+   obey the space, and for an intrusion into reality that defect is characterisation.* Screen-space
+   line noise delivers exactly that on a model — so the billboard's unique advantage was eaten by a
+   feature built for a different purpose, leaving only its costs (no silhouette when circled, breaks
+   close up and from above, per-pose drawing, the Doom-rotation question). **A deferral can be closed
+   by something built for an unrelated reason**, which is the same shape as step 6's rejection being
+   overturned by step 3's physics arriving anyway.
+
+   What this buys: no sprite sheets, no multi-angle rotations, no per-pose art, creature art is one
+   mesh each, and open question 8 stops gating the artist brief. The billboard quad stays in the
+   probe as the evidence and can be deleted whenever.
 
    **Leaning by the end of 2026-07-30: billboards for bosses, models for the mindless creatures** —
    Jeremy's call, with a trailing "TBH", so treat it as a lean awaiting a screenshot rather than a
