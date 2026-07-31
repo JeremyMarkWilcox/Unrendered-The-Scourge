@@ -1883,35 +1883,44 @@ eight is the right size.
 
 ---
 
-## 20. The last boss — three routes, and the good ending
+## 20. The last boss — two ways to lose her, one to save her
 
 **Jeremy's reveal, 2026-07-31.** In the final Dream pocket, **the anchor is Iris.** She asks you to
 destroy her, and severing her weakens the boss exactly as any sever does.
 
 | Route | The fight | Iris | Ending |
 |---|---|---|---|
-| **Sever her** | weakened, no aura drain | **destroyed** | the loss — and you may never learn it was avoidable |
-| **Refuse, and overkill** | full strength, anchor intact, Resolve draining throughout | freed | **good** |
-| **Exorcise** | weakened — the engine *releases* the anchor instead of destroying it | freed | **good** |
+| **Sever her** | weakened, no aura drain | **dies** | the loss — you did what she asked |
+| **Overkill, without the engine** | full strength, anchor intact, Resolve draining throughout | **dies** | the loss — you refused, and it cost her anyway |
+| **The exorcism engine** | weakened — the engine *releases* the anchor instead of destroying it | **lives** | **the only good ending** |
 
-> **Revised 2026-07-31, and the revision simplifies it: this is two routes, not three.** An earlier
-> draft gave the good ending to the engine alone and called overkill "grim". Jeremy's correction —
-> *"option 2 killing the boss gives you the good ending as well, because it would be a hard battle"* —
-> makes the structure **sever her, or refuse**, where **the refuse route has two ways to survive it:
-> raw skill, or the engine.**
+> **Revised twice on 2026-07-31, and this is the settled version. Read the second note; the first is
+> kept only so the reasoning is traceable.**
 >
-> That is not a new shape. It is §15's ratified *two routes past a creature* — reflex or environment —
-> arriving at the climax, and it is the fairness principle Jeremy stated when that rule was made:
-> *"I will create trap/puzzle environments for people who aren't as good. I feel like this is a fair way
-> to do it."* **So the engine is not a third route; it is the accessibility ramp on the hard one.** It is
-> strictly dominant — easier fight *and* the good ending — and that is correct, because it costs three
-> chapters of thoroughness that nothing else in the game requires.
+> **First revision** (superseded): Jeremy moved the good ending onto the overkill route as well —
+> *"option 2 killing the boss gives you the good ending as well, because it would be a hard battle"* —
+> making the engine an accessibility ramp on a hard fight rather than a distinct outcome.
+>
+> **Second revision (current):** he reversed it the same day, after the untethering rules were settled in
+> §21. *"Untethering your wife or killing her without the exorcism will kill her. The trap/exorcism is
+> the only good ending path and I like it better this way."*
+>
+> **The reversal is a consequence, not a change of mind.** §21 established that a tethered person dies
+> when the tether goes, whichever end it is cut from. Iris is tethered. So the only survivable outcome is
+> the one that does not cut the tether at all — and there is exactly one of those. The ending stopped
+> being a menu and became an implication of a rule the game teaches for three chapters.
 
-**This is the two-route economy becoming the theme, which is the best thing a mechanic can do.** §1's
-sever-versus-overkill has been teaching one lesson for three chapters — two ways past the same
-obstacle, paying different currencies — and at the end the currencies become **her, skill, or
-preparation.** The last of those is the game's own thesis: §4's *"you do not out-fight it, you out-build
-it"* turns out to be what saves her.
+**What this buys, and it is the largest structural gain in the document: the entire crafting system now
+converges on one object.** With two good paths the engine was optional flavour. With one, every station,
+every reclaimed memory and every restored screen is pointed at building the thing that saves your wife.
+§6's three major repairs stop being a progression device and become a rising sequence — **taught on a
+bridge, practised on a cart, and the third one is your marriage.**
+
+**Overkill becomes the unprepared route, not the heroic one**, and that is correct rather than a
+demotion. Invariant 12 says there are no dead saves: a player who reaches the finale with nothing built
+can still finish the game. They just finish it badly. The three routes are better read as *prepared*,
+*unprepared and merciful*, and *unprepared and stubborn* — and the difference between the last two is
+only how the player feels about what they did, which is the right place for a difference to live.
 
 ### The tether has two ends — which is what the engine actually cuts
 
@@ -1922,24 +1931,47 @@ engine would kill her exactly as the Dream route does.
 > **Severing in the Dream destroys the anchor. The engine releases it.** Same tether, cut from the other
 > end.
 
-So the engine weakens the boss *and* frees her, which is why it is the best outcome available, and
+So the engine weakens the boss *and* she lives, which is why it is the **only** good outcome, and
 invariant 11 is satisfied more literally than before rather than less: cutting the tether is still the
 only way to remove regeneration, and it turns out there are two ends to cut.
 
-### The Graveflower hoard is the foreshadowing
+**And this is exactly why the other two routes kill her.** Severing in the Dream destroys the anchor.
+Overkill leaves the tether intact and kills the thing on the far end of it, which takes her with it.
+Only the engine takes the tether off her without breaking either end. One rule, three outcomes, no
+special-casing at the finale.
 
-**Severing her is now the outcome where you did what she asked and lost her anyway**, and a player who
-never engaged with crafting may finish the game never knowing it was avoidable. That is only fair if the
-game hinted, and [`items.md`](items.md) turns out to have been hinting for three chapters without being
-designed to:
+### Graveflower is the engine's material — 8 of the 12 in the world
 
-- **Graveflower you cannot spend on anything**, accumulating from every screen you restore.
-- **Her notes turning up in unrelated places**, because the demon dropped them as worthless.
-- **Three locked recipes in a cache** you can hold but not reproduce.
+**Revised 2026-07-31. This replaces an earlier passage that treated the Graveflower hoard purely as a
+hint, and it fixes an arithmetic bug the earlier roster shipped with.**
 
-All three say *her work can still do something.* A player who paid attention has the hint; a player who
-did not, does not — which is what "rewards effort" means when it is real rather than decorative. Worth
-recording because the hoard was designed as an economy and turned out to be structure.
+[`items.md`](items.md) §2 originally spent Graveflower on three *consumable* salves against a total
+world budget of twelve units (2/4/6). Twelve units cannot supply a consumable you burn every fight. The
+material was mis-assigned, and the fix is the one the ending was asking for anyway:
+
+> **Graveflower goes into the exorcism engine and nothing else. The engine costs 8. The world holds 12.**
+
+Three things fall out, and none of them had to be designed:
+
+- **Fixing the world is literally how you save her.** Graveflower comes only from minor restorations
+  (§6), so the falling-action activity turns out to be the good ending's currency. Every optional screen
+  you repair is a payment.
+- **The hoard is still the hint, and now a better one.** You accumulate an unspendable scarce material
+  for two chapters, from restoring the things she used to tend. Alongside **her notes turning up where
+  the demon discarded them** and **a cache you can hold but not read**, it says *her work can still do
+  something* — without ever saying it.
+- **There is slack, deliberately: 8 of 12.** You may miss a third of the repairs and still save her.
+
+**The slack is not generosity, it is the difference between a choice and a trap.** Requiring all twelve
+would mean one skipped repair in chapter 1 silently locking the good ending eight hours later, with no
+signal at any point. Recoverability survives too: **chapter 3 alone yields 6**, so even a player who
+ignored restoration entirely for two chapters can reach 8 by working the mine and taking one trip back.
+Expensive, never impossible — the same bargain guaranteed flight makes.
+
+**One line of UI does all the fairness work and it is not a warning.** Once you hold the engine's plan,
+its recipe lists *8 Graveflower* exactly as every other recipe lists its inputs. The game never nags and
+never hides, which is Jeremy's standard stated as a mechanic: *"it gives some responsibility to the
+player — I find those warnings super annoying."*
 
 ### The exorcism engine does not violate invariant 11 — it satisfies it
 
@@ -1961,13 +1993,22 @@ Two conditions keep it that way, and both are cheap:
 - **It cuts the tether; it does not "suppress the aura."** Same effect, different claim, and §4 spent a
   page on precisely that difference.
 
-### Why three routes and not two with a skin on
+### The choice-architecture problem, and why it went away
 
-**The real risk here is not the invariant, it is choice architecture.** If exorcism were mechanically
-equal to severing but morally cheaper, nobody would ever sever her — that is not three choices, it is
-one choice and two mistakes. So the three bills above must stay genuinely different, and the load is
-carried by **exorcism giving you no sever**: you fight the boss at full strength with its anchor intact,
-and the engine is what you spent the whole game earning instead of a discount on the fight.
+An earlier draft worried at length that if exorcism were mechanically equal to severing but morally
+cheaper, nobody would ever sever — *"not three choices, one choice and two mistakes"* — and tried to
+keep the three bills genuinely different by loading cost onto the engine route.
+
+**That worry was solved by the roster, not by tuning.** The engine is strictly better *and that is fine*,
+because **it is not available to most players at the moment they arrive.** It costs three chapters of
+optional work — 8 Graveflower from restorations you were never required to do, plus both journal tracks.
+A player who has it is a player who earned it over the whole game; a player who does not is choosing
+between the only two options they actually hold. Nobody is weighing three equal buttons, which is what
+made the original framing wrong.
+
+So the honest description is not *three routes* at all. It is **one route you prepare for, and two you
+fall back on** — and which of the fallbacks a player takes is a question about them, not about a
+tradeoff the design has to balance.
 
 **The fusion pays off here and nowhere else does it matter as much.** The engine needs **her physick to
 purify and his craft to contain**, so it cannot be built from one track. Jeremy: *"ironic that both
@@ -1983,10 +2024,285 @@ Neither was designed for this and both hold, which is usually a sign the structu
   go build it.** The good ending is never irrecoverably lost — only not yet earned. That keeps
   invariant 12 intact at the one place a three-ending structure would most easily break it.
 - **Chapters 1 and 2 refill and stay reachable** (§19), so going back to do the optional work is
-  supplied rather than a scavenge.
+  supplied rather than a scavenge. Jeremy, 2026-07-31, on the 8-of-12 slack: *"you can backtrack to
+  reclaim them so it is still open."*
 
-### Left open on purpose
+**Both guarantees are load-bearing now in a way they were not when there were two good endings.** With
+one good path, "the door stays open until you land the final blow" is the only thing standing between
+this design and a gotcha. Neither guarantee may be weakened without reopening the ending.
 
-**Whether refusing to sever her leaves her alive-but-corrupted or takes her with the boss.** That is
-writing rather than mechanics, it blocks nothing, and it is better decided when the scene is being
-written than now.
+### Closed 2026-07-31
+
+**Whether refusing to sever her leaves her alive-but-corrupted or takes her with the boss** — previously
+left to the writing pass. §21's untethering rule closed it: **she dies.** Overkill leaves the tether
+intact and kills what is on the other end of it. There is no longer a version of this scene where
+refusing is enough on its own.
+
+---
+
+## 21. The corrupted — who survives, and why — ratified 2026-07-31
+
+**This section exists because it was the largest hole in the story.** Jeremy: *"This might be the
+biggest plot hole in my story/game — what are the factors that determine if a possessed person is saved
+or not."* The answer turned out to be already built, in a rule adopted for pacing reasons and never read
+as fiction.
+
+> **Tethered dies. Untethered survives.**
+
+Minor demons *wear* people. The hold is loose, and beating the host shakes it off — Jeremy's words,
+*"the hold on them just needs them to get beat up."* The demon itself drove an anchor into exactly
+three: the Lost Trapper, the Blacksmith, and Iris.
+
+**That is why there are only three heists, and it is now also why there are only three deaths.** The
+decision that non-bosses have no Dream pocket was made because ten heists would be a slog. It turns out
+to encode the moral logic of the entire game, which is worth recording as a caution as much as a
+success: the constraint arrived first and the meaning arrived second, and it would have been easy to
+resolve the pacing problem some other way and never find this.
+
+**It is legible without a line of exposition.** A player can see which kind they are facing, because one
+kind has a pocket and the other does not. Nobody has to be told, and nobody will hunt for a fourth
+anchor that does not exist — which was Jeremy's stated reason for wanting the rule uniform in the first
+place: *"it is something that should be consistent and will stop players from second guessing
+themselves."*
+
+### Three appearances, three fates — the art is the warning
+
+Jeremy's instinct, unprompted: *"Should possessed people just look possessed kind of, but then the Lost
+Trapper looks like a zombie since he has been dead?"* Yes — and it generalises into the whole visual
+grammar.
+
+| | Looks like | Outcome |
+|---|---|---|
+| **The nine** | still recognisably a person, but the trade is eating them: the tool fused to the hand, the body overgrown toward the work | beaten → **freed, alive** |
+| **The Lost Trapper** | a corpse being worn. Weeks dead | nobody in there. Nothing to save |
+| **The Blacksmith** | alive, and further gone than anything yet seen | freeing him **kills him** |
+
+**This is §7's legibility promise applied to art instead of to a readout.** The player can read the
+outcome before committing, and it costs no UI, no dialogue and no warning — which is the requirement
+Jeremy has restated more than any other: *"I find those warnings super annoying."*
+
+It also does a job no timer could. **The Blacksmith reads as what the nine become if nobody reaches them
+in time**, which is an argument for hurrying that never touches the clock — and §19 spent a page
+establishing that this game does not get a clock.
+
+### The escalation is four steps, not three
+
+The three bosses teach three lessons, but the load-bearing step is the one that is not a boss at all.
+
+| | | Teaches |
+|---|---|---|
+| **The Lost Trapper** | you cut a snare, and nothing answers | the **verb** |
+| **The twenty-seven** | beaten, freed, they get up and walk away | the **rule** |
+| **The Blacksmith** | begs, is freed, thanks you, and **dies** | the **cost** — by breaking the rule, and Daniel learns it here with the player |
+| **Iris** | begs in the same words | the **choice**, and you built the third answer |
+
+**Step two is why step three lands.** By the time the Blacksmith dies the player has freed roughly a
+dozen people and watched every one survive. He is not escalating from one prior data point; he is
+violating a dozen. A design that skipped straight from the Trapper to the Blacksmith would have taught
+nothing, because two events do not establish a rule to break.
+
+### What the Blacksmith knows, and what Daniel does not — settled 2026-07-31
+
+**The knowledge is split between the two characters, and that split is the scene.**
+
+| | |
+|---|---|
+| **The Blacksmith** | **suspects** it will kill him, and **does not care.** He is in agony and would rather end as himself than continue as this. He never says so. |
+| **Daniel** | **has no idea**, until he surfaces into the Waking world and finds the body. |
+
+**Corrected from the first draft, which gave Daniel the knowledge one boss too early.** That version had
+him understand the cost going in — and it quietly broke the escalation table above, which claims the
+Blacksmith *teaches the cost*. If Daniel already knows, the Blacksmith teaches Daniel nothing and the
+lesson lands only on the player. Jeremy's version puts the knowledge where the structure needs it: **the
+Blacksmith gets agency, Daniel gets the reveal, and Iris gets the informed choice.**
+
+Note what is and is not committed here, because "we don't need to pick one" can turn into mush and this
+does not. Three things are decided — **he suspects, he does not care, he does not say it.** The only
+thing left open is whether his suspicion is *correct*, and nobody in that room could know that. It is an
+ambiguity inside a character rather than inside the design, which is the writable kind.
+
+**He has to settle his affairs, or the beat inverts.** In hindsight the player must be able to tell he
+knew; otherwise Daniel reads as having carelessly killed an innocent man, which makes him stupid instead
+of complicit. The fix is characterisation, not exposition — **a man who expects to live does not hand
+over his business.** *"There's a key under the anvil."* *"Tell her I—"* First read it is a hurt man
+rambling; second read it is a will.
+
+**And the last thing he says is gratitude.** Jeremy, 2026-07-31: a sigh, and *"Thank you…"* as the spirit
+goes.
+
+**That line is doing structural work, not just tone.** Jeremy: *"This isn't on Daniel, it is on the
+demons."* The player has just killed someone by doing exactly what the game taught them to do, and if
+the scene reads as punishment for playing correctly they will distrust every choice after it — which is
+fatal three hours before §20 asks them to make the biggest one. The thanks is what keeps the death a
+**tragedy rather than a trap.** Grief, not guilt. Keep it if the scene is ever rewritten; it is the
+cheapest possible guard on the ending's fairness.
+
+### An anchor is the trade-object, never person-shaped — ratified 2026-07-31
+
+Jeremy asked what the Trapper's anchor should actually look like, having not pictured one: *"just having
+a voice when you interact with it and the choice to cut the anchor."*
+
+> **The Trapper's anchor is a snare, sprung and empty.**
+
+Four reasons stacked, and the fourth is the one that matters:
+
+- **It is his trade**, which is the same rule the nine already run on (§10) — the trade *is* the design.
+- **Sprung and empty is the whole character in one silhouette:** the thing that caught him, with nothing
+  in it any more.
+- **It is the cheapest model in the game.** A loop of wire and a bent sapling.
+- **You cut a snare.** The verb this game spends three chapters teaching is *cut*, and the first thing
+  you ever cut is a rope. The Blacksmith's anchor is then visibly something you cannot just cut, and the
+  escalation lives in the object rather than in a difficulty number.
+
+**The rule it generalises to is now binding on all three bosses:**
+
+> **An anchor is an object of the person's trade. It is never person-shaped, and it never has a face.**
+
+The voice comes *out of a thing*, which is more unsettling than a thing with a face, and it saves three
+character models in a realm that cannot afford them.
+
+**One question this pushes downstream, and it is a writing call rather than a systems one.** If the
+grammar holds, **Iris's anchor is her work** — her kit, her notes — not her body. That is tighter
+thematically, because §9 of `items.md` already establishes that her recipes returning *is* her returning,
+so destroying her work destroying her closes the loop the item economy opened. It trades gut-punch for
+horror. **Left open deliberately**; the rule above stands either way, and only Iris's specific object is
+unfixed.
+
+### Encounter cadence — nine creatures, three sightings each
+
+| | |
+|---|---|
+| **Regular creatures** | **9** — three per chapter, chapter-locked, never reused across chapters |
+| **Bosses** | **3** — one per chapter |
+| **Sightings per creature** | **3** — two on the critical path, **one guarding something optional** |
+| **Except the Beast** | **5–6**, increasing as chapter 3 goes deeper. The only creature that breaks the cadence |
+| **Fights** | 9 in ch1, 9 in ch2, **~12 in ch3** · **30 regular + 3 bosses** |
+
+### The Beast is the exception, and the exception is the plot — added 2026-07-31
+
+Jeremy's original chapter 3 pitch was *"an otherworldly beast that made its way through the portal ahead,
+and if we don't close it then the world will be full of physical creatures that cross as well."* **So the
+Beast appearing more often is not a difficulty curve, it is the thing the chapter is about.** Jeremy:
+*"the many times will be impactful for the ending — that the creatures aren't just in the dream world any
+more, and this is the future if you don't stop it."*
+
+**It is also the only escalation in the game that is free.** Every other creature's repeats cost a
+rescued character, an art asset and a scene. The Beast was never a person, so a repeat costs a room and
+nothing else — which is exactly backwards from the usual situation where the thing you want more of is
+the expensive thing.
+
+> **The survival rule is about the possessed. The Beast was never a person, so nothing is freed and
+> nothing is lost — it is simply slain.**
+
+Jeremy: *"the beasts are just slain, not knocked sense into them."* That carve-out is legible without a
+word of explanation, because **it is the only thing in the game that does not look human**, so the player
+never stands waiting for someone to get up.
+
+**Escalate the presentation, not just the count.** Six of the same encounter is padding; one, then a
+pair, then something larger near the portal is a tide coming in. Vary the staging — the count is the
+budget, not the design.
+
+**And this is what makes the mine's economy work.** §7 of `items.md` needs chapter 3 to supply the
+materials its fight count consumes, or the rising action stalls into a farming trip in the worst possible
+chapter. A slain Beast leaves a carcass, and **the fights that spend chapter 3's materials are the fights
+that supply them** — see "harvest is the mirror of rescue" below.
+
+**Two placement notes carried from the discussion.** The extra Beasts should mostly sit on the critical
+path (`BlocksPath`), because fights are opt-in and flight is guaranteed — an optional Beast is one a
+cautious player never meets, and the escalation being paid for does not happen. Jeremy: *"I think when we
+place we will see if any should be optional"*, so treat that as a default rather than a law.
+
+**Why three sightings and not two.** First you meet it and learn its type the hard way; second you come
+prepared, which is the payoff and the floor for a vulnerability to become knowledge rather than a puzzle;
+third is optional. Two is enough to teach and three is what makes the opt-in system mean something — a
+thorough player fights nine a chapter, a cautious one fights six.
+
+**Required outnumbers optional, deliberately.** Jeremy: *"I like needed being larger than optional. A
+lot of games flip it and it feels like a chore."*
+
+**The optional sighting is where two existing rules land, and they land on the same encounter.** §7's
+placement rule puts the Fire- and Caustic-vulnerable creatures on the optional sighting in chapters 1–2,
+so the thing you cannot kill yet is never in your way. And **the optional sighting guards a repair
+site** — so beating the fight you did not have to leads to a screen you can restore, which yields
+Graveflower, which builds the engine, which saves your wife. **Every piece of optional content in the
+game points at the ending, and none of it needs a quest log to say so.**
+
+### Repetition is not a compromise here — it is the theme
+
+Repeating a creature is normally padding. It is not, in this genre and under these rules, and the reason
+is worth stating because the instinct is to apologise for it.
+
+- **A screen is a memorised place, not a corridor.** So the constraint is narrow: **one creature per
+  screen, never the same one on two adjacent screens.** Adjacent duplicates read as wallpaper; the same
+  trade in the deep woods and again at the ford reads as an ecology.
+- **Nothing ever respawns on a cleared screen.** This is the real violation in a point-and-click, and the
+  design is already immune: a defeated body stays where it fell, and the screen changes permanently.
+- **Every instance frees a *different named person*.** So the corrupted form repeats and the recovered
+  one does not.
+
+That last point is where repetition stops being tolerated and starts being the point:
+
+> **Corruption erases the person. Freeing them restores it.**
+
+Three identical hunched silhouettes are not three copies of a monster — they are what the Scourge *does*,
+which is make people interchangeable. Individuality comes back at the moment you save them. And the
+village visibly fills with people you rescued as you clear it, which sets up the finale for free: the one
+person you cannot save.
+
+### What this costs in code and art
+
+**Code — three consequences, none urgent, all cheap if taken before content:**
+
+| | |
+|---|---|
+| `EntityData.SpiritTexture` / `ShatteredTexture` / `EchoTexture` | **dead.** Written when both realms were 2D; the Dream went 3D on 2026-07-30 and a `Texture2D` cannot be handed to a low-poly pursuer. Delete, and fix the class comment that still describes "six in total". |
+| `EntityData.HarvestItemId` / `PurifiedTexture` | **unused, and still unused even though the Beast drops materials** — see below. Nothing is harvested via the *entity*. `EntityState.Purified` survives and now means *this person is freed*, which is the flag the rescued NPC spawns on. |
+| **Bosses have two forms, not three** | blank `PurifiedName`, blank `HarvestItemId`. They are destroyed, never purified. |
+
+**A freed human is an NPC, not an entity state.** The room places an NPC hotspot gated on the flag the
+fight sets — existing hotspot-and-flag machinery, no new fields. Which means `PurifiedName` belongs only
+to bodies that stay bodies, and after the animal cut there are none.
+
+#### Harvest is the mirror of rescue, and it is the same machinery
+
+Jeremy, 2026-07-31, on the extra Beasts: *"lots of beasts to drop stuff."* That looked like it revived
+`EntityData.HarvestItemId`, which had just been declared dead. **It does not.** The drop is authored the
+same way a rescue is:
+
+| | The room places… | Gated on |
+|---|---|---|
+| **Beat a person** | an **NPC hotspot** — they get up and speak | the fight's flag |
+| **Slay a Beast** | a **harvest hotspot** — a carcass you can work | the fight's flag |
+
+One word different in the room data, no new code, and `InteractionService.Harvest` already exists and is
+already flag-gated on `harvested.{instanceId}`. It is also **more** flexible than the field would have
+been: two Beasts in different rooms can drop different things without two `EntityData` files.
+
+> **You can only harvest what was never human.**
+
+That is the rule, and it is not squeamishness for its own sake — harvesting a neighbour you have just
+freed would be grotesque in a way that would recolour the whole rescue system, while dressing a kill that
+came through a portal is just work. The one animal in the game is the one thing you can render down.
+
+**What it drops: Tallow and Cured Hide.** `items.md` §1 reclassified both as scavenged goods *because*
+the animals were cut, and a carcass is their obvious source — so chapter 3 gets them back from the only
+place they ever made sense. Bitterroot and Pitch have to be seeded thick in the mine by hand instead; a
+Beast cannot plausibly supply either.
+
+**Art — the brief, because the failure mode is expensive:**
+
+- **Roughly 9 corrupted + 9–12 freed ≈ 20 assets**, not 27. The corrupted nine must each be unique; the
+  freed can reuse a design across two or three instances, and **varying the pose rather than the design**
+  (kneeling, standing, being helped up) reads as different moments rather than pasted copies. At 80
+  pixels tall, identity is silhouette and costume, not face.
+- **Silhouette carries everything.** Nine enemies have to be tellable apart by shape alone with no detail
+  legible. This is free here, because nine trades are nine shapes — but it is the note an artist will
+  miss if it is not written down.
+- **Commission one full character and a style sheet first, approve, then order the rest.**
+- Low-res is not a style choice bolted on: **480×270 with 4× nearest is what the renderer already is**
+  (§16).
+
+**Writing, which is the cost that lands on Jeremy rather than on the budget.** Twenty-seven freed people
+is twenty-seven scenes, and filler dialogue damages a short game more than a smaller cast would. Settled
+2026-07-31: the apothecaries and anyone handing over something meaningful get real scenes; everyone else
+gets **one line or a nod, and walks off.** Jeremy: *"people don't care too much about side stuff."*

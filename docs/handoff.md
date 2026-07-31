@@ -1,7 +1,7 @@
 # Handoff — where we left off
 
-Last updated: **2026-07-30.** Read this first, then `docs/combat.md` — which is the source of
-truth for combat, Resolve, the Dream and camps, and whose §15–18 are the newest material. **§18 is
+Last updated: **2026-07-31.** Read this first, then `docs/combat.md` — which is the source of
+truth for combat, Resolve, the Dream and camps, and whose §19–21 are the newest material. **§18 is
 the ratified fight design and the authority on how combat works** — it closes the item, trap and
 equipment vocabulary that the rest of that document defers, and it deletes Defence as a number.
 
@@ -40,16 +40,89 @@ existed, which is the pattern worth noticing.
 weapon, coat and tool, named and costed, with per-chapter availability and the scarce budget. It closed
 the last blocking item in M4 — no station can be authored until the material list exists, because every
 station is balanced against it. **The chapters are a woodland, a village and a dark mine**, and the
-roster prices the Dream at **10 pockets** (7 knowledge, 3 boss), accepted as the authoring bill.
+roster prices the Dream at **11 pockets** (8 knowledge, 3 boss), accepted as the authoring bill.
 
-**And the ending is designed: `combat.md` §20.** In the last Dream pocket **the anchor is Iris**, and
-there are three routes past the final boss paying three different currencies — sever her (guilt),
-refuse and overkill (difficulty), or **build the exorcism engine** (three chapters of thoroughness, and
-the good ending). The one thing to read there before touching combat code is *why the engine does not
-break invariant 11*: the rule says cutting the tether is the only way to remove regeneration, and never
-said the **Dream** was the only way to cut a tether. The engine is a severing by a third route, not a
-trap buying the aura off — and it stays legal only while it is a unique authored object rather than an
-`ItemCategory.Trap`.
+**And the ending is designed: `combat.md` §20.** In the last Dream pocket **the anchor is Iris**. The one
+thing to read there before touching combat code is *why the engine does not break invariant 11*: the rule
+says cutting the tether is the only way to remove regeneration, and never said the **Dream** was the only
+way to cut a tether. The engine is a severing by a third route, not a trap buying the aura off — and it
+stays legal only while it is a unique authored object rather than an `ItemCategory.Trap`.
+
+---
+
+## Newest, 2026-07-31 — the bestiary, and the ending reversed
+
+Still docs-only. **`combat.md` §21 is new and is the authority on who survives a fight**, and
+[`items.md`](items.md) **§10 is the creature roster**. Three things changed that invalidate earlier
+reading, so they are called out rather than left to be discovered:
+
+**1. Severing Iris now kills her, and §20's route table was rewritten.** The previous version had
+severing as the sad-but-survivable route. It is not: **the tether has two ends**, severing destroys the
+anchor, and the anchor is her. So there are two ways to lose her and one to save her, and **the exorcism
+engine is the only good ending**. This is not a change of mind — it is §21's rule applied consistently,
+and §20 keeps the superseded version visible so the reasoning is traceable.
+
+**2. Every corrupted creature is a person, and one rule decides who lives.**
+
+> **Tethered dies. Untethered survives.**
+
+The demon personally tethered three things — the Trapper's corpse, the Blacksmith, Iris. Everything else
+is spillover, and beating spillover just frees the person. So the nine regular creatures all survive, the
+bosses all die, and the escalation is *Trapper (says nothing, already dead) → Blacksmith (begs you) →
+Iris*, which is how the player learns the cost of the ending before they have to choose it.
+
+**3. Graveflower is the exorcism engine's material and nothing else.** A real arithmetic bug: the first
+roster spent a **12-unit fixed world budget** on three *consumable* salves. Fixed by moving both damage
+components onto commons and onto **two freed apothecaries in chapter 2**, and pricing the engine at
+**8 of 12**. Knock-on: **chapter 2 is now the arsenal chapter and chapter 3 is the construction
+chapter** — see `items.md` §7.
+
+**The roster is 9 regular creatures + 3 bosses = 12**, because four damage types give exactly twelve
+unique (vulnerable, resistant) pairs and a thirteenth would have to repeat one. Each creature appears
+**three times** — two on the critical path, one guarding something optional — so **30 regular fights and
+3 boss fights**. Each of the twenty-seven human fights frees a different named person; the corrupted form
+repeats and the recovered one does not, which is the theme rather than a compromise.
+
+**4. Four smaller things settled later the same day, each of which changes something built:**
+
+- **The Blacksmith suspects and does not care; Daniel does not know until he surfaces.** The first draft
+  gave Daniel the knowledge going in, which broke the escalation table — if he already knows, the
+  Blacksmith teaches him nothing. He settles his affairs (*"there's a key under the anvil"*) so the
+  player can tell in hindsight, and his last word is **"Thank you…"** Jeremy: *"this isn't on Daniel, it
+  is on the demons"* — the death has to read as tragedy, not as punishment for playing correctly, three
+  hours before §20 asks for the real choice.
+- **An anchor is an object of the person's trade, never person-shaped and never with a face.** The
+  Trapper's is **a snare, sprung and empty** — his trade, his whole character in one silhouette, the
+  cheapest model in the game, and it makes the verb literal: the first thing you cut is a rope. Iris's
+  specific object is left open.
+- **The Beast is seen five or six times, not three**, increasing as the mine goes deeper, so chapter 3
+  runs ~12 fights against 9 elsewhere. **Chapter 3 is rising action, not falling** — the Dream is where
+  you go to think, and the climax should not be thinking.
+- **The exorcism engine needs its own knowledge pocket**, which the first bill priced at zero. The bridge
+  and cart take their memory from the chapter's boss pocket; the engine cannot, because you build it
+  before the final fight. It is also **the only recipe requiring both tracks** — the first real use of
+  `RecipeData.RequiresBothTracks`. Hence 11 pockets, not 10.
+
+**What this changes for code, when the code pass happens** (none of it urgent, all of it cheaper before
+content exists):
+
+- `EntityData.SpiritTexture` / `ShatteredTexture` / `EchoTexture` are **dead** — written when both realms
+  were 2D. Delete them and fix the class comment that still says "six in total".
+- `EntityData.HarvestItemId` is **unused, and stays unused even though Beasts drop materials.** The drop
+  is a **harvest hotspot the room places, gated on the fight's flag** — exactly mirroring the NPC hotspot
+  a freed person spawns as. Same machinery, no new fields, and two Beasts can drop different things
+  without two `EntityData` files. The rule: **you can only harvest what was never human.**
+- **A freed human is an NPC, not an entity state.** Same hotspot-and-flag machinery as above.
+- **Bosses have two forms, not three:** blank `PurifiedName`. They are destroyed, never purified.
+- `data/entities/beast_giant_rat.tres` is the old model (an animal, with both a Dream pocket and a
+  purified harvest — now a boss-only combination). Jeremy: *"the rat was just a test, no real loss
+  here."*
+
+**Creature *data* is unblocked and creature *art* is not.** The types, counts and placements in
+`items.md` §10 are settled enough to author `.tres` files against; what is still waiting is the
+billboards-or-models call for the Dream, and the commission itself. §21's art brief: commission one full
+character and a style sheet, approve, then order the rest — and **silhouette carries everything**, since
+nine trades have to be tellable apart at 80 pixels with no detail legible.
 
 **Newest change: the 3D Dream is walkable.** `scenes/dream/DreamProbe.tscn` — open it, press **F6**,
 click to look, `WASD` to walk, and scrub the look with the keys listed in "Done: unit 1 — the probe"
@@ -324,11 +397,19 @@ open too** — the shapes landed, so a `.tres` written today will not need reope
 `VulnerableTo`, `ResistantTo`, `Deals` and `Durability` on a creature and `Deals`/`Slot`/
 `WardsAgainst` on a weapon or trap, and the content sweep will tell you if a combination is inert.
 
-> **One placement rule, ratified 2026-07-31, and it cannot be gated so it has to be remembered.** The
-> traps that deal **Fire and Caustic are not craftable until chapter 3** ([`items.md`](items.md)), so:
+> **One placement rule, ratified 2026-07-31 and restated the same day, and it cannot be gated so it has
+> to be remembered.** It used to name chapters — *"in chapters 1–2, no Fire- or Caustic-vulnerable
+> creature on the critical path"* — which stopped being right when both types became learnable inside
+> chapter 2. It now says what it was always protecting:
 >
-> **In chapters 1–2, a Fire- or Caustic-vulnerable creature guards something *optional*. Never the
-> critical path.**
+> **A creature is only placed on the critical path if the player can already make the type it is
+> vulnerable to by the time they reach it. Otherwise it guards something optional.**
+>
+> In the shipped roster that binds exactly one creature — the chapter 1 **Messenger**, which is
+> Fire-vulnerable in a chapter with no Fire, so **all three of its sightings are optional** rather than
+> the usual two-path-and-one. The chapter 2 Blacksmith looks like a violation and is not: he is
+> Caustic-vulnerable, but the apothecary who teaches Corrosive Draught is on the path ahead of him.
+> **Each chapter teaches the answer to its own boss** — that is the intended shape, not an exception.
 >
 > On an optional route it is a **locked door you can see through** — fight it expensively if you like
 > (the wrong type halves damage and never zeroes it, and flight is guaranteed), or note it and come back.
@@ -351,9 +432,11 @@ Two things still to hold off on, and the reasons are now different from each oth
   is going regardless of how the creature question lands. The hold now has a definite end — when
   step 4 of "The Dream in 3D" produces a pocket format — rather than a decision-shaped one.
 - **Creature art**, though not creature *data*. `EntityData`'s combat fields are safe to fill in
-  today; what a spirit *looks like* waits on billboard-versus-model, because that call decides
-  whether the deliverable is a sprite sheet or a mesh. This is the only thing open question 8 still
-  blocks, which is a much shorter list than it used to be.
+  today — and as of 2026-07-31 there is a roster to fill them *from*, in [`items.md`](items.md) §10:
+  twelve entities with their vulnerable/resistant/deals triples and chapter placement already settled.
+  What a spirit *looks like* waits on billboard-versus-model, because that call decides whether the
+  deliverable is a sprite sheet or a mesh. This is the only thing open question 8 still blocks, which
+  is a much shorter list than it used to be.
 
 ### The Dream in 3D — the startup order
 
