@@ -1,4 +1,4 @@
-# The item and creature roster — drafted 2026-07-31
+# The item and creature roster — drafted 2026-07-31, revised 2026-08-01
 
 **What this is.** Every material, salve, trap, weapon, coat and tool in the Waking world, named and
 costed in one pass — and, since 2026-07-31, **every creature too** (§10). It exists because `combat.md`
@@ -6,8 +6,8 @@ costed in one pass — and, since 2026-07-31, **every creature too** (§10). It 
 genuinely blocking item in M4 — no station can be authored until it exists, because every station is
 balanced against it.
 
-**Read `combat.md` §19 and §21 first.** This file is the roster; §19 is the item grammar and §21 is the
-creature grammar, and where they disagree the grammar wins.
+**Read `combat.md` §19, §21 and §22 first.** This file is the roster; §19 is the item grammar, §21 is the
+creature grammar and §22 is the screen grammar, and where they disagree the grammar wins.
 
 > **This is a document, not content.** Nothing here is a `.tres` yet, deliberately: the shapes it needs
 > (`HotspotKind.Station`, `ItemCategory.Component`, `RecipeData.RequiresStation` /
@@ -38,7 +38,7 @@ creature grammar, and where they disagree the grammar wins.
 | **Pitch** | Craft | ch1 woodland | binder, and the fuel in fire traps |
 | **Scrap Iron** | Craft | ch2 village | edges, heads, springs, mechanisms |
 | **Cured Hide** | Craft | ch2 village | straps, grips, armour |
-| **Cairnstone** | Craft · **SCARCE** | ch1 sparse → ch3 abundant | every forged weapon head and the best traps |
+| **Cairnstone** | Craft · **SCARCE** | ch1 sparse, ch2 mostly, ch3 the last one | **four permanent things and nothing else** — Bell Maul, Limewashed Smock, Mine Pick, Deadfall |
 
 **Bitterroot and Tallow already exist as authored `.tres` items**, and `salve_clearmind` is already
 `2 Bitterroot + 1 Tallow`. The existing content validates the vocabulary rather than needing rework,
@@ -70,9 +70,43 @@ which is the strongest argument available that eight is the right size.
 Heartwood, Heartwood was misclassified. The two scarce materials are the *only* things a chapter budget
 contains, and they are the only things that make a craft a decision.
 
-**Chapter 3 introduces no new common, on purpose.** The mine is where Cairnstone becomes abundant,
-which gives the chapter an identity without widening the vocabulary — and it makes the mine the
-**arsenal chapter**, which is the falling-action shape §19 asks for.
+### The commons split in two, and only one half stays alive — 2026-08-01
+
+Permanent traps (§3) changed what the commons are *for*, and it is worth writing down before anyone
+tunes a harvest node. Jeremy asked the question directly — *"if the traps are crafted and done, does
+that open up room for more items? I was wondering where the item shift would move."* Counting it out:
+
+| | Materials | What they buy | Demand shape |
+|---|---|---|---|
+| **Live all game** | **Bitterroot, Tallow** | the four salves (§2) | **repeating** — the only repeating demand left |
+| **Go dormant** | **Heartwood, Scrap Iron, Cured Hide, Pitch** | six traps, two weapons, three coats, the tools | **one-time** — spent building a kit you then own |
+
+**Every Craft common is now a startup cost.** Once the kit is built, the four dormant materials do
+nothing for the rest of the game, and Bitterroot and Tallow carry the entire ongoing economy — which is
+correct, because salves are the finite resource invariant 1 now rests on (`combat.md` §1).
+
+**The answer to "does this open room for more items" is no, and deliberately.** Inventing recipes to
+soak up Heartwood would be filler: content whose only reason to exist is that a number looked lonely.
+Jeremy: *"okay, I am fine shrinking whatever would just be filler."* **So the fix is fewer sources, not
+more sinks** — three authoring consequences:
+
+1. **Fewer harvest nodes for the four dormant commons**, weighted toward chapters 1 and 2 where the kit
+   is actually being built. §19's abundance rule is satisfied by *enough to never refuse a craft*, not
+   by *piles*.
+2. **Bitterroot and Tallow stay generous everywhere, and get more generous in chapter 3.** They are the
+   only two a player can genuinely run out of.
+3. **A dormant material should stop appearing once its sinks are gone**, rather than being a pickup you
+   are already maxed on — see §7 on what a Beast carcass drops.
+
+**Chapter 3 introduces no new common, on purpose.** ~~The mine is where Cairnstone becomes abundant,
+which gives the chapter an identity without widening the vocabulary.~~ *(An earlier version of this
+sentence called the mine "the arsenal chapter, which is the falling-action shape §19 asks for". Both
+halves are now wrong: §7 moved the arsenal to chapter 2, and chapter 3 is rising action. Chapter 3 is
+where you **spend**, which is why §7 requires every common to be abundant there.)*
+
+> **The abundant-Cairnstone half went too, on 2026-08-01** — see the budget note below. With traps
+> permanent the mine has exactly one stone to spend, so abundance there would be pickups you cannot use.
+> **The commons are what chapter 3 is generous with; Cairnstone is not a common.**
 
 ### Where the two scarce materials come from, and why it matters
 
@@ -87,6 +121,16 @@ the wife, Iris."*
 That is the better version of an earlier draft where it grew wherever the Scourge had killed. Making it
 a reward for **repair** rather than for death ties the material to her directly: you fix what she used
 to tend, and the thing you find there turns out to be hers.
+
+> **Sharpened 2026-08-01, and this is the lore, not a flavour note.** `combat.md` §22 settled what Daniel
+> is doing when he restores a screen: **he repairs broken made-things** — a well cover, a fence, a wheel,
+> a hearth — because the corruption spreads through the works of human hands left undone. So:
+>
+> **Graveflower is not gathered and it is not manufactured. It grows where the land is right again.**
+>
+> Which means the world's twelve units are not twelve pickups scattered by an author. They are twelve
+> places the player personally put back in order. The material that saves Iris comes only from healed
+> ground, and nothing else in the game produces it.
 
 **Graveflower must be single-purpose or the hoard gets spent before the revelation.** That constraint
 survived every revision; what changed is *which* single purpose.
@@ -123,13 +167,38 @@ a second sink would put the hoard's whole meaning back at risk.
 
 Guesses, to be tuned in play. These six numbers **are** the material economy.
 
-| | ch1 woodland | ch2 village | ch3 mine |
-|---|---|---|---|
-| **Graveflower** | 2 | 4 | 6 |
-| **Cairnstone** | 3 | 5 | 8 |
+| | ch1 woodland | ch2 village | ch3 mine | total | the game spends |
+|---|---|---|---|---|---|
+| **Graveflower** | 2 | 4 | 6 | **12** | 8 |
+| **Cairnstone** | **1** | **3** | **2** | **6** | 4 |
 
 Gated by **story milestone**, never by a clock or a step counter (§19). Chapters 1 and 2 both refill
 when the chapter 2 boss falls; chapter 3 is terminal.
+
+> **Cairnstone was cut from 3 / 5 / 8 to 1 / 3 / 2 on 2026-08-01, and the cut is a consequence rather
+> than a balance tweak.** 16 was sized for a **repeating** sink. §3 made traps permanent, so every
+> Cairnstone sink in the game is now one-time, and the whole demand is four stones:
+>
+> | | | chapter |
+> |---|---|---|
+> | **Bell Maul** | 1 | ch2 |
+> | **Limewashed Smock** | 1 | ch2 |
+> | **Deadfall** | 1 | ch2 (learned ch1) |
+> | **Mine Pick** | 1 | ch3 |
+> | **Total demand** | **4** | |
+>
+> Jeremy set the target: *"rare mats should be for the equipment, one time, and the amounts should line
+> up or be over a little."* Six against four is over by a little, and the slack lands where it is
+> needed — **ch1 + ch2 grant 4 against 3 sinks** (they pool, since both refill at the same milestone),
+> and **ch3 grants 2 against 1**. There is no order of purchases that can leave you short, which is what
+> retires the softlock in `placement.md` §8. **Do not raise these numbers to make the mine feel
+> generous** — a scarce material you cannot spend is Jeremy's *"finding things you are maxed on"* peeve
+> wearing a different hat.
+>
+> **This costs chapter 3 a line it used to have.** §1 above and §7 both said the mine is *"where
+> Cairnstone becomes abundant"*, giving the chapter an identity for free. That is withdrawn — abundance
+> without a sink is clutter. Chapter 3's identity is the twelve fights, the Mine Pick, the knot gate and
+> the engine, which is more than enough (§7).
 
 ---
 
@@ -168,7 +237,8 @@ Three things it buys:
 
 The knock-on is a pacing change worth stating plainly, because it inverts the earlier plan. With both
 damage components arriving in chapter 2, **the mine introduces no new combat capability at all** — its
-content is the Mine Pick, the Limewashed Smock, abundant Cairnstone, and the exorcism engine.
+content is the Mine Pick, abundant Cairnstone, and the exorcism engine. *(The Limewashed Smock was listed
+here until 2026-08-01; it is forgeable in chapter 2 and merely first useful here — see §4.)*
 
 That is better than saving new toys for last. **You enter the final chapter fully armed, and the
 remaining work is construction** — which is exactly the falling-action shape §19 asked for, and it means
@@ -212,12 +282,84 @@ salve slots are two healing items, trap slots are two traps, and nothing arbitra
 refinements gated on holding the base, per §15's family rule, and that is the largest workload saving
 in this document.
 
+> **How the Mechanical family spans two chapters — settled 2026-08-01.** The pocket that teaches it is in
+> chapter 1, but §7 lists only the Snare as chapter 1 content and the other three as chapter 2. Both
+> statements are kept, and the thing that reconciles them is already in the table above: **the chapter 1
+> pocket teaches all four, and three of them need Scrap Iron, which is a village material.** You learn
+> them in the wood and you build them in the village.
+>
+> **Nothing new is invented and no second pocket needs placing.** The alternative — teach the Snare in
+> chapter 1 and the other three in a chapter 2 find — costs an extra authored find and gives up the better
+> effect, which is that the journal reads *"Deadfall — needs Scrap Iron"* for a whole chapter. That does
+> the same job as the Fire-vulnerable Messenger standing in chapter 1 with no answer (§10): it tells the
+> player something is coming. **Visible and not yet affordable is this game's main motivator**, and the
+> material reading joins that pattern where the recipe reading opts out of it.
+>
+> **What was at risk and is not:** chapter 1's lesson is *one damage type, one trap*. Four usable traps in
+> the woodland would delete it. One usable trap, four known, keeps it.
+>
+> **This changes nothing about where knowledge comes from.** Jeremy asked the right question — *"are we
+> moving away from finding recipes?"* — and the answer is no. His craft is reclaimed from Dream pockets and
+> her physick is found in her notes; that is the premise and it is untouched. Scrap Iron is in the village
+> because villages have iron. **The guard worth stating: a material is never a reward for anything.** The
+> moment a pocket or a boss hands one over, this has drifted into "the demon stole the materials", which is
+> a different and worse story.
+
 The "fires" column is not a property to memorise; it is readable from the object (§18). Oil waits for a
 brand; a snare closes on its own.
 
-**All six are consumed, always** — win, flee or driven off. Since §19 stopped destroying equipment on
+~~**All six are consumed, always** — win, flee or driven off. Since §19 stopped destroying equipment on
 death, a rigged trap is **the only thing a fight can take from you**, which is what keeps §1's overkill
-column honest.
+column honest.~~
+
+### Craft each one once and own it forever — ratified 2026-08-01
+
+**Every trap in the table above is permanent.** Build it at the bench, and it is in your kit for the
+rest of the game — win, flee, driven off or killed. Nothing above the table changes: same six traps,
+same inputs, same *fires* column, same two rig slots. **The recipe column becomes a one-time price
+rather than a per-fight one.**
+
+Jeremy's proposal, and his reasoning is the ratification: *"What if traps were craft once and then use
+forever? No more stress of how many items. You are gridlocked to using two. We have shifted the style of
+the game a lot from the beginning and the trap mechanics lagged behind. It makes salves the biggest
+finite resource and it should be — there are ways to win without using salves, so to me that is why it
+works well."*
+
+**Four things this fixes, and the first one was a softlock:**
+
+- **The Deadfall's Cairnstone cost could dead-end a save.** Cairnstone is scarce and also buys the Bell
+  Maul and the Limewashed Smock; a player who spent the chapter 2 supply on Deadfalls could arrive at a
+  gate unable to afford either. `placement.md` §8 caught it and offered three repairs — all of which
+  are now moot, because a Deadfall bought once is a cost you cannot repeat. **This is the same mistake
+  §2 already fixed for salves, made a second time in a different table.**
+- **"Consumed" had stopped meaning anything for the other five.** §19 requires that a common never be
+  the reason a craft is refused, and Snare, Spiked Pit, Chime, Oil Slick and Vitriol Flask are commons
+  end to end. Remaking one cost a walk, not a supply.
+- **Counting traps was the last inventory-bookkeeping mechanic left.** Carry limits are gone, the
+  loadout decision happens in front of the creature, and camps are a menu. A stock count of Deadfalls
+  was the sole survivor of a system the design had otherwise dismantled.
+- **It deletes a blind trade.** *"Should I save this for something worse?"* is a decision made without
+  information, and `combat.md` §18 removed those everywhere else it found them. Own all six and the
+  only question left is the good one: which two answer the thing standing in front of you.
+
+**What still costs you something:** the **rig cap of two** (`combat.md` §18) is untouched and is where
+the scarcity actually lives; the **site** is still consumed when you are driven off; and **her salves**
+are now the game's one genuinely finite resource. Overkill is still the expensive route — it is just
+expensive in the right currency.
+
+> **This reverses a decision `combat.md` had explicitly rejected, twice.** The rejection is preserved
+> struck-through at §4, §13 and §19 rather than deleted, because it was **correct when written and the
+> reason it stopped being correct is worth keeping**: it assumed traps were a finite supply, and the
+> abundance rule had quietly made them infinite. The full argument, and the honest cost — a failed
+> fight now takes nothing but turns — is in `combat.md` §19, "Traps are permanent".
+>
+> **The fallback if it plays too soft, recorded so it is not re-derived:** a trap that *fires* is spent
+> for the remainder of that fight and returns afterwards. That keeps the Deadfall's *one-shot, large*
+> honest without bringing back an inventory.
+
+**Two implementation notes for the code pass**, neither authorised yet: `InventoryCraftingManager.`
+`SurvivesDeath` must return **true** for traps, and a crafted trap wants to be an owned flag rather
+than a stack — the bench should refuse to build a second one instead of letting the count climb.
 
 ---
 
@@ -228,19 +370,40 @@ that **a creature vulnerable to Fire or Caustic can only be answered by preparat
 not out-fight it, you out-build it"* stated as a mechanic instead of a slogan. Jeremy: *"I want them as
 traps, and it makes traps more useful beyond a lot of damage with no meaning."*
 
+> **"Preparation" was re-pointed 2026-08-01 and the rule is stronger for it.** When traps were
+> consumable, this sentence half-meant *stockpiling* — bring enough Oil Slicks. Traps are permanent now
+> (§3), so it can only mean the thing it should always have meant: **you read the creature and choose
+> the right two of six.** The first clause is untouched — no weapon deals Fire or Caustic, ever, so a
+> creature vulnerable to either is still answered at the rig screen and nowhere else. What changed is
+> that failing to answer it is a **misread** rather than a shortage, which is what invariant 7 wanted.
+
 | Item | Slot | Effect | Inputs | Source |
 |---|---|---|---|---|
 | **Splitting Axe** | Weapon | Edge | — | **starting** — his own tool |
 | **Bell Maul** | Weapon | Blunt | Heartwood + Scrap Iron + 1 Cairnstone | forged, ch2 |
 | **Tanner's Coat** | Armour | wards Edge | 3 Cured Hide | forged, ch2 |
 | **Padded Jack** | Armour | wards Blunt | Cured Hide + Tallow | forged, ch2 |
-| **Limewashed Smock** | Armour | wards Caustic | Cured Hide + 1 Cairnstone | forged, ch3 |
+| **Limewashed Smock** | Armour | wards Caustic | Cured Hide + 1 Cairnstone | forged, **ch2** |
 
 **No armour wards Fire.** Jeremy: *"So fire is the only hazard you have to stomach."* Kept deliberately
 — one unanswerable damage type gives the bestiary somewhere to escalate that no loadout can defuse.
 
 **Armour is one family with three variants, so one pocket.** The armour slot starts **empty**: the first
 coat should be a moment rather than a default.
+
+> **The Smock moved from ch3 to ch2 on 2026-08-01, and the correction is a deletion.** One pocket buys all
+> three coats, so listing the Smock as chapter 3 content needed a second gate to be true, and the two
+> candidates were both bad: a ninth knowledge pocket would break `combat.md` §19's *eight pockets, eight
+> Resolve upgrades*, and a material lock would be a rule invented to defend a typo.
+>
+> **The line was simply wrong. Availability and usefulness are not the same thing.** Only the Beast deals
+> Caustic and the Beast is a chapter 3 creature (§10), so the Smock is forgeable the moment you leave the
+> armour pocket and does nothing until the mine. That is the same shape as the Bell Maul, which you get
+> well before most of what it answers, and it needs no new mechanism at all.
+>
+> **The knock-on:** §7 previously described chapter 3's new capability as *"the Limewashed Smock and the
+> Mine Pick."* It is now the Mine Pick alone — which is correct rather than thin. Chapter 3's content is
+> twelve fights, six blights, the engine and the finale, not a coat.
 
 Two weapons is not thin. With no damage numbers anywhere (§11) and vulnerabilities belonging to the
 creature, Edge-or-Blunt is a genuine read of what you are fighting rather than a tier choice.
@@ -273,13 +436,36 @@ or three lonely set pieces.
 
 | | Cost | Yields | Count |
 |---|---|---|---|
-| **Major repair** — the spine | a **reclaimed memory** + key items | passage, or the finale | **3** |
-| **Minor restoration** — per screen | **commons only**, no memory, no key item | **Graveflower**, and the screen visibly changes | **many** |
+| **Major repair** — the spine | a **reclaimed memory** + key items + **a jigsaw** | passage, or the finale | **3** |
+| **Mending a blight** — per screen | **a jigsaw, and nothing else** | **1 Graveflower**, and the screen cleanses | **12** |
 
-**Commons-only is what makes the minor ones affordable to author.** Dozens of key items would be a
-content mountain; a hotspot, a Heartwood cost, a flag and a changed background is an afternoon each. It
-also gives commons a second sink so they are not purely trap-and-armour feed, and each one is a small
-version of *"zone cleanses, sun comes out"* — already in the playable loop today.
+> **Revised 2026-08-01 — the minor restoration is now "mending a blight", and it is decided in
+> `combat.md` §22.** Two things changed and a third was pinned down.
+>
+> | | Was | Is |
+> |---|---|---|
+> | **Name** | minor restoration / hazard | **a blight**, and you **mend** it |
+> | **Cost** | commons only | **a jigsaw. Required, and there is no material cost at all** |
+> | **Count** | "many" | **exactly 12** — plus the 3 majors, which also get one |
+>
+> **The count was never actually free.** §1 fixes the world's Graveflower at twelve and `combat.md` §20
+> prices the engine at eight, so "many" was always twelve wearing a vague word.
+>
+> **Why the puzzle replaced the price:** paying materials makes the good ending a *grind*; solving makes
+> it an *attention* gate, and the player who looked carefully is the one who gets the engine.
+>
+> **Amended later the same day — the pay-to-skip is deleted.** It survived one draft and did not survive
+> Jeremy's two objections: *"you cannot fail a slider puzzle"* (so "required" never meant hard — the
+> conditions written to protect a stuck player were guarding a wall that cannot exist) and *"no game or
+> event means you look at something and get a flower though lol"* (so the puzzle is what earns the flower;
+> without it a blight is a pickup). It could not have been priced either — commons are abundant by rule, so
+> a skip is cheap and kills the puzzle, or dear and breaks the commons rule. **The out already exists one
+> level up:** blights sit behind optional fights, so a player who does not want them skips the optional
+> content and finishes by severing. Full argument in `combat.md` §22.
+
+**A blight is affordable to author because it is a hotspot, a flag and a changed background** — plus one
+small puzzle, kept tractable by sharing roughly three forms across the fifteen instances. Each one is a
+small version of *"zone cleanses, sun comes out"*, already in the playable loop today.
 
 **The three major repairs:**
 
@@ -320,21 +506,24 @@ into the two freed apothecaries.
 
 | | **ch1 woodland** | **ch2 village** | **ch3 mine** |
 |---|---|---|---|
-| **Materials added** | Bitterroot, Tallow, Heartwood, Pitch, *(Graveflower and Cairnstone, sparse)* | Scrap Iron, Cured Hide | none new — **but everything gets abundant**, see below |
+| **Materials added** | Bitterroot, Tallow, Heartwood, Pitch, *(Graveflower and Cairnstone, sparse)* | Scrap Iron, Cured Hide | none new — **Bitterroot and Tallow abundant**, see below *(said "everything gets abundant" until 2026-08-01; Cairnstone and the dormant commons are excluded — §1)* |
 | **Salves craftable** | Clearmind | Clearmind | **+ Deepmend** |
 | **Components** | none | **+ Burning Oil, Corrosive Draught** | — |
 | **Traps** | Snare | + Spiked Pit, Deadfall, Chime, **Oil Slick, Vitriol Flask** | — |
 | **Weapon** | Splitting Axe *(starting)* | + Bell Maul | — |
-| **Armour** | none | Tanner's Coat, Padded Jack | + Limewashed Smock |
+| **Armour** | none | Tanner's Coat, Padded Jack, **Limewashed Smock** | — *(the Smock is forgeable in ch2 and useful here)* |
 | **Tool** | Bill Hook | Pry Bar | Mine Pick |
 | **Damage types available** | Edge | Edge, Blunt, **Fire, Caustic** | all four |
+| **Blights to mend** | 2 | 4 | 6 |
+| **Dream verb gained** | *(you start with Suppress)* | **Float**, from the ch1 boss | **Flare**, from the ch2 boss |
 | **Major repair** | the bridge | the mine cart | **the exorcism engine** |
+| **Gate to the chapter's boss** | the bridge, rebuilt | the mine cart, rebuilt | **the Snarl, cut** — 3 knot pockets, `combat.md` §23 *(added 2026-08-01; ch3 previously had no gate at all)* |
 
 **Chapter 2 is now the arsenal chapter and chapter 3 is the construction chapter.** That is a real change
 of shape from the previous draft, which loaded everything into the mine, and it is better: the middle
 chapter is where a player should be learning, and the last one is where they should be *using* what they
-have while the story closes. Chapter 3's only new capability is the Limewashed Smock and the Mine Pick;
-everything else it offers is material and the engine.
+have while the story closes. **Chapter 3's only new capability is the Mine Pick** *(corrected 2026-08-01 —
+the Smock moved to ch2, see §4)*; everything else it offers is material and the engine.
 
 ### Chapter 3 is rising action, not falling — and its supply has to match
 
@@ -342,8 +531,8 @@ everything else it offers is material and the engine.
 withdrawn.** Jeremy: *"less pockets in level 3 and more beasts to fight will help with the rising action,
 rather than being stuck in the dream world thinking about progressing in the awake 2D world."* The Dream
 is where you go to *think*, and the last chapter should not be thinking. Chapter 3 is short on Craft and
-long on pressure: **roughly twelve regular fights against nine in each earlier chapter**, because the
-Beast appears five or six times (§10, `combat.md` §21).
+long on pressure: **twelve regular fights against nine in each earlier chapter**, because the
+Beast appears six times (§10, `combat.md` §21).
 
 **That creates one real risk and it has a concrete fix.** Twelve fights against a finite material budget
 means a player runs dry and backtracks — in the final chapter, which is exactly the momentum the change
@@ -351,9 +540,40 @@ was made to build. Two conditions, both authoring rules:
 
 1. **Chapter 3 is abundant in every common, not only Cairnstone.** The scarce-material line in the table
    above used to be the whole promise; it is not enough.
-2. **The Beast supplies what it costs.** A slain Beast leaves a carcass yielding **Tallow and Cured
-   Hide**, so the fights that spend chapter 3's materials are the fights that stock them. Bitterroot and
+2. **The Beast supplies what it costs.** A slain Beast leaves a carcass yielding **Tallow** ~~and Cured
+   Hide~~, so the fights that spend chapter 3's materials are the fights that stock them. Bitterroot and
    Pitch have to be seeded by hand — a Beast cannot plausibly drop either.
+
+> **Cured Hide left the carcass on 2026-08-01, and the change makes both conditions sharper.** Hide is a
+> dormant common now (§1): it buys traps and coats, all of which are permanent and all of which you own
+> before the mine. A Beast dropping it in chapter 3 would be a pickup with no sink — the exact peeve §1
+> is written against. **Tallow is the only thing a chapter 3 player can actually run short of**, because
+> it binds every salve, so the carcass now drops precisely the material the fight might have cost you.
+>
+> **Condition 1 narrows too, and should be read as narrowing rather than weakening.** *"Abundant in every
+> common"* was sized for a chapter that still built things. Chapter 3 builds the Mine Pick and the engine
+> and otherwise **spends salves**, so what must be abundant there is **Bitterroot and Tallow**; the four
+> dormant commons only need enough for the Pick. Seeding piles of Heartwood in the mine is clutter.
+
+**And that is why three of the six Beasts are optional — added 2026-08-01.** Chapter 3 gets no refill
+(`combat.md` §19), and rather than invent a third milestone the supply becomes a valve the player
+controls: run short, and there is material standing in a side passage you chose to walk past. Jeremy:
+*"if we clearly make half optional then you have the ability to but not needed."* The design never has to
+guess how much a given player needed, which a scheduled refill would have to.
+
+> **The valve survived the permanent-trap pass and got narrower, which is better — checked 2026-08-01.**
+> It was worth asking whether it still had a job once traps stopped consuming materials. It does, and now
+> it has exactly one: **the optional Beasts are a Tallow valve, and Tallow is salves.** A player who
+> burned their salves on the first three Beasts can walk into a side passage and get the binder for more.
+> That is a tighter loop than the old two-material version — *the resource the fights cost you is the
+> resource the fights restore* — and it is the one place in chapter 3 where an optional fight pays for
+> itself in the currency invariant 1 runs on.
+
+**The floor this establishes, and it is the only hard one:** *"the only thing that could be the third
+lever is either unanchoring the last boss or building the exorcism box."* Stated as an authoring rule —
+**the final fight must be winnable on path materials alone; the engine may require optional content.**
+That is not a compromise: `combat.md` §20 depends on the engine being earned, and invariant 12 holds
+because backtracking is always open and now costs no walking.
 
 That second one is not an economy patch bolted on. It is the same hotspot-and-flag machinery that places
 a freed person, pointed at a corpse instead — see `combat.md` §21, *"you can only harvest what was never
@@ -406,11 +626,45 @@ Since a Craft family costs one knowledge pocket (§15):
 | **The exorcism engine** — added 2026-07-31, see below | **1** |
 | **Knowledge pockets** | **8** |
 | **Boss pockets** | **3** |
-| **Total 3D pockets** | **11** |
+| **Knot pockets** — added 2026-08-01, ch3 only | **3** |
+| **Total 3D pockets** | **14** |
+
+> **Every knowledge pocket pays twice — added 2026-08-01.** Jeremy: *"should the pockets give upgrades to
+> Vit and Resolve in addition to the craftsman recipe? I think that would feel more rewarding."* Half of
+> that is taken:
+>
+> **Each of the eight knowledge pockets grants its craft family *and* a permanent increase to maximum
+> Resolve.** Maximum Vitality never increases. The reasoning is in `combat.md` §19 — a Resolve maximum is
+> the mechanical form of Attunement and is already allowed to cross; a bigger health bar is neither
+> Attunement nor material, and §18 deleted scalar defence for the same reason it should not be handed to
+> the player.
+>
+> **What the eight increments are actually buying is the three Dream verbs** — Suppress, Float, Flare —
+> which all draw on the same meter. Resolve is a fuel tank, not a second health bar, so eight upgrades
+> buy traversal and stealth rather than survivability.
 
 **Accepted at ten 2026-07-31** — Jeremy: *"10 is enough variation but not too many runs as well. I can
 focus on 10 really polished levels."* **It is eleven**, and the eleventh was an undercount rather than an
 addition.
+
+> **It is fourteen as of 2026-08-01, and this one *is* an addition — Jeremy's, with the bill stated
+> plainly.** The three new ones are the **knot pockets** of `combat.md` §23: chapter 3's boss is now
+> behind **the Snarl**, and the three cords holding it shut are cut in three hunted Dream pockets.
+>
+> **This is a real increase against a number he accepted at ten, so it should not be smuggled in.** What
+> makes it a different kind of ten-to-fourteen than it looks:
+>
+> - **They cost no item.** The wall in this section is the item list — a new *knowledge* pocket means a
+>   new craft family, and §1 locked those counts. A knot pocket grants **passage and nothing else**, so it
+>   spends none of that budget. The eleven-pocket ceiling was a ceiling on **recipes**, and this does not
+>   touch it.
+> - **They are chases, not levels.** A knowledge pocket is an authored logic space; a knot pocket is a
+>   room with a pursuer in it and one thing to reach. Three of those are not three of these.
+> - **They grant no max-Resolve upgrade**, so the *"eight pockets, eight upgrades"* pairing in the note
+>   below survives untouched. That was the constraint most at risk and it was checked first.
+>
+> Jeremy's framing, which is why the addition is worth it: *"more dream world content and opportunities
+> to use chapter 2 powers"* — the three verbs get their only real exam before the finale.
 
 ### The engine needs a pocket, and I had priced it at zero
 
@@ -431,6 +685,16 @@ together are what undoes it."* The engine is where that finally cashes out:
 That is the two-track design paying off on the single object the whole story points at, and the first
 draft of this table charged nothing for it.
 
+**The engine's pocket is optional, and the breach-thing guards its door — added 2026-08-01.** It is the
+only pocket in the game that is not on the critical path, which is correct: `combat.md` §20 depends on
+the engine being something you go and get rather than something the chapter hands you. The guard is the
+last and largest Beast variant, standing at the portal — chosen rather than convenient, because the
+roster is locked at twelve and because **the one gate on the good ending is then the one fight that costs
+nothing.** Every other door in chapter 3 is a person.
+
+You are told the pocket might exist by the Blacksmith's spirit in the chapter 3 camp, who gives the
+principle and not the recipe. Full chain in `combat.md` §20.
+
 **Beyond that one, the wall is the item list, not imagination.** A twelfth pocket means a twelfth *craft
 family* — a fourth tool, a third weapon, a third trap family — and §1 locked the material and item counts
 precisely so that this could not drift. Jeremy: *"like I say, with falling action being a little light is
@@ -440,15 +704,15 @@ probably good."*
 the journal's two sides. The two damage components cost no pocket either — they come from freed people,
 which is the third source in §1's table.
 
-### Where the ten fall, now that the chapters are fixed
+### Where the fourteen fall, now that the chapters are fixed
 
 The material and creature placements above determine this; it is not a free choice.
 
-| | Knowledge pockets | Boss pocket | Total |
-|---|---|---|---|
-| **ch1 woodland** | Bill Hook, Mechanical traps | the Lost Trapper | **3** |
-| **ch2 village** | Pry Bar, Bell Maul, armour, Fused traps | the Blacksmith | **5** |
-| **ch3 mine** | Mine Pick, **the engine** | the Demon | **3** |
+| | Knowledge pockets | Knot pockets | Boss pocket | Total |
+|---|---|---|---|---|
+| **ch1 woodland** | Bill Hook, Mechanical traps | — | the Lost Trapper | **3** |
+| **ch2 village** | Pry Bar, Bell Maul, armour, Fused traps | — | the Blacksmith | **5** |
+| **ch3 mine** | Mine Pick, **the engine** | **the lit, high and far knots** | the Demon | **6** |
 
 **Chapter 2 is heavier and it should stay that way.** It is the arsenal chapter, so most of the Craft
 lives there. Chapter 3 is deliberately light on Dream time — **not because there was nothing to put in
@@ -461,11 +725,25 @@ six times instead of three, and the mine fills up with things that crossed. See 
 Jeremy: *"less pockets in level 3 and more beasts to fight will help with the rising action, rather than
 being stuck in the dream world thinking about progressing in the awake 2D world."*
 
+> **Amended — not reversed — 2026-08-01, and the amendment is in his own sentence.** Chapter 3 now has
+> **six** pockets, twice chapter 1's, which reads like a straight contradiction of the quote above. It is
+> not. **What he objected to was being stuck in the Dream *thinking***, and that is the clause the rule
+> now turns on:
+>
+> **Chapter 3 has fewer *knowledge* pockets and more *action* pockets.** The knowledge count is
+> **unchanged at two** — the fewest of any chapter, exactly as this section argued. The three additions
+> are chases with no puzzle in them, which is not a brake on momentum, it *is* the momentum. Jeremy:
+> *"I think this will help with the falling action also rather than hurt. Demons in the mine, more
+> action-packed dream worlds, breaking the knots to do the final battle."*
+>
+> Everything the paragraph above defends survives: no logic puzzle at the climax, no new craft family, no
+> Craft knowledge moved out of chapter 2. `combat.md` §23 for the gate itself.
+
 ---
 
-## 9. Two lore notes that constrain authoring
+## 9. Three lore notes that constrain authoring
 
-Not decoration — both change how content gets placed.
+Not decoration — each one changes how content gets placed.
 
 ### Her notes were scattered, his craft was stolen
 
@@ -517,6 +795,29 @@ So the roster carries the ending's fairness argument. Worth knowing before any o
 Graveflower an early sink would not just soften an economy, it would put back a way to lose the good
 ending by accident, hours before the game tells you the ending exists.
 
+### The demon's work is legible, and only to him — added 2026-08-01
+
+**The three knots of the Snarl pay in narrative and nothing else** (`combat.md` §23, ratified the same
+day). Cutting one shows Daniel the *binding itself* for the first time — he reads it the way a maker
+reads another maker's joinery, and across the three cuts he goes from **the work** to **the hand** to
+**where else he has seen it.** No material, no recipe, no upgrade, no item.
+
+**It belongs in this section rather than in §10 because it is the delivery vehicle for the note above.**
+The Graveflower hoard, the scattered notes and Deepmend all say *her work can still do something*; the
+third knot is where that setup finally points at something. It is the last narrative beat before the
+finale and the only one chapter 3 has.
+
+**Two authoring constraints fall out, and both are item-economy constraints, which is why they are
+here:**
+
+- **A knot must never hand over an object.** Not a material, not a note, not a fragment of her kit. The
+  temptation will be strong precisely because the third beat is *about* her work — and the moment a
+  knot drops something, the premise reads as *the demon stole the supplies* (§3), and the Cairnstone
+  and Graveflower budgets in §1 both reopen.
+- **The third beat names a recognition, not an object.** *What* Iris is tethered to is still open
+  (`combat.md` §21 — her work, or her body). Written correctly it survives either answer; written
+  carelessly it decides one by accident, in a line of flavour text, in the wrong document.
+
 ---
 
 ## 10. The bestiary — nine creatures and three bosses, drafted 2026-07-31
@@ -541,14 +842,14 @@ ecology instead of as padding. A Logger answers to an axe because he *is* an axe
 | # | Was | Ch | Vulnerable | Resistant | Deals | Placement |
 |---|---|---|---|---|---|---|
 | 1 | **Logger** | 1 | Edge | Blunt | Edge | path |
-| 2 | **Hunter** | 1 | Edge | Fire | Blunt | path — **Swarm** (a hunting party, several bodies in one encounter) |
+| 2 | **Hunter** | 1 | Edge | Fire | Blunt | path *(was **Swarm** — archetype cut 2026-08-01, see below)* |
 | 3 | **Messenger** | 1 | **Fire** | Edge | Fire | **optional, all three sightings** — see below |
 | 4 | **Stable Master** | 2 | Edge | Caustic | Blunt | path — **Warden** (`BlocksPath`) |
 | 5 | **Apothecary** | 2 | Blunt | Caustic | Edge | path — **two of her three give a recipe** (§2) |
 | 6 | **Innkeeper** | 2 | **Caustic** | Fire | Fire | path, but only after the apothecary |
 | 7 | **Soldier** | 3 | Blunt | Fire | Edge | path — **Brute** |
 | 8 | **Miner** | 3 | **Fire** | Blunt | Blunt | path |
-| 9 | **The Beast** | 3 | **Caustic** | Edge | Caustic | path — **the only non-human, and the only one seen more than three times** |
+| 9 | **The Beast** | 3 | **Caustic** | Edge | Caustic | **3 path + 3 optional** — the only non-human, and the only one seen more than three times |
 
 **Checks this table passes, and they are the reason to keep it in this shape:**
 
@@ -558,17 +859,37 @@ ecology instead of as padding. A Logger answers to an axe because he *is* an axe
   no tool is a one-fight novelty.
 - **Every creature is answerable when you meet it**, under §7's placement rule. Worked through below.
 
-**Archetypes are derived, not authored** (§18 — there is no enum). Swarm is *several entries in one
-encounter list*; Warden is `BlocksPath = true`; Brute is a higher `Damage` with the same `Durability`.
-Keep durability roughly flat across all nine: difficulty comes from the type match, because a bigger
-number makes a fight longer and §5 caps a fight at 3–6 turns.
+**Archetypes are derived, not authored** (§18 — there is no enum). Warden is `BlocksPath = true`; Brute
+is a higher `Damage` with the same `Durability`. Keep durability roughly flat across all nine: difficulty
+comes from the type match, because a bigger number makes a fight longer and §5 caps a fight at 3–6 turns.
+
+> **Swarm is cut, 2026-08-01, and the Hunter is demoted to an ordinary path creature.** Jeremy: *"as of
+> now and probably always, battles are 1 v 1."* Swarm was *several bodies in one encounter*, so 1v1
+> removes its entire content. It is cut for the same reason §18 cut Afflicter — an archetype is only free
+> if it is existing machinery rearranged, and Swarm needs multi-body turn order, target selection and a
+> trap that resolves against more than one creature. The Hunter's row loses a label and nothing else; its
+> pair, its chapter and its placement are unchanged.
 
 ### The Beast breaks two rules on purpose
 
-**It is seen five or six times, not three**, increasing as the mine goes deeper. Everything else in the
+**It is seen six times, not three**, increasing as the mine goes deeper. Everything else in the
 table is fixed at three. That is chapter 3's plot rather than its difficulty curve — the portal is open
 and the world is filling with things that crossed — and it is the only escalation in the game that costs
 no art and no writing, because there is nobody to free. Full argument in `combat.md` §21.
+
+**Six is the ordinary cadence run twice — 3 on the path, 3 optional (2026-08-01).** The path three carry
+the escalation; the optional three are chapter 3's supply valve, since the chapter gets no refill, and
+the last of them guards the exorcism engine's pocket. So the Beast turns out not to need a placement rule
+of its own after all — it needs the standard two-path-one-optional rule, doubled.
+
+**Three visual variants against one damage pair**, which leaves the locked twelve untouched — a variant
+is the same tactical problem with a different `Durability`, `Damage` and sprite:
+
+| Variant | Where | Reads as |
+|---|---|---|
+| **the crosser** | main path, baseline | it got through |
+| **the settled one** | side paths, tougher and slower | it got through a while ago, and it has been feeding |
+| **the breach-thing** | at the portal, guarding the engine's pocket | there is something worse on the other side |
 
 **And it is slain, not freed.** Jeremy: *"the beasts are just slain, not knocked sense into them."*
 
@@ -579,9 +900,10 @@ No exposition is needed, because it is the only thing on this table that does no
 never stands waiting for someone to get up. It is also therefore **the only creature you can harvest**
 (Tallow and Cured Hide, §7), which is what funds chapter 3's fight count.
 
-Its extra sightings should mostly be `BlocksPath`. Fights are opt-in and flight is guaranteed, so an
-optional Beast is one a cautious player never meets and the escalation quietly does not happen — but
-Jeremy's note stands: *"when we place, we will see if any should be optional."* Default, not law.
+~~Its extra sightings should mostly be `BlocksPath`.~~ **Superseded by the 3+3 split above.** The concern
+it was protecting — that an optional Beast is one a cautious player never meets, so the escalation is not
+paid for — is answered by putting the *escalation* on the path and the *supply* off it, rather than by
+weighting the whole set toward one or the other.
 
 ### The three bosses
 
@@ -665,6 +987,10 @@ fine.** It was flagged as the roster's thinnest column; Jeremy: *"I'm actually o
 by far the most different."* The Beast then went from three sightings to five or six, which settles it
 without changing a single damage type: **the coat is not for one fight, it is for six**, and it is the
 last thing you forge before the chapter that needs it most. Leave the Miner on Blunt.
+
+*Amended 2026-08-01: the Smock is forgeable in chapter 2 rather than chapter 3 (§4), so it is no longer
+"the last thing you forge." Everything else here holds, and one detail improves — the coat can sit unused
+in your kit for a whole chapter before the first Beast makes sense of it.*
 
 ### The slice that exists today is the old model
 

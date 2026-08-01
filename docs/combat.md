@@ -26,7 +26,16 @@ than a difficulty setting.
 | Route | Where | Costs | Feels like |
 |---|---|---|---|
 | **Sever** | Pixel Realm | Resolve — renewable | the efficient path |
-| **Overkill** | Waking world | traps, consumables, her supplies — finite | stubbornness, and it hurts |
+| **Overkill** | Waking world | **her salves — finite and uncraftable until ch3 — and turns** | stubbornness, and it hurts |
+
+> **The overkill column was revised 2026-08-01 and the old wording is worth seeing.** It used to read
+> *"traps, consumables, her supplies — finite."* Traps are now crafted once and kept forever (`items.md`
+> §3), so they left the column — **but they had already stopped belonging in it.** §19's rule that a
+> common must never be the reason a craft is refused made five of the six traps effectively infinite;
+> remaking one costs a gathering walk, not a supply. The column had been hollow for a while and the
+> permanent-trap decision only made it visible. **Invariant 1 survives intact** — the two routes still
+> cost genuinely different currencies, a Dream run against her irreplaceable salves — and the finite half
+> is now concentrated in the one place the story wants it.
 
 Neither is correct. Most players will sever. The overkill route exists because being *able*
 to refuse the Dream is worth more than the efficiency you give up for it.
@@ -184,13 +193,18 @@ readable from the object. Oil waits for a brand; a snare closes on its own. See 
 > two.** Edge and Blunt traps are pure Craft, made from common materials. **Fire and Caustic traps are
 > fused**: they need her burning oil or her corrosive salve as an ingredient, so they cannot be built
 > without both knowledge tracks, and they are built at the camp bench rather than at a field station.
-> The oil slick row above is therefore a fused trap, not a Craft one. Traps are still **consumed
+> The oil slick row above is therefore a fused trap, not a Craft one. ~~Traps are still **consumed
 > always** — §19 leans on that harder than this section did, because after equipment stopped being
-> destroyed on death, a rigged trap became the only thing a fight can take from you.
+> destroyed on death, a rigged trap became the only thing a fight can take from you.~~
 >
-> Permanent traps were requested and **rejected** in the same conversation: they would collapse
+> ~~Permanent traps were requested and **rejected** in the same conversation: they would collapse
 > overkill's cost to turns and salves while severing still cost a Dream run, which inverts invariant 1.
-> See §19, "Equipment survives death".
+> See §19, "Equipment survives death".~~
+>
+> **Superseded 2026-08-01: traps are crafted once and kept forever.** The full argument, including why
+> the rejection above was right when written, is in §19, "Traps are permanent". Short version: the
+> abundance rule had already made five of the six traps effectively unlimited, so "consumed" was
+> bookkeeping rather than cost, and the finite half of invariant 1 is now **her salves**.
 
 #### Only severing touches the aura
 
@@ -337,10 +351,15 @@ spend them, which is the point: burning her work must always be a choice, never 
 **At 0 Resolve in the Dream:** it throws you out. There is no Snap duel; Resolve empty and
 being touched are the same ending.
 
-**At 0 Resolve in a boss fight:** you are driven off to camp and **lose everything you
-rigged** — traps spent, the site consumed, rebuild before you try again. Fleeing voluntarily
-costs the same rigging; the difference is that you still have your unspent consumables,
-because you stopped before pouring them all in. Same loss, very different bill.
+**At 0 Resolve in a boss fight:** you are driven off to camp and **lose the rig** — ~~traps spent,~~ the
+site consumed, set it up again before you try again. Fleeing voluntarily costs the same rigging; the
+difference is that you still have your unspent salves, because you stopped before pouring them all in.
+Same loss, very different bill.
+
+> **Amended 2026-08-01.** Traps are permanent now (§19), so being driven off costs the *placement* and
+> the turns, not the traps themselves. That is a smaller bill than this paragraph was written to
+> describe — deliberately: the finite half of invariant 1 moved onto her salves, which are the thing you
+> actually run out of in a boss fight.
 
 > **Consequence — decided.** Resolve refilling on return would mean *failing a heist costs
 > nothing but time*, and the two-route economy in Section 1 depends on the Dream route having
@@ -533,12 +552,19 @@ is characterisation, not just economy.
 noise characterises nothing; losing them because you chose to spend them is the whole point.
 
 **Crude substitutes must be *sufficient*, not merely present.** Anchored bosses regenerate
-between visits (Section 3), so overkill has to land in one sitting; her salves are finite; and
-a failed engagement costs you the rigging. Put those together and a player who fails twice
+between visits (Section 3), so overkill has to land in one sitting; her salves are finite; ~~and
+a failed engagement costs you the rigging.~~ Put those together and a player who fails twice
 could otherwise lose the overkill route *permanently*. So the crude versions have to be able
 to close a fight — worse, slower, needing more of them and better rigging — or failure
 silently deletes half of Section 1. Not a soft lock, since severing always remains, but the
 second route would quietly stop existing.
+
+> **Weakened 2026-08-01, and that is good news for this rule rather than bad.** The struck clause was
+> one of three legs holding up "a player who fails twice loses the route" — and it is gone, because
+> traps are permanent (§19) and a failed engagement now costs only turns. **The requirement stands
+> anyway on the remaining two legs**, since her salves are still finite and bosses still regenerate.
+> But the failure spiral it was guarding against is now much shallower: failing twice costs you salves
+> you chose to spend, not a kit you have to rebuild.
 
 **Her named salves stay uncraftable.** Physick approaching their quality late (Section 8 says
 her stock outclasses your work *"for most of the game"*) means brewing your own near-equals
@@ -699,9 +725,12 @@ stays cheap.
   than thrown consumables. The recorded worry that three-and-one matched §8's "few of her notes, far
   apart" is answered by volume instead: she has four recipes against the Craft side's many, so her
   contribution stays sparse while being load-bearing.
-- ~~Can traps be recovered after a fight?~~ Still **consumed, always** — the answer above stands, and
+- ~~Can traps be recovered after a fight?~~ ~~Still **consumed, always** — the answer above stands, and
   §19 depends on it more heavily than §13 did. Once equipment stopped being destroyed on death, a
-  rigged trap became the only thing a fight can take from you.
+  rigged trap became the only thing a fight can take from you.~~ **Answered again, the other way,
+  2026-08-01: traps are never consumed.** Craft each one once and own it for the rest of the game.
+  §19, "Traps are permanent" — a question that gets re-asked in three separate sessions is usually
+  the design telling you the answer is wrong.
 
 **Still open:**
 
@@ -1193,9 +1222,11 @@ Section 3 already polices that from the other side. Anchored enemies regenerate 
 visits, so chipping converts supplies into nothing; severed ones do not regenerate and chipping them
 across visits is explicitly legitimate. Camps need no rule about it.
 
-The through-line: with healing free, a lost engagement costs you **your rigging and your
+The through-line: with healing free, a lost engagement costs you **~~your rigging and~~ your
 consumables, not your HP bar** — which is Section 4's thesis stated in the economy. HP was never
-meant to be the scarce resource here.
+meant to be the scarce resource here. *(Traps left this sentence 2026-08-01 — §19, "Traps are
+permanent". The through-line survives on the half that mattered: what a lost fight takes is **her
+salves**, and only the ones you chose to pour in.)*
 
 > **Two revisions from §19 (2026-07-31). The camp is untouched as a mechanism; two of the bullets above
 > change.**
@@ -1218,6 +1249,76 @@ meant to be the scarce resource here.
 >
 > Note that "free healing protects her salves" gets *stronger* under §19, not weaker: her salves are no
 > longer even healing items, so there is nothing left to burn on the boring use.
+
+### A camp is a menu, not a place — ratified 2026-08-01
+
+**This overturns the two paragraphs at the top of this section about geography and per-area spacing.**
+Jeremy: *"Since inventory isn't a factor any longer, can't we just make fast travel to camp but really
+have it be a menu? … The hotspot is a crutch that very weak story RPGs use to make it seem more
+impactful."*
+
+> **There is one camp per chapter, and you reach it from anywhere with a menu action.** No walking, no
+> remembering where it was, no per-area spacing. Arriving still refills both pools automatically, and
+> everything else in the ratified list above is untouched.
+
+**The three camps are the emotional spine of the game, which is the real reason to have one per chapter
+rather than several per area.** Each is a painted room you return to, and the sequence says something the
+plot never states out loud:
+
+| | Camp | What the room says |
+|---|---|---|
+| **ch1** | **his cottage** | empty. She is gone, and the bench is where she left it |
+| **ch2** | **the first house you liberate** | filling. Every person you free is somewhere in it |
+| **ch3** | **a camp in the mine** | one dead man, and nobody else. This part is yours alone |
+
+**What this costs, stated honestly: Waking-world hazards lose their teeth.** If you can leave for a full
+heal at any moment, no attrition mechanic outside a fight can matter. Jeremy accepted the trade
+directly — *"the gain from instant camp is more than the hazards bring"* — and §22 does not try to save
+attrition. It changes what a hazard *is* instead, which is the only move free healing cannot defeat.
+
+**Three pressures survive untouched, and they are the three the game actually runs on:**
+
+| | Pressure | Why the menu cannot reach it |
+|---|---|---|
+| **Inside a fight** | **her salves**, ~~rigging,~~ turns, Vitality | there is no menu out of a fight |
+| **Inside a Dream pocket** | Resolve, and the pursuer | there is no menu out of a pocket |
+| **Between fights** | none, **by design** | this was already true — §17 always said the Waking world's job is relief |
+
+**And it removes a genuine tax that had nothing to do with difficulty.** Jeremy: *"remembering where
+camps are is cumbersome — this fixes a lot and relieves unneeded stress on memory."* Camps were already
+interchangeable and already rebound automatically, so the walk to one was never a decision. It was
+bookkeeping wearing a decision's clothes. The design already refused a carry limit and already lets
+equipment survive death; the walk was the last piece of the same discarded idea.
+
+#### Showing chapter 2 filling up, without twenty-seven bodies
+
+§21 wants the liberated house to visibly fill as you rescue people, and §21's own art budget is nine to
+twelve freed sprites against twenty-seven rescues. Both hold, because occupancy is not the same as
+occupants:
+
+- **Three or four named people are physically present** — the ones with lines. That is the cast.
+- **Everyone else is signs of habitation.** Bedrolls on the floor, lamps lit, a second fire, tools
+  racked, voices from the next room. **Count the bedrolls and you have counted the rescues** — a tally
+  with no UI, no number, and one reused sprite.
+- **Production-wise it is three painted states of one room** — sparse, filling, full — not twenty-seven
+  additions. The people who are present reuse the freed portraits §21 already pays for.
+
+#### The chapter 3 camp has one occupant, and he is dead
+
+Jeremy: *"I don't think this should have other people, since it is your task you do alone. But if we had
+the spirit of the Blacksmith to talk to it could give you more context."*
+
+> **The Blacksmith's spirit is in the mine camp.** He is the only person there, he is the man you killed,
+> and he is the reason the finale has a third option.
+
+What he does is split deliberately, and the split is what keeps §20 fair — see that section for the full
+argument. In short: **he gives mechanism freely and morality only as his own hedged opinion**, he does
+not know the exorcism engine exists as a buildable thing, and Daniel never agrees with him out loud.
+
+Jeremy's framing, which belongs in the writing brief verbatim because it is what protects the player who
+severed: *"the Blacksmith didn't get a dirty deal, he got the greatest mercy at the time, and if he could
+have seen and understood everything he would still have asked for it. Children accept characters having
+godlike powers and saving everyone on a whim, and life isn't like that."*
 
 ---
 
@@ -1347,22 +1448,35 @@ reading is what the code is being built against.
 |---|---|---|
 | **Brute** | hits hard and slowly, telegraphed | armour, and out-damaging it |
 | **Warden** | high durability, narrow vulnerability | the *matching* type; ruinous if you brought the wrong one |
-| **Swarm** | several weak bodies | traps that catch more than one; single-target answers are inefficient |
+| ~~**Swarm**~~ | ~~several weak bodies~~ | **cut 2026-08-01 — see below** |
 
-**None of these needs a field.** Brute and Warden are the existing numbers arranged differently, and
-Swarm is an encounter with more than one body in it — so archetype is a description of *how to
-author*, not something to store. Same principle as camp-ness being derived from the workbench (§17):
-do not store what falls out. If behaviour ever diverges enough to need one, an `Archetype` enum is
-additive.
+**Neither of these needs a field.** Brute and Warden are the existing numbers arranged differently — so
+archetype is a description of *how to author*, not something to store. Same principle as camp-ness being
+derived from the workbench (§17): do not store what falls out. If behaviour ever diverges enough to need
+one, an `Archetype` enum is additive.
 
-A fourth, **Afflicter** — barely hurts you in the fight but leaves something on you that keeps
-costing Vitality afterwards — was raised and **cut.** It was the only one of the four that needed a
-mechanic which does not exist (a persistent condition), and the other three earn their difference
+A third, **Afflicter** — barely hurts you in the fight but leaves something on you that keeps
+costing Vitality afterwards — was raised and **cut.** It was the only one that needed a
+mechanic which does not exist (a persistent condition), and the others earn their difference
 for free.
 
-**Consequence for the build:** the encounter holds a **list** of bodies from day one even though the
-first authored fights will have one each. Swarm is nearly free if the list is there from the start
-and expensive to retrofit, and a list of one behaves exactly like a single enemy.
+#### Swarm is cut too — 2026-08-01
+
+Jeremy: *"as of now and probably always, battles are 1 v 1."* That is a decision about the whole game,
+not about one creature, and it removes Swarm's entire content: several weak bodies in one encounter is
+the only thing Swarm ever was.
+
+**It is cut for exactly the reason Afflicter was**, which is the useful part of recording it: an
+archetype is only free if it is the existing machinery arranged differently. Brute and Warden are.
+Afflicter needed a persistent condition. Swarm needs multi-body turn order, target selection, and a trap
+that resolves against more than one creature — three mechanics that do not exist and would each need
+their own gates. Two archetypes that cost nothing beat three where the third is a subsystem.
+
+**The encounter's body *list* stays.** It costs nothing, a list of one behaves exactly like a single
+enemy, and it is expensive to retrofit if 1v1 is ever revisited. But it is now **an unexercised code path
+with no content behind it**, which is precisely the `--verify-slice` blind spot the project has a memory
+about: a gate over a list that is always length one can never fail. Document it as insurance, do not
+gate it, and do not let a future session read the list as evidence that multi-body fights were designed.
 
 ### Equipment — one weapon, one armour
 
@@ -1406,16 +1520,19 @@ paragraph above is asking for. Three notes on it:
 > scope and is better for the player"* — so nothing degrades **and** nothing is lost. Equipment becomes
 > a Zelda tool in full: crafted once from a reclaimed memory plus materials, owned for good.
 >
-> **What that costs, stated here rather than discovered later: death is now cheap.** It takes the traps
-> you had rigged and the walk back from camp, and nothing else. That is defensible on this section's own
+> **What that costs, stated here rather than discovered later: death is now cheap.** It takes ~~the traps
+> you had rigged and~~ the walk back from camp, and nothing else. That is defensible on this section's own
 > logic — flight is guaranteed, so death is avoidable, and a cheap price on an avoidable failure is a
 > different bargain from a cheap price on an unavoidable one. But it is thinner than what this section
 > designed, and it should be re-checked in play rather than assumed.
 >
 > Two knock-ons. The **cache loses the purpose the second bullet above gave it** (see §17's revision
-> note), and **traps become the only thing a fight can take from you**, which is what keeps §1's
+> note), and ~~**traps become the only thing a fight can take from you**, which is what keeps §1's
 > overkill column honest — the route paid for in finite supplies is still paid for in finite supplies.
-> Permanent traps were requested in the same conversation and rejected for exactly that reason.
+> Permanent traps were requested in the same conversation and rejected for exactly that reason.~~
+> **a fight can now take nothing from you at all** — traps went permanent 2026-08-01 (§19, "Traps are
+> permanent"), so §1's overkill column is paid in **her salves** instead. That is the honest version:
+> traps had been abundant-by-rule for a while, and salves are the resource that actually runs out.
 
 ### The condition ladder is derived
 
@@ -1600,6 +1717,20 @@ Thoroughness in chapter 1 is paid out in chapter 1's boss fight rather than bank
 chapter never has to be balanced against any other chapter. That is the whole reason to do it this
 way.
 
+> **Where the refills come from — added 2026-08-01.** They hang on **the chapter 1 and chapter 2 boss
+> pockets**, which are already spoken for and cost nothing extra. Beat the boss, reclaim the memory, fix
+> the bridge or the cart — **and the world behind you restocks.** Framed diegetically as a cleansing that
+> runs back through everything you already cleared, which is the same fiction as *"zone cleanses, sun
+> comes out"* at chapter scale. All eleven pockets in [`items.md`](items.md) §8 have jobs, so there was
+> never a spare one to hang this on; making it a consequence of the boss is better than inventing a
+> twelfth pocket to be the vending machine.
+>
+> **Chapter 3 gets no refill, and that is now covered by the Beast rather than by a third milestone.**
+> Roughly half of chapter 3's Beast encounters are optional, so a player who runs short has material
+> standing in a side passage they chose to walk past. Jeremy: *"if we clearly make half optional then you
+> have the ability to but not needed."* A player-controlled valve beats a scheduled refill, because the
+> design never has to guess how much they needed.
+
 **With no carry limit, the milestone schedule is the only throttle on the entire consumable economy**
 — it is a balance-critical number rather than a flavour detail, and it is the lever that gives Jeremy
 the exact control he asked for.
@@ -1752,19 +1883,66 @@ for the player."*
 So **nothing degrades and nothing is lost.** Equipment is a Zelda tool — crafted once from a reclaimed
 memory plus materials, owned for good. It is also what retires the cache's stated purpose (above).
 
-**State the consequence plainly rather than discovering it later: death is now cheap.** It costs the
-traps you had rigged and the walk back from camp, and nothing else — salves are only "lost" by being
-spent, which is consumption rather than a penalty. That is defensible, because §18's flight guarantee
-makes death entirely avoidable and making an avoidable failure cheap is a different bargain from making
-an unavoidable one cheap. It is thinner than what §18 designed, and it is worth re-checking in play
-rather than assuming.
+**State the consequence plainly rather than discovering it later: death is now free.** ~~It costs the
+traps you had rigged and~~ It costs the walk back from camp and nothing else — salves are only "lost" by
+being spent, which is consumption rather than a penalty. That is defensible, because §18's flight
+guarantee makes death entirely avoidable and making an avoidable failure cheap is a different bargain
+from making an unavoidable one cheap. It is thinner than what §18 designed, and it is worth re-checking
+in play rather than assuming.
 
-**Traps remain consumed, always** — §13's answer stands and this section leans on it. They are now the
+> **Amended 2026-08-01: "cheap" became "free" when traps went permanent** (below). The last item on the
+> bill was the rigged traps, and it is gone. Everything the paragraph argues still holds — it is simply
+> arguing it about a smaller number now, and the "worth re-checking in play" line is worth more than it
+> was. **If it needs bite, spend-for-the-fight is the lever**, not death penalties: see the fallback at
+> the end of the trap reversal below.
+
+### Traps are permanent — reversing §13, and reversing this section's own answer
+
+~~**Traps remain consumed, always** — §13's answer stands and this section leans on it. They are now the
 only thing a fight can take from you, which is what keeps §1's overkill column honest: the route paid
 for in finite supplies is still paid for in finite supplies. Permanent traps were considered and
 **rejected**: they would have collapsed overkill's cost to turns and salves while severing still cost a
 Dream run, inverting invariant 1. The fantasy behind the request — *I own the fire tool forever* — is
-served by equipment, which is permanent and grants damage types already.
+served by equipment, which is permanent and grants damage types already.~~
+
+> **REVERSED 2026-08-01. Traps are crafted once and kept forever** (`items.md` §3). This is the passage
+> that rejected the idea, kept visible because the rejection was *correct when it was written* and the
+> reason it stopped being correct is the useful part.
+>
+> **What the rejection assumed: that traps were a finite supply.** They are not, and had not been for a
+> while. §19 requires that a common never be the reason a craft is refused, and five of the six traps are
+> made entirely from commons — so remaking one costs a gathering walk, not a supply. The sixth, the
+> Deadfall, was the only genuinely scarce one, and its Cairnstone cost turned out to be a **softlock**
+> rather than a tension (`placement.md` §8). **The overkill column had already been hollowed out by the
+> abundance rule; making traps permanent only stopped the document from claiming otherwise.**
+>
+> **Invariant 1 is not inverted, because the finite half moved rather than vanished.** Overkill now costs
+> **her salves** — uncraftable until chapter 3, rationed all game, and the one thing in the economy that
+> genuinely runs out. Jeremy: *"it makes salves the biggest finite resource and it should be. There are
+> ways to win without using salves, so to me that is why it works well."* A cost you can choose to avoid
+> is a better cost than one you pay automatically.
+>
+> **Three reasons beyond the softlock, and the second is the one that decided it:**
+>
+> - **The trap mechanics lagged the rest of the design.** §19 deleted carry limits, §18 moved the loadout
+>   decision to the rig screen in front of the creature, and camps became menus. Counting how many
+>   Deadfalls you own was the last surviving inventory-bookkeeping mechanic in a game that had removed
+>   every other one. Jeremy: *"we have shifted the style of the game a lot from the beginning and the trap
+>   mechanics lagged behind."*
+> - **"Should I save this trap for something worse?" is a blind trade**, and this design has deleted blind
+>   trades everywhere else it found them. It is the same argument that made §18's rig cap better than a
+>   carry limit — *informed, in front of the creature, instead of blind at camp.* Permanent traps finish
+>   that job: you own all six and the only question left is which two answer the thing you are looking at.
+> - **You are gridlocked to two per fight regardless.** The rig cap already supplies the scarcity that
+>   consumption was supposed to provide, and it supplies it in the better place.
+>
+> **The honest cost, and it is real: a failed fight now takes nothing but time.** Flight is guaranteed
+> (§18), camps refill both pools free (§17), equipment survives death (§19), and traps now do too. What
+> keeps that from becoming trial-and-error is invariant 7 — **a creature's vulnerability is readable off
+> the creature**, so a wrong rig is a misread rather than a lottery ticket, and the design never wanted
+> the player brute-forcing combinations. If it needs more bite in play, the cheap fix is that **a trap
+> that fires is spent for the remainder of that fight** and returns afterwards, which keeps the Deadfall's
+> *one-shot, large* honest without reintroducing an inventory.
 
 ### Catalysts flip from price to reward
 
@@ -1844,6 +2022,50 @@ deliberately **not** built; revisit only if a played pocket shows a player getti
 
 Tuning note: keep the suppression drain slow enough that cautious over-hiding is a waste rather than a
 death. The *visible* cost — being half-blind — is what teaches the player to come back up.
+
+### Three verbs, one meter — and eight upgrades that make it a fuel tank
+
+**Ratified 2026-08-01, and it changes what Resolve *is*.** The section above is still correct that
+suppression is the only *passive* drain; what it lacked was anything else to spend on. Jeremy: *"instead
+of ladders, which make no sense in the spirit realm — after boss 1 you gain the ability to float, costing
+resolve. It would help pathfinding around enemies be much more meaningful."*
+
+| Verb | Gained | Cost | What it is for |
+|---|---|---|---|
+| **Suppress** | from the start | drains while held | hide. The near field goes dark |
+| **Float** | after **boss 1** | drains while held | slow rise and slight lateral drift. Vertical traversal without ladders |
+| **Flare** | after **boss 2** | drains while held | push the light *out*. Hidden geometry, the anchor and the tether lines become visible — and everything in the pocket can see you |
+
+**Flare is the exact mirror of the first verb and that is why it is the right third one.** It is a puzzle
+tool with a price, never an escape button: it reveals and it attracts, and it arrives in chapter 3 where
+the pockets are hunted, so the price is real. Jeremy is open to more verbs later; three is the set that
+exists.
+
+> **Each of the eight knowledge pockets raises maximum Resolve.**
+
+**This is what makes the verbs worth having, and it needed no new rule.** A permanent Resolve maximum was
+already established as the mechanical form of Attunement, and *"only knowledge, perception, Attunement
+and state cross over"* already permits it. You get better at being in the Dream by being in the Dream.
+
+**Resolve stops being a second health bar and becomes a fuel tank**, which is a far better reason to want
+a bigger one than "breathing room" was. It is also why the upgrades can be frequent without inflating
+anything: eight increments buy traversal and stealth, not survivability.
+
+**Maximum Vitality never increases, and this is a rule rather than an omission.** It is not Attunement,
+so it must not cross a boundary that explicitly passes nothing material — and §18 spent a page deleting
+Defence as a number on the grounds that difficulty comes from the type match rather than from bigger
+numbers. A growing health bar is the same scalar creep seen from the player's side. **Waking-world
+progression is recipes, tools and coats.** Jeremy: *"not increasing Vit makes the game much easier to
+balance too."*
+
+**Tuning note, and it is the one thing to know before balancing:** the boss aura drain and the three
+verbs draw on the same meter, so every upgrade lengthens boss fights *and* deepens pockets at the same
+time. Those are coupled, not independent. An earlier draft here proposed making the boss drain
+proportional to maximum so that fights stayed six turns; that is **withdrawn**. Jeremy: *"the 6-turn rule
+was just an arbitrary number — increasing Resolve should give you the option for longer fights. I don't
+think there is an issue until it is off balanced."* So **per-boss drain is an authored value, not a
+formula.** The invariant that must hold is that a boss fight ends decisively, not that it ends on a
+particular turn.
 
 ### Two principles worth quoting, because they settle future arguments
 
@@ -2010,6 +2232,76 @@ So the honest description is not *three routes* at all. It is **one route you pr
 fall back on** — and which of the fallbacks a player takes is a question about them, not about a
 tradeoff the design has to balance.
 
+### How the player learns the engine exists — settled 2026-08-01
+
+Three steps, and each one is a separate act by the player. The chain matters more than any of its links,
+because it is what stops a good ending being handed over in a conversation.
+
+| | Step | Gives you |
+|---|---|---|
+| **1** | **the Blacksmith's spirit**, in the chapter 3 camp (§17) | *the principle* — that there might be another way |
+| **2** | **an optional Dream pocket**, guarded by the **breach-thing** (§21) | *the blueprint* — the recipe itself |
+| **3** | **mended blights** (§22) | *the material* — 8 Graveflower of the world's 12 |
+
+**The ghost gives the principle, never the recipe, and the distinction is load-bearing.** He felt a
+tether from the inside and he is a blacksmith, so he knows a tether is a **made thing**, and a made thing
+can be unmade by a better-made one. He does not know it takes Graveflower, or eight of it, or that it is
+built at a bench. Daniel supplies the craft. The Blacksmith supplies the insight.
+
+**He also does not know the engine exists as a buildable object, which is what makes his comfort safe.**
+He is arguing about the only two roads he ever saw: stay what he was, or end. So *"you did right by me"*
+is not an endorsement of severing Iris — it is a dead man saying that of the two options he knew about,
+the player picked the right one. **The same lines mean different things depending on what that player has
+found.** Someone who has built the engine hears outdated advice from a man who died before there was a
+third way, which is sad; someone who has not hears genuine comfort. It can never function as a hint, so
+the no-warnings rule above survives contact with the only NPC positioned to break it.
+
+Two smaller guards, both cheap and both writing rather than systems:
+
+- **He hopes; he is not certain.** *"I think you did right by me."* A ghost who is sure is an oracle. A
+  ghost who is hoping is a person — and he is not neutral, because he needs it to have been right.
+- **Daniel never agrees out loud.** Silence or deflection, not a speech. That is the internal
+  counterweight Jeremy asked for: *"we will need to counter this so the player doesn't feel robbed of
+  making a poor choice."*
+
+**The guard on the blueprint is the breach-thing, and it is chosen rather than convenient.** The pocket
+needs a gate, the roster is locked at twelve by the damage-type matrix, and the breach-thing — the last
+and largest Beast variant, at the portal — was already going to be there. It is also the only right
+answer thematically: **the one gate on the good ending is the one fight that costs nothing.** Every other
+door in chapter 3 is a person. This one never was.
+
+Jeremy's constraint on timing is satisfied by placement alone — *"I don't think they should be able to
+craft it until before the fight"* — because the pocket is deep in chapter 3, near the portal.
+
+### "You happened to have it" becomes "you went back for it" — revised 2026-08-01
+
+**Menu camps (§17) made backtracking nearly free, and that changes the shape of this section rather than
+breaking it.** A player told about the engine in chapter 3 can now go back and mend what they skipped, at
+almost no cost in time. The earlier framing — that the engine is unavailable to most players at the
+moment they arrive, and that this is what keeps the three routes from being three equal buttons — is
+still true on a first arrival. What is no longer true is that it stays unavailable.
+
+> **The good ending is no longer "you happened to have it." It is "you went back for it."**
+
+**That is the better version and it is deliberately not a downgrade.** Daniel walking back over every
+place he already passed, mending the things he did not have to mend, to save her — that is the same
+person the whole game has been about, and it is a stronger last act than a player discovering they
+happened to be carrying enough.
+
+**It also removes the one thing this structure could genuinely get wrong.** Jeremy, 2026-08-01: *"I don't
+want to gate the player on the first time through, because it punishes them if they want to; and if they
+were faithful to the game they should be rewarded and not have to backtrack — they should be able to
+finish at the climax."* Both halves of that are now true at once:
+
+| The player who… | gets |
+|---|---|
+| **mended as they went** | the engine already affordable. **No backtrack, they finish at the climax** — the reward for having been thorough is that nothing interrupts the ending |
+| **skipped the optional work** | a real second chance, cheap in time, expensive in the only currency that matters — going back over the whole game with the reason now in front of them |
+
+Neither is punished, and the two are told apart by what they already did rather than by a check at the
+door. That is the fairest version of a locked ending this design has produced, and it exists because
+camps became a menu — which is not a connection anyone planned.
+
 **The fusion pays off here and nowhere else does it matter as much.** The engine needs **her physick to
 purify and his craft to contain**, so it cannot be built from one track. Jeremy: *"ironic that both
 trades will be its downfall."* The demon stole his knowledge and discarded hers as worthless
@@ -2030,6 +2322,11 @@ Neither was designed for this and both hold, which is usually a sign the structu
 **Both guarantees are load-bearing now in a way they were not when there were two good endings.** With
 one good path, "the door stays open until you land the final blow" is the only thing standing between
 this design and a gotcha. Neither guarantee may be weakened without reopening the ending.
+
+**A third joined them on 2026-08-01: camps are a menu (§17), so the return trip costs no walking.** That
+is what converts "go back and do the optional work" from a punishment into an offer, and it is why the
+revision above could be accepted rather than argued around. Add it to the list of things that may not be
+weakened without reopening this section.
 
 ### Closed 2026-07-31
 
@@ -2175,8 +2472,8 @@ unfixed.
 | **Regular creatures** | **9** — three per chapter, chapter-locked, never reused across chapters |
 | **Bosses** | **3** — one per chapter |
 | **Sightings per creature** | **3** — two on the critical path, **one guarding something optional** |
-| **Except the Beast** | **5–6**, increasing as chapter 3 goes deeper. The only creature that breaks the cadence |
-| **Fights** | 9 in ch1, 9 in ch2, **~12 in ch3** · **30 regular + 3 bosses** |
+| **Except the Beast** | **6** — the same cadence run twice, **3 on the path and 3 optional** (2026-08-01) |
+| **Fights** | 9 in ch1, 9 in ch2, **12 in ch3** · **30 regular + 3 bosses** |
 
 ### The Beast is the exception, and the exception is the plot — added 2026-07-31
 
@@ -2207,10 +2504,40 @@ materials its fight count consumes, or the rising action stalls into a farming t
 chapter. A slain Beast leaves a carcass, and **the fights that spend chapter 3's materials are the fights
 that supply them** — see "harvest is the mirror of rescue" below.
 
-**Two placement notes carried from the discussion.** The extra Beasts should mostly sit on the critical
-path (`BlocksPath`), because fights are opt-in and flight is guaranteed — an optional Beast is one a
-cautious player never meets, and the escalation being paid for does not happen. Jeremy: *"I think when we
-place we will see if any should be optional"*, so treat that as a default rather than a law.
+~~**Two placement notes carried from the discussion.** The extra Beasts should mostly sit on the critical
+path…~~ **Superseded by the split below, 2026-08-01.**
+
+#### Three on the path, three optional — and three variants — 2026-08-01
+
+The earlier note wanted the extra Beasts on the critical path so the escalation would actually be paid
+for; §19's chapter 3 supply wanted them optional so a short player has somewhere to go. **Both are
+satisfied by splitting the two jobs rather than compromising between them.**
+
+| | Count | Job |
+|---|---|---|
+| **On the path** (`BlocksPath`) | **3** | the escalation. Three forced sightings is enough to read as *they are everywhere now* |
+| **Optional** | **3** | the supply valve, and the last one guards the engine's pocket (§20) |
+
+**Which means the Beast does not need a special placement rule after all — it needs the ordinary one,
+run twice.** §21's cadence is two on the path and one optional per creature; the Beast is that doubled.
+That is a simplification, not a carve-out, and it removes the only creature that had its own placement
+law.
+
+**Three visual variants, and they cost nothing extra on the tactical side.** Jeremy: *"we can make one
+stronger variant towards the end of the level and make two different visuals — one the main-path version
+and the other a side path. For this impactful enemy I feel like it is worth it."* A variant shares the
+(vulnerable, resistant) pair, so the locked twelve is untouched — it is the same tactical problem with a
+different `Durability`, a different `Damage`, and a different sprite.
+
+| Variant | Where | Reads as |
+|---|---|---|
+| **the crosser** | main path, baseline | it got through |
+| **the settled one** | side paths, tougher and slower | it got through a while ago, and it has been feeding |
+| **the breach-thing** | last, at the portal — guarding the engine's pocket | there is something worse on the other side |
+
+Three sprites for six encounters, and the escalation is carried by what the player sees rather than by a
+number going up — which is what *"escalate the presentation, not just the count"* above was asking for
+without knowing how to spend it.
 
 **Why three sightings and not two.** First you meet it and learn its type the hard way; second you come
 prepared, which is the payoff and the floor for a vulnerability to become knowledge rather than a puzzle;
@@ -2248,6 +2575,11 @@ Three identical hunched silhouettes are not three copies of a monster — they a
 which is make people interchangeable. Individuality comes back at the moment you save them. And the
 village visibly fills with people you rescued as you clear it, which sets up the finale for free: the one
 person you cannot save.
+
+**That beat now has a home: the chapter 2 camp** (§17), which is the first house you liberate and fills
+as you go. It is shown with bedrolls rather than bodies — three painted states of one room, a handful of
+named people with lines, and a countable pile of bedding standing in for everyone else. And the chapter 3
+camp is the answer to it: nobody there at all, except the one man you killed.
 
 ### What this costs in code and art
 
@@ -2306,3 +2638,429 @@ Beast cannot plausibly supply either.
 is twenty-seven scenes, and filler dialogue damages a short game more than a smaller cast would. Settled
 2026-07-31: the apothecaries and anyone handing over something meaningful get real scenes; everyone else
 gets **one line or a nod, and walks off.** Jeremy: *"people don't care too much about side stuff."*
+
+---
+
+## 22. The Waking world — screens, blights, and mending — ratified 2026-08-01
+
+**This section exists because §17 made camps a menu, and that took the teeth out of every Waking-world
+hazard in one move.** With a free heal available at any moment, no attrition mechanic outside a fight can
+matter. Rather than try to save attrition, this changes what a hazard *is* — into the one thing free
+healing cannot defeat.
+
+### Three reasons a screen is not finished
+
+This is the whole interactivity vocabulary of the Waking world, and everything else is examine text.
+
+| | The screen is… | Answered by |
+|---|---|---|
+| **Held** | a creature stands on it | the fight |
+| **Blocked** | a way through is shut | the chapter's tool — Bill Hook, Pry Bar, Mine Pick |
+| **Fouled** | a made thing is broken | **mending it** — see below |
+
+**A screen with none of these left is cleansed**, and cleansing is free and universal: the colour comes
+back, the light changes, and nothing is charged for it. That is Jeremy's requirement — *"I do want every
+screen to be able to lift the visual curse"* — and it holds even for a screen that only ever held two
+items to pick up.
+
+**Creatures, interactables and pocket doors share screens.** Jeremy: *"enemies and point-and-click
+objects or portal items should be on the same screen; it will space out the content better… we don't want
+screens to feel empty either."* The one thing that stays on its own screen is a Dream pocket's interior,
+which is a different realm.
+
+### Hazard is renamed Blight, and the verb is Mend
+
+`Hazard` stopped being accurate the moment it stopped dealing damage.
+
+> **Blight** — the thing. **Mend** — the verb. **A mended screen** — the state.
+
+*Blight* is a land word rather than a person word, and it reads as what the Scourge leaves behind rather
+than as a trap someone set.
+
+**Code side this is more than a rename, and the difference matters — a blight is not the hazard that
+exists today.** There is deliberately **no `HotspotKind.Hazard`**: a hazard is a `VitalityCost` plus a
+`HazardText` on any existing hotspot kind, charged by `InteractionService` on a successful click. A
+blight charges nothing and damages nobody. So:
+
+| | Today's hazard | A blight |
+|---|---|---|
+| **Shape** | `VitalityCost` + `HazardText` on any hotspot | its own thing — gates cleansing, presents a puzzle, pays out |
+| **Costs** | Vitality | **a jigsaw. Nothing else, and there is no skip** |
+| **Yields** | nothing | **1 Graveflower**, and the screen cleanses |
+| **Repeats** | by default, unless flag-gated | never — one flag, one mend |
+
+**What becomes of `VitalityCost` is a decision for the code pass, not this section.** Waking-world damage
+is no longer part of the design, so the field has no design customer left — but `yard_cairn` is authored
+with `VitalityCost = 10`, that content is verified in play, and it is currently the only way to reach 0
+Vitality outside a fight. Do not delete either the field or the cairn on the strength of this section:
+**decide it deliberately when the code pass reaches §22, and check what the collapse-path gates are
+actually exercising first.** This is exactly the class of thing the `--verify-slice` blind-spot note
+warns about — a green gate over content that the design has quietly stopped wanting.
+
+The one clean rename either way: **`HazardText` → `BlightText`** if the field survives.
+
+### The twelve blights are the restoration sites, and they are the good ending's currency
+
+**This is the load-bearing consequence, and it collapses four systems into one chain.**
+
+> **A blight is what makes a screen one of the twelve restoration sites.** Mending it cleanses the screen
+> and yields **1 Graveflower**.
+
+hazard → restoration site → Graveflower → the exorcism engine → Iris lives. Every optional thing in the
+Waking world now points at the ending, with no quest log saying so, and the hazard machinery that was
+about to be deleted becomes the authoring surface for the twelve.
+
+**Why the count is exactly twelve and not "many":** [`items.md`](items.md) §6 already fixed the minor
+restorations at twelve because §1 fixes the world's Graveflower at twelve and §20 prices the engine at
+eight. The blight count was never free; it was already spent.
+
+### Mending costs a puzzle, not materials — and as of 2026-08-01 it costs *only* that
+
+An earlier draft of this had a blight cost commons to put right. Jeremy: *"I think a mini-game to cleanse
+the land is a better option than giving up resources."* He is right, and the argument is bigger than
+protecting the economy:
+
+> **Paying materials makes the good ending a grind. Solving makes it an attention gate.** The player who
+> looked carefully gets the engine.
+
+That is exactly the ending §20 wants, and it is the one gate the design had no mechanism for.
+
+**Not a scored mini-game — a small point-and-click puzzle**, which is the same verb §15 already ratified
+for Dream pockets. It needs no new system: hotspots, examine text, and order. Jeremy: *"I want the puzzles
+to be fun and fulfilling and not too difficult."* A simple slider is explicitly in scope.
+
+#### It is a jigsaw, it is required, and the skip is deleted — ratified 2026-08-01
+
+**This reverses the pay-to-skip that the rest of this subsection was built around.** Two moves by Jeremy
+collapsed it, and the second one is the argument:
+
+> *"You cannot fail a slider puzzle."* — and — *"I should require it or just not do it. No game or event
+> means you look at something and get a flower though lol."*
+
+The first killed the framing. A puzzle with no fail state is not a difficulty gate, so "unskippable" never
+meant *hard*, it only meant *thirty seconds*. Every condition written above was protecting against a wall
+that could not exist. **The condition that the skip must still yield the Graveflower is therefore void** —
+it was guarding against gating the ending on puzzle skill, and there is no puzzle skill to gate on.
+
+The second is the real reason: **the puzzle is what earns the flower.** Remove it and a blight is a pickup
+with extra steps. So it is all fifteen mends or none of them.
+
+**And a skip could not have been balanced anyway.** Commons are abundant by design — §19 requires that a
+common never be the reason a craft is refused — so a commons skip is either cheap, in which case everyone
+takes it and the puzzle is dead content, or dear, in which case it breaks the commons rule from the other
+side. There was no price that worked.
+
+**The out the design was trying to provide already exists one level up.** Blights sit behind optional
+fights (§21). A player who does not want them does not do the optional content, never meets a blight, and
+finishes by severing — which §20 treats as a legitimate ending and which the Blacksmith's *"greatest mercy
+at the time"* speech exists specifically to protect. The skip was a second out for players who already
+had one, and redundant options are not free: they cost a price to balance, a second interaction path, UI
+to explain, and nobody uses them.
+
+| | Was | **Is** |
+|---|---|---|
+| **Mending a blight** | a puzzle, or commons to skip | **a jigsaw. That is the whole interaction** |
+| **Skipping** | yields the flower, must cost more than solving | **does not exist** |
+| **The 12 → 8 slack** | four blights you could not be bothered with | **four blights you did not find** |
+
+**That last row is the gain.** The slack now measures exploration rather than tedium tolerance, which is a
+far better thing for the good ending to hang on, and it is exactly what §20's *"you went back for it"*
+wants. Miss up to four blights entirely and the engine is still affordable.
+
+**A jigsaw specifically, and small.** Jeremy: *"a jigsaw is shorter and gives the same completionist
+feeling — win-win."* Board sizes stay deliberately modest; invariant 6 applies (expensive never long) and
+a mend is a payoff, not a test.
+
+#### The three major repairs get one too — and the same rule
+
+The bridge, the mine cart and the exorcism engine were costed as commons-plus-a-memory, which made the
+three biggest moments in the Waking world the only flat ones. They get a jigsaw as well, on the same
+terms: required, unfailable, short. **Fifteen mends in total, one interaction, no branching.**
+
+The framing that settles it is Jeremy's — *"I thought they would look cool to complete the objects"*:
+**the puzzle is not a gate, it is the animation.** It is what makes a repair an act rather than a purchase.
+The engine is different only trivially, and it is a tautology rather than a rule: skipping its assembly
+would mean not building the engine, so there is nothing to skip *to*.
+
+**Twelve blights plus three majors is a real authoring bill.** Keep it tractable with roughly **three
+forms, five instances each** — *spot the wrong part among many*, *do these in the right order*, *use the
+right tool on the right thing* — with the third form gated on the chapter's tool, so a chapter 3 blight
+cannot be solved in chapter 1 and the fifteen spread themselves across the game without a difficulty
+curve to tune.
+
+### What Daniel is actually doing — he repairs, he does not build
+
+Jeremy raised the lore problem directly, and it is a real one: *"this is tripping me up lore-wise more
+than mechanically — how should Daniel use his craftsman ability to ward off the curse? Building a statue
+comes to mind but it feels like idolatry, which is counterintuitive to the plot."*
+
+**The statue is not needed, and the instinct that it was wrong was correct.** An idol is made to be looked
+at. A tool is made to be used. The answer was already in the premise:
+
+> **A blight is a broken made-thing.** A well cover, a fence, a wheel, a hearth, a lintel, a boundary
+> stone, a plough. The corruption spreads through the works of human hands left undone, and Daniel — a
+> craftsman — puts them back in working order. The ground stops being sick because the works on it are
+> whole again.
+
+Five things fall out of that, and none of them had to be designed:
+
+- **The idolatry problem disappears.** He is not making a holy object. He is doing his job.
+- **It is the theme, exactly inverted.** The demon stole his craft. Every mend is that craft used the way
+  craft is meant to be used.
+- **It explains why it has to be him** — not because he is chosen, but because he is the one who knows how
+  things go together. That is the un-godlike heroism Jeremy asked for two decisions earlier.
+- **The puzzle and the fiction become the same act.** "Put this back together correctly" *is* the three
+  forms above. The puzzle never feels bolted on, because it is not a puzzle, it is the work.
+- **It finally explains Graveflower.** You do not manufacture it. **It grows where the land is right
+  again.** So the material that saves Iris comes only from healed ground — twelve small repairs to one
+  town, gathered into the thing that repairs a person.
+
+**The maker's mark.** If a mended screen needs a visible sign — Jeremy's serpent instinct, which was
+sound — the craftsman's version is not a statue but **his stamp on the work.** One sprite, a signature
+rather than an object of worship, and a free visual index of what is done. It is also quietly grim by the
+end: his mark on twelve broken things, and on the box he built for his wife.
+
+### Where a Dream pocket's door sits
+
+| Pocket | The door is | Why |
+|---|---|---|
+| **Boss pocket** (3) | the tethered person's place — the forge, the trap line, the cottage | you go where they were |
+| **Knowledge pocket** (8) | **something of Daniel's own that the demon ruined** — a warped blade, a burnt page, his own bench | the stolen-craft premise made literal: you put your hand on your ruined thing and fall in after what was taken from it |
+
+**A door appears on a Held screen once the creature is beaten**, which is Jeremy's *"the side pockets
+would be in their own screen beyond an enemy."* Doors are never on Fouled screens.
+
+**That last rule is not cosmetic — it keeps the critical path free of material spend.** Blights are the
+optional twelve; if a pocket door sat behind one, progression would depend on solving a puzzle or paying
+commons, and both are things this design has spent two sections making optional.
+
+> **A third kind of door joins this table 2026-08-01 — the knot pockets.** See §23. Their doors follow
+> the same rule (Held or clear, never Fouled) and their objects are different again: not a person's place
+> and not Daniel's ruined thing, but **the demon's own work** — a cord of it, running into the rock.
+
+---
+
+## 23. The Snarl — chapter 3's gate — ratified 2026-08-01
+
+**The problem this solves was structural and Jeremy found it before I did.** Chapters 1 and 2 each end
+behind a **major repair**: the bridge, then the mine cart. You cannot reach the boss until you have
+rebuilt the way to them, and that repair is the chapter's spine. **Chapter 3 had nothing.** You arrive
+in the mine, fight twelve fights, and the Demon is simply *there* — the one chapter with no reason you
+cannot walk straight at it.
+
+His proposal: *"We could make a force field door that can only be broken by breaking 2–4 anchors that
+are powering it. Would close off the path to the boss so the player has to run around and not go
+straight there. Would be more dream world content and opportunities to use chapter 2 powers."*
+
+**Ratified with two changes of vocabulary and no change of mechanism.**
+
+### What it is
+
+**The demon has knotted the way shut.** The last passage of the mine is closed by **the Snarl** — a mass
+of the demon's binding grown across the rock, the same craft it uses on people turned on a place. It
+cannot be cut, mended, forced or crafted around in the Waking world. Three **cords** run out of it and
+disappear into the stone in three directions.
+
+**Follow a cord to where it goes into the rock, and there is a pocket door.** Inside, in the Dream, is
+the **knot** that cord is tied in. Cut the knot and the cord goes slack out here. Cut all three and the
+Snarl falls open.
+
+| | |
+|---|---|
+| **The barrier** | **the Snarl** — Waking, impassable, one authored screen |
+| **The trace** | **3 cords**, followed across the mine to three doors |
+| **The task** | **3 knot pockets** — hunted Dream pockets, one per cord |
+| **The verb** | **cut**, which is the verb you already have |
+| **The reward** | **passage, and nothing else** — no material, no upgrade, no recipe |
+
+### Why "knot" and not "anchor"
+
+**Jeremy's word was "anchor" and it is already taken.** An anchor is *the object a tethered person's soul
+is bound to* (§21) — the whole trade at the finale turns on it, and Iris's anchor is the one thing §20
+leaves deliberately open. A second meaning on that noun would be the worst possible collision in the
+worst possible chapter. Jeremy: *"it will be easy to fit that into a narrative."*
+
+**"Knot" is the better word anyway, and not only because it is free.** The demon binds a person with a
+**tether** to an **anchor**; it binds a *way* with a **knot**. Same hand, same craft, different victim —
+so the vocabulary tells you the mine's door and the woman in the finale were done by the same thing.
+**And your answer is the same answer:** you sever a tether and you cut a knot. The gate teaches no new
+verb. It is the verb the whole game is about, aimed at architecture for the first time.
+
+"Force field" was the wrong register for the same reason — it is a science-fiction noun in a game whose
+entire vocabulary is craft, rope, iron and rot.
+
+### Why three, and what each one is for
+
+**Three, because there are three Dream verbs and this is their exam.** §19 gives you Suppress from the
+start, Float after the first boss and Flare after the second, all drawing on one Resolve meter. Chapter 3
+is the only place all three are in hand, and until now nothing asked you to have understood them.
+
+| Knot | The verb it examines | The bind |
+|---|---|---|
+| **The lit knot** | **Flare** | it is invisible in the dark and the pocket is dark. **The light that shows it to you shows you to the pursuer** — you cannot look and hide at the same time |
+| **The high knot** | **Float** | it is tied out of reach. Floating spends the same meter suppression does, so the climb is paid for out of the hiding |
+| **The far knot** | **Suppress** | it is past the pursuer, in the open. Moving unlit means **you cannot see it until you are on it** — you go from memory |
+
+**One verb each, one meter, three different squeezes on it.** That is the whole design; the level
+authoring is Jeremy's.
+
+~~**Two is the fallback if the 3D bill hurts** — drop the far knot, since Suppress is the verb the player
+has had longest and needs the least examining.~~ **Four is not on the table**: there is no fourth verb, so
+a fourth knot would be a repeat rather than a question.
+
+> **The two-knot fallback is withdrawn — 2026-08-01.** Jeremy: *"Want them to beat all 3."* **Three is
+> now the committed number, not a target with an escape hatch under it.** See *"If the bill hurts, the
+> lever is scale"* below for what replaces it.
+
+### What it costs the rest of the design — checked, and the answer is very little
+
+- **It does not touch "eight pockets, eight max-Resolve upgrades"** (§19). **A knot pocket grants no
+  upgrade.** Its reward is passage — a Zelda door at chapter scale — and the eight knowledge pockets keep
+  their one-to-one with the eight upgrades. This was the first thing checked and it is the constraint most
+  at risk from adding pockets.
+- **It does not add a major repair or a jigsaw.** Fifteen mends stays fifteen (§22). **A knot is cut, not
+  mended** — it is the demon's work, and Daniel repairs human work only. The two ideas do not overlap even
+  slightly, which is a good sign the noun is right.
+- **It adds no fights and no creatures.** The three doors sit on three of chapter 3's **existing seven
+  critical-path fight screens**, per the Held-screen rule above.
+- **It costs no material.** Nothing is crafted, so §1's economy is untouched and rule 13 in
+  `placement.md` is not engaged.
+- **It adds three 3D pocket interiors** — 11 to 14 across the game — and **one Waking screen**, the Snarl
+  itself. That is the real bill and it is worth stating plainly rather than burying: **chapter 3's Dream
+  authoring roughly doubles.**
+
+### The "fewer pockets in chapter 3" rule is amended, not reversed
+
+`items.md` §7 records Jeremy's objection in his own words: *"less pockets in level 3 and more beasts to
+fight will help with the rising action, rather than being stuck in the dream world thinking about
+progressing in the awake 2D world."* Three new pockets in chapter 3 looks like a straight contradiction.
+It is not, and the distinction is in his sentence: **what he objected to was being stuck in the Dream
+*thinking*.**
+
+> **The rule now reads: chapter 3 has fewer *knowledge* pockets and more *action* pockets.** Knowledge
+> pockets are where you stand still and work something out. Knot pockets are chases. Chapter 3 keeps
+> exactly **two** knowledge pockets — unchanged — and gains three pockets that are pure pressure.
+
+Jeremy, on the same point: *"I think this will help with the falling action also rather than hurt.
+Demons in the mine, more action-packed dream worlds, breaking the knots to do the final battle."* That
+is the shape the chapter wanted: **the Dream stops being the room where you go to think and becomes the
+place the chase happens.**
+
+**And it retires a stale category.** §15 and the pockets note described exactly two kinds of pocket:
+quiet knowledge pockets and **hunted boss pockets**. Knot pockets are hunted and have no boss at the end,
+so the two kinds are properly **quiet and hunted** — "hunted" simply stops being a synonym for "boss".
+Nothing about how a hunted pocket behaves changes.
+
+### Rules the knot pockets inherit unchanged
+
+Stated so no one re-derives them at authoring time:
+
+- **The pursuer costs Resolve on contact, and cannot kill you** (§15). Vitality never appears in the
+  Dream. **This is not an aura** — aura is boss-only and drains passively; the pursuer is a hazard.
+- **0 Resolve ejects you to camp**, the camp menu refills for free (§17), and you walk back in. **A knot
+  pocket cannot dead-end a save** — invariant 12 holds without a special case.
+- **A cut knot stays cut.** It is world state, like a severed tether and a mended screen.
+- **The order is the player's.** Three cords, three directions, no sequence.
+
+### What a cut knot pays — ratified 2026-08-01
+
+Jeremy: *"So yeah just more falling action / narrative I agree."*
+
+**The reward slot was empty by construction, not for want of ideas, and that is worth recording before
+anyone tries to fill it with a mechanic.** A gate like this normally pays out one of three things, and
+three separate earlier decisions had already spent all three:
+
+| The usual reward | Why it is unavailable here |
+|---|---|
+| **A shortcut back** | worthless — camps are a menu (§17), travel is already free |
+| **A power** | spoken for — **eight knowledge pockets, eight max-Resolve upgrades** (§19), and that pairing is load-bearing |
+| **A material** | banned outright (`items.md` §3) — a material reward drifts the premise to *the demon stole the supplies* |
+
+**What is left is the fourth currency, and it is the one the Dream trades in anyway: knowledge.**
+Everything you bring out of a pocket is something you now *know*. So the knots pay in knowledge, and it
+costs no system to do it — no item, no flag, no field, no UI. A cut knot is already world state.
+
+### What he learns: how to read the demon's work
+
+**You have spent two chapters meeting tethered people from the outside** — corrupted, coming at you. You
+have never once seen the binding itself. **The knot is the demon's joinery, and Daniel is the one
+character who would stand there and read it**, the way any maker reads another maker's work. That is the
+stolen-craft premise (§20) spending its last dividend: the demon took his craft, and the final use of
+that craft is recognising the demon's.
+
+| Cut | What he sees |
+|---|---|
+| **First** | **the work.** Not a monster's mess — a *joint*. Deliberate, tied by something that knew exactly what it was doing. A craftsman's recognition, and it is not a welcome one |
+| **Second** | **the hand.** Same tie, same habits, the same small wrongness in the same place. One maker did the wood, the village and the mine |
+| **Third** | **where else it is.** He has seen this tie before, and he knows where |
+
+**The third beat is the one the chapter needs.** It hands the finale its question a chapter early —
+which is precisely the pacing Jeremy is describing — and it does so without answering it.
+
+### The two "threes" are different threes, and confusing them is the likely mistake
+
+Jeremy, on reading the above: *"I thought we said to do 3 based on the three Spirit abilities you have
+at that point?"* **Yes — and that is still the reason there are three knots.** The count has since
+picked up a *second* justification and the two hang on different hooks, which is worth stating flatly
+because the section now argues both and a reader will assume they are one argument.
+
+| | Fixed to the pocket | Floats to the cut order |
+|---|---|---|
+| **The verb it examines** | ✔ lit = Flare, high = Float, far = Suppress | — |
+| **The narrative beat** | — | ✔ first / second / third cut |
+
+**Whichever cord the player follows, they get that pocket's verb and the next beat in the sequence.**
+Enter the high knot first and it is Float + beat 1; enter it last and it is Float + beat 3. The verb
+assignment never moves. Nothing about *"write the third so it only lands because the first two
+happened"* touches which knot examines which verb — "third" there means the third **cut**.
+
+> **Why the count is over-determined rather than double-counted:** three verbs says *why a fourth would
+> be a repeat*; three acts says *why a second would be a mutilation*. They constrain from opposite
+> sides, which is why the number is now hard in both directions.
+
+### Three guards on this, all of them cheap to obey
+
+- **It attaches to the ordinal, not to the pocket** — and therefore **the beat text may not mention the
+  pocket it fires in.** No darkness, no height, no distance: beat 2 plays wherever the player happens to
+  be, so it can only talk about **the knot itself**, which is the same craft in all three. This is the
+  authoring rule the ordinal decision actually produces, and it is easy to violate by writing three
+  atmospheric paragraphs that each describe their own room. Tie the "one maker" line to the high knot
+  and half of all players hear it first, where it means nothing.
+- **It does not close §21, and must not.** *What* Iris is tethered to is still deliberately open — her
+  work or her body. The knots are **where the player finds out, not the decision about what they find
+  out.** Write the third beat so it names the recognition and not the object, and either answer still
+  lands on it.
+- **It does not undercut the Blacksmith's ghost or the engine** (§20). The ghost gives you the
+  *principle* and never the recipe; the engine is *how*. Reading a knot is neither — it is **what you
+  aim the engine at.** Three different pieces of the same answer, arriving from three different places,
+  none of them redundant.
+
+**And it retro-justifies the Snarl itself.** A barrier that exists to slow you down is arbitrary level
+design. A barrier that exists because the demon would rather you did not arrive **knowing** is a motive.
+The knots are the thing it was hiding.
+
+### If the bill hurts, the lever is scale — not count. Closed 2026-08-01
+
+**The fallback used to be "build two knots instead of three." It is withdrawn.** Jeremy: *"Want them to
+beat all 3."* Three is committed.
+
+**And that is the right call for a reason beyond preference, now that the reward is narrative.** The
+moment each cut carries a beat, the three stop being three instances of one room and become **a
+three-act structure that only works at three** — the work, the hand, where else he has seen it. Cutting
+one does not remove a third of the content, it removes the middle term of an argument. A two-knot
+version would still *function* as a gate and would no longer *say* anything, which is the worst kind of
+cut: it passes every check and quietly deletes the point.
+
+> **What replaces the escape hatch, so there is still an answer if chapter 3's Dream authoring runs
+> long: shrink the pockets, do not drop one.** Cost per pocket is the elastic quantity here and count is
+> not. A knot pocket is **seen once**, has **one objective**, and its whole job is one squeeze on one
+> verb — none of which needs size. §15's open note already asks what the *smallest* space that still
+> reads as a place is; the built six-room maze is very likely more than a one-visit chase needs.
+
+**Two consequences to hold onto:**
+
+- **Three knots is now a floor, not a target.** It sits alongside "fifteen mends" and "eight pockets,
+  eight upgrades" as a number the design leans on rather than one it happens to have landed on.
+- **The three-act shape is the reason, so it is also the constraint on writing them.** If the three
+  beats could be delivered in any order and any subset without loss, the argument above is false and the
+  fallback quietly comes back. **Write them so the third one only lands because the first two happened.**

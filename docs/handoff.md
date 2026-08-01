@@ -1,9 +1,15 @@
 # Handoff — where we left off
 
-Last updated: **2026-07-31.** Read this first, then `docs/combat.md` — which is the source of
-truth for combat, Resolve, the Dream and camps, and whose §19–21 are the newest material. **§18 is
+Last updated: **2026-08-01.** Read this first, then `docs/combat.md` — which is the source of
+truth for combat, Resolve, the Dream and camps, and whose §19–22 are the newest material. **§18 is
 the ratified fight design and the authority on how combat works** — it closes the item, trap and
 equipment vocabulary that the rest of that document defers, and it deletes Defence as a number.
+
+**If what you need is "how much of everything is there and where does it go," read
+[`placement.md`](placement.md)** — the placement bill, written 2026-08-01. Every creature, fight,
+pocket, blight, camp, NPC, node, tool and set piece counted per chapter, with the constraint on each,
+so the mock-up map can be drawn. It is a rearrangement of `combat.md` §17–23 and `items.md`, not a new
+authority: **where it disagrees with them, they win.**
 
 **Nothing is currently known to be broken.** The whole slice plays end to end. Commands live in
 `README.md`; Claude runs `--verify-slice` before and after code changes, so there is no start-of-
@@ -50,7 +56,152 @@ stays legal only while it is a unique authored object rather than an `ItemCatego
 
 ---
 
-## Newest, 2026-07-31 — the bestiary, and the ending reversed
+## Newest, 2026-08-01 — camps became a menu, hazards became the good ending, and traps became permanent
+
+Still docs-only; **the suite is still 328, exit 0.** **Seven decisions**, and the first one caused the
+next four. **`combat.md` §22 is new** and is the authority on how a Waking-world screen works; **§23 is
+new** and is the authority on chapter 3's gate.
+
+**Two of the seven reverse earlier ratified decisions**, and both reversals keep the old text
+struck-through with a note on why it was right when written: **traps are permanent** (item 6, reversing
+§13 and §19) and **chapter 3 gains three pockets** (item 7, amending the *"fewer pockets in chapter 3"*
+rule). The pay-to-skip deletion in item 2 also voided a constraint ratified the previous session.
+
+**1. A camp is a menu, not a place (§17).** One camp per chapter, reachable from anywhere, still refilling
+both pools automatically. Jeremy: *"the hotspot is a crutch that very weak story RPGs use."* The three
+camps are the chapter arc — **ch1 his empty cottage, ch2 the first house you liberate (filling), ch3 a
+mine camp with one occupant, and he is dead.** The honest cost is that Waking-world hazards lose their
+teeth; §22 is the answer, and it does not try to save attrition.
+
+**2. Hazard is renamed Blight, and mending one is how you get Graveflower (§22).** The chain now runs
+**blight → restoration site → Graveflower → the exorcism engine → Iris lives**, so the built hazard
+machinery becomes the authoring surface for the **twelve** repairs instead of being deleted. **Mending
+costs a puzzle, not materials** — paying makes the good ending a grind, solving makes it an attention
+gate. A screen is unfinished for exactly three reasons: **Held** (a creature), **Blocked** (a tool),
+**Fouled** (a blight).
+
+> **Amended later the same day — it is a jigsaw, it is required, and the pay-to-skip is gone.** Jeremy:
+> *"you cannot fail a slider puzzle"* (so "required" never meant hard, and every condition written to
+> protect a stuck player was guarding a wall that cannot exist) and *"no game or event means you look at
+> something and get a flower though lol"* (so the puzzle is what earns the flower). A commons skip could
+> not have been priced anyway — commons are abundant by rule, so it is either cheap and kills the puzzle,
+> or dear and breaks the commons rule. **The out already exists one level up:** blights sit behind optional
+> fights, so a player who does not want them skips the optional content and finishes by severing.
+> **The three major repairs get a jigsaw too — fifteen in total, one interaction, no branching.** The
+> framing that settles it is Jeremy's: *"I thought they would look cool to complete the objects"* — the
+> puzzle is not a gate, it is the animation. And the 12 → 8 Graveflower slack now measures **exploration**
+> rather than tedium tolerance, which is a better thing for the good ending to hang on.
+
+**3. The lore of it: Daniel repairs, he does not build.** A blight is a *broken made-thing* — a well
+cover, a fence, a wheel — and the corruption spreads through the works of human hands left undone. That
+kills the idolatry problem Jeremy raised, makes the puzzle and the fiction the same act, and finally
+explains the material: **Graveflower grows where the land is right again.**
+
+**4. Three Dream verbs on one meter, and eight upgrades (§19).** **Suppress** from the start, **Float**
+after boss 1 (vertical traversal, because ladders in the spirit realm make no sense), **Flare** after
+boss 2 (reveals the hidden and makes everything see you). **Each of the eight knowledge pockets raises
+maximum Resolve.** Maximum Vitality never does — it is not Attunement, and §18 deleted scalar defence for
+the same reason. Boss drain stays an **authored per-boss value**, not a formula; the six-turn figure was
+always arbitrary.
+
+**5. The good ending is now "you went back for it" (§20).** Menu camps made backtracking nearly free, so
+the engine is reachable after you learn about it. The chain is **the Blacksmith's spirit gives the
+principle → an optional pocket guarded by the breach-thing gives the blueprint → twelve mended blights
+give the material.** The ghost never knows the engine exists as a buildable thing, which is what stops
+him functioning as a hint. A player who mended as they went finishes at the climax with no backtrack; a
+player who skipped gets a real second chance. Neither is punished.
+
+**Also settled:** **Swarm is cut** from §18 (battles are 1v1 always — the Hunter is demoted to an ordinary
+path creature, and the encounter body-list stays as unexercised insurance, **not** to be gated). The
+**Beast is 3 on the path + 3 optional** with **three visual variants** sharing one damage pair. The two
+material refills hang on the **ch1 and ch2 boss pockets**; chapter 3 has no refill and uses the three
+optional Beasts as its valve.
+
+**Then the placement bill: [`placement.md`](placement.md).** Every creature, fight, pocket, blight, camp,
+NPC, node, tool and set piece counted per chapter with the constraint on each, plus a derived screen bill
+(**~58 Waking screens, 14 pocket interiors, 3 camp scenes**) and a **fifteen-rule checklist** to hold a
+drawn map against. It is a rearrangement of §17–23 and `items.md`, **not** a new authority.
+
+Building it turned up three things that did not follow from the counts underneath them, and the third is
+not cosmetic:
+
+- **It is 24 people freed, not 27.** The 27 assumed nine creatures × three sightings. The Beast is seen
+  **six** times and frees nobody, so it is `8 human creatures × 3 = 24`, and `24 + 6 = 30` fights.
+- ***"The optional sighting guards a repair site"* cannot be one-to-one** — ch2 has 3 optional fights and 4
+  blights. Resolved by **one blight per chapter being gated on that chapter's tool** instead of a fight.
+- **~~⚠~~ The Cairnstone budget could softlock the game — `placement.md` §8. FOUND AND FIXED THE SAME
+  DAY.** The **Deadfall cost 1 Cairnstone and was a consumable**, which is exactly the mistake
+  `items.md` §2 removed from the salves (*"a fixed world budget cannot supply a consumable"*) — it was
+  just sitting in the trap table instead. A player who rigged five Deadfalls in chapter 2 could not forge
+  the **Bell Maul**, which the chain needs before the Apothecary, and the refill does not arrive until
+  after that fight. **That was a dead save, against invariant 12.** Fixed by item 6 below — traps are
+  permanent, so there is nothing repeatable left to overspend.
+
+**6. Traps are crafted once and kept forever (`items.md` §3, `combat.md` §19).** Jeremy's proposal, and
+it reverses a decision `combat.md` had rejected twice — the struck-through rejections are kept at §4,
+§13 and §19 because they were **right when written**. What changed: §19's rule that a common must never
+refuse a craft had already made five of the six traps effectively unlimited, so *"consumed"* was
+bookkeeping rather than cost. Counting Deadfalls was also the last inventory mechanic in a game that had
+deleted carry limits, moved the loadout to the rig screen and turned camps into a menu.
+
+> **The knock-on that matters most: invariant 1's overkill column is now *her salves*.** Jeremy: *"it
+> makes salves the biggest finite resource and it should be — there are ways to win without using
+> salves, so to me that is why it works well."* **A fight can now take nothing from you at all** except
+> what you choose to spend; the honest cost is that death is free, and the recorded fallback if it plays
+> too soft is *a trap that fires is spent for that fight and returns afterwards* — **not** death
+> penalties. The rig cap of two is untouched and is where the real scarcity lives.
+>
+> **Two follow-ons.** The **Cairnstone budget was cut 3 / 5 / 8 → 1 / 3 / 2** (16 stones to 6, against a
+> whole-game demand of exactly 4: Bell Maul, Smock, Mine Pick, Deadfall) — Jeremy's target was *"rare
+> mats should be for the equipment, one time, and the amounts should line up or be over a little."* And
+> the commons split in two: **Bitterroot and Tallow live all game** (salves), while **Heartwood, Scrap
+> Iron, Cured Hide and Pitch go dormant** once the kit is built. The answer to *"does this open room for
+> more items?"* was **no** — the fix is fewer sources, not invented sinks. Beast carcasses now drop
+> **Tallow only**.
+
+**7. Chapter 3 gets a gate: the Snarl (`combat.md` §23 — new).** Jeremy spotted the structural hole:
+chapters 1 and 2 put a **major repair** between you and the boss (the bridge, the mine cart) and chapter
+3 had nothing. **The demon has knotted the way shut.** Three **cords** run out of the Snarl into the
+rock; follow each to a door and cut its **knot** in a hunted Dream pocket.
+
+> **"Anchor" was his word and it is already taken** — an anchor is the object a tethered soul is bound
+> to (§21), and Iris's is the open question the finale turns on. **"Knot" is better anyway:** the demon
+> tethers a person and knots a *way*, same craft, and your answer is the same verb — you cut it. "Force
+> field" was the wrong register in a game whose vocabulary is rope, iron and rot.
+>
+> **Three, because there are three Dream verbs and this is their exam** — the **lit knot** (Flare: the
+> light that shows it to you shows you to the pursuer), the **high knot** (Float: the climb is paid out
+> of the hiding), the **far knot** (Suppress: you cannot see it until you are on it). **All three are
+> committed** — Jeremy: *"Want them to beat all 3."* Four is not on the table, since there is no fourth
+> verb. **If the 3D bill hurts, the lever is size, not count** (a pocket is seen once and asks one
+> question — shrink it); the earlier "build two" fallback is withdrawn.
+>
+> **What it costs: three pocket interiors (11 → 14) and one Waking screen.** What it does *not* cost —
+> all checked — no max-Resolve upgrade (**eight pockets, eight upgrades** survives), no jigsaw or fourth
+> major repair (a knot is **cut**, not mended; fifteen mends stays fifteen), no fight, no creature, no
+> material, no craft family. The doors sit on three existing critical-path fight screens.
+>
+> **The *"fewer pockets in chapter 3"* rule is amended, not reversed.** His objection was to being stuck
+> in the Dream ***thinking***; knot pockets are chases. So: **fewer knowledge pockets** (still two, the
+> fewest of any chapter) **and more action pockets.** Jeremy: *"demons in the mine, more action-packed
+> dream worlds, breaking the knots to do the final battle."* Side effect — "hunted" stops meaning "boss";
+> the two kinds of pocket are properly **quiet and hunted**.
+>
+> **What a cut knot pays — closed the same day.** Jeremy: *"So yeah just more falling action / narrative
+> I agree."* The slot was empty **by construction**: a shortcut is worthless (camps are a menu), a power
+> is spoken for (eight pockets, eight upgrades), and a material is banned. What is left is the currency
+> the Dream already trades in — **knowledge**. So each cut shows Daniel the *binding itself*, which he
+> has never seen up close, and which he can read because he is a maker: **the work → the hand → where
+> else he has seen it.** Zero systems, and it retro-justifies the Snarl (the demon would rather you did
+> not arrive knowing). **Three guards:** the beat hangs off the **ordinal**, not the pocket, because the
+> order is free; it must **not** close §21 (*what* Iris is tethered to stays open — name the recognition,
+> not the object); and it hands over **no object of any kind**, or §1's budgets reopen. **The beats are
+> a three-act structure that only works at three**, which is what closed the two-knot fallback: cutting
+> one would not remove a third of the content, it would remove the middle term of an argument.
+
+---
+
+## 2026-07-31 — the bestiary, and the ending reversed
 
 Still docs-only. **`combat.md` §21 is new and is the authority on who survives a fight**, and
 [`items.md`](items.md) **§10 is the creature roster**. Three things changed that invalidate earlier
@@ -81,7 +232,8 @@ chapter** — see `items.md` §7.
 unique (vulnerable, resistant) pairs and a thirteenth would have to repeat one. Each creature appears
 **three times** — two on the critical path, one guarding something optional — so **30 regular fights and
 3 boss fights**. Each of the twenty-seven human fights frees a different named person; the corrupted form
-repeats and the recovered one does not, which is the theme rather than a compromise.
+repeats and the recovered one does not, which is the theme rather than a compromise. *(The Beast is the
+exception at six: **3 path + 3 optional**, three visual variants, one damage pair.)*
 
 **4. Four smaller things settled later the same day, each of which changes something built:**
 
@@ -351,6 +503,10 @@ moved from last to first**, for the reasons in §1a:
      `RequiresBothTracks` / `SetsFlag`, `CraftBlock.NotAtCamp` → `NotAtStation`, `ItemCategory.Reagent`
      → `Component` with key items unified, `CountsAgainstSlots(ItemCategory)` as a static sibling of
      `SurvivesDeath`, `SurvivesDeath` gaining `Equipment`, and a salve cap beside `RigSlotsPerFight`.
+     **Added 2026-08-01: `SurvivesDeath` must also return true for `Trap`** — traps are permanent
+     (`items.md` §3), so **`Salve` is the only category a fight can consume.** A crafted trap also wants
+     to be an **owned flag rather than a stack**: the bench should refuse to build a second one instead
+     of letting a count climb. That is the shape most likely to be got wrong by copying the salve path.
    - **Then the puzzle seam**, which is deliberately thin: solving a puzzle writes to
      `DiscoveredBlueprints` and nothing else, so `Craft(recipeId)` is unchanged and `--verify-slice`
      never touches a puzzle. **Keep it that way** — a score crossing that seam would put a game rule in
@@ -1096,7 +1252,8 @@ Two honest notes on the section's limits:
   covers it and none can without gating the thresholds themselves.
 
 **What is left of combat: the encounter state machine.** Nothing can start a fight yet. That unit
-owns the turn loop over a *list* of bodies (the list exists from day one so Swarm is nearly free), the
+owns the turn loop over a *list* of bodies (the list exists from day one and stays — but **Swarm was cut
+2026-08-01**, so it is unexercised insurance and must not be gated), the
 opt-in confirm step with §7's legibility readout naming both what the creature fears and what it
 deals, alternating turns, the turn-cost rule, traps firing per `TriggersItself`, guaranteed flee with
 a parting strike, the weak baseline attack that replaces `InteractionService`'s one-click Severed
