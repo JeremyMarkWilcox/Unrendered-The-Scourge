@@ -1,0 +1,48 @@
+[gd_resource type="Resource" script_class="RoomData" load_steps=7 format=3]
+
+[ext_resource type="Script" uid="uid://b0jetcphiy2cm" path="res://src/Data/HotspotData.cs" id="1_hs"]
+[ext_resource type="Script" uid="uid://v0juosv2w310" path="res://src/Data/RoomData.cs" id="2_room"]
+
+[sub_resource type="Resource" id="hs_0"]
+script = ExtResource("1_hs")
+Id = "ch3_sealed_drift_to_old_workings"
+Label = "The Old Workings"
+Kind = 0
+Region = Rect2(70, 390, 290, 410)
+TargetRoomId = "ch3_old_workings"
+
+[sub_resource type="Resource" id="hs_1"]
+script = ExtResource("1_hs")
+Id = "ch3_sealed_drift_look"
+Label = "The Seal"
+Kind = 1
+Region = Rect2(700, 550, 520, 250)
+ExamineText = "[unwritten]"
+
+[sub_resource type="Resource" id="hs_2"]
+script = ExtResource("1_hs")
+Id = "ch3_sealed_drift_bitterroot"
+Label = "Bitterroot"
+Kind = 3
+Region = Rect2(120, 870, 220, 160)
+ItemId = "herb_bitterroot"
+ItemAmount = 2
+RefillsAtMilestone = true
+
+[sub_resource type="Resource" id="hs_3"]
+script = ExtResource("1_hs")
+Id = "ch3_sealed_drift_scrap_iron"
+Label = "Scrap Iron"
+Kind = 3
+Region = Rect2(370, 870, 220, 160)
+ItemId = "mat_scrap_iron"
+ItemAmount = 1
+RefillsAtMilestone = true
+
+[resource]
+script = ExtResource("2_room")
+Id = "ch3_sealed_drift"
+DisplayName = "The Sealed Drift"
+ChapterId = "ch3"
+PlaceholderStyle = 1
+Hotspots = Array[ExtResource("1_hs")]([SubResource("hs_0"), SubResource("hs_1"), SubResource("hs_2"), SubResource("hs_3")])

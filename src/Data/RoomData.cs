@@ -13,20 +13,24 @@ public partial class RoomData : Resource
     [Export] public string Id { get; set; } = "";
     [Export] public string DisplayName { get; set; } = "";
 
-    /// <summary>Which region this belongs to, for corruption and cleansing.</summary>
-    [Export] public string ZoneId { get; set; } = "";
+    /// <summary>
+    /// Which chapter this screen belongs to — <c>ch1</c>, <c>ch2</c>, <c>ch3</c>. A bare string on
+    /// purpose: there is no chapter resource, because nothing yet needs one (see
+    /// <see cref="Core.GameConfig"/>). This is what the material refill groups by.
+    /// </summary>
+    [Export] public string ChapterId { get; set; } = "";
 
-    [ExportGroup("Waking backgrounds")]
+    [ExportGroup("Backgrounds")]
     [Export] public Texture2D WakingBackground { get; set; }
 
     /// <summary>Shown instead once the zone is purified — weather cleared, colour returned.</summary>
     [Export] public Texture2D WakingBackgroundPurified { get; set; }
 
-    /// <summary>Authored at <see cref="Core.GameConfig.DreamResolution"/>, 480x270.</summary>
-    [ExportGroup("Dream background")]
-    [Export] public Texture2D DreamBackground { get; set; }
+    // `DreamBackground` — a second 480x270 painting per screen, shown through the spectral-vision
+    // overlay. Deleted 2026-08-02 with the great swap. It was the most expensive field in the game:
+    // every authored screen implied a second authored screen. A room is one picture again.
 
-    /// <summary>Resolve drain scalar for this screen, before zone and realm modifiers. 0..1.</summary>
+    /// <summary>Resolve drain scalar for this screen, before zone modifiers. 0..1.</summary>
     [ExportGroup("Atmosphere")]
     [Export(PropertyHint.Range, "0,1,0.05")] public float BaseCorruption { get; set; } = 0.3f;
 

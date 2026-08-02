@@ -44,9 +44,43 @@ public static class SliceVerifier
 
         RegisterVerifyRooms();
 
+        // A gate that throws used to take the whole run down with it, and not loudly: Godot's C#
+        // layer logs the exception and keeps the loop alive, so `--verify-slice` sat at a prompt
+        // until something killed it. A hang and a red look nothing alike to a person and identical
+        // to a script. Twice in one day (2026-08-02) a broken fixture produced a hang instead of the
+        // failure it should have — an empty spine reaching `.First()`, and a mistyped room id
+        // leaving every downstream lookup null. So: catch, record it as a failure like any other,
+        // and fall through to the summary. **The count will be short** when this fires, because the
+        // gates after the throw never ran; that is why the message says so.
+        try
+        {
+            RunGates();
+        }
+        catch (Exception e)
+        {
+            Failures.Add($"[crash] a gate threw and the rest never ran — {e.GetType().Name}: {e.Message}");
+        }
+
+        GD.Print("");
+        GD.Print(new string('-', 62));
+        if (Failures.Count == 0)
+        {
+            GD.Print($"  ALL GATES PASSED  ({_checks} checks)");
+            GD.Print(new string('-', 62));
+            return 0;
+        }
+
+        GD.Print($"  {Failures.Count} FAILURE(S) of {_checks} checks");
+        foreach (var f in Failures) GD.Print($"    x {f}");
+        GD.Print(new string('-', 62));
+        return 1;
+    }
+
+    private static void RunGates()
+    {
         GateHarness();
         GateM1_TwoScreenNavigation();
-        GateM2_StateRealmTable();
+        GateM2_StatePresentationTable();
         GateM3_MicroLoop();
         GateVitalityPool();
         GateHeistMechanics();
@@ -67,21 +101,13 @@ public static class SliceVerifier
         // gate caught it.
         GateCraftingAndUse();
         GateInventoryPanel();
+        GateMultiFlagGating();
+        GateChapterSpine();
         GateAuthoredContent();
 
-        GD.Print("");
-        GD.Print(new string('-', 62));
-        if (Failures.Count == 0)
-        {
-            GD.Print($"  ALL GATES PASSED  ({_checks} checks)");
-            GD.Print(new string('-', 62));
-            return 0;
-        }
-
-        GD.Print($"  {Failures.Count} FAILURE(S) of {_checks} checks");
-        foreach (var f in Failures) GD.Print($"    x {f}");
-        GD.Print(new string('-', 62));
-        return 1;
+        // Last, because it walks the player onto two synthetic screens and leaves them there, and
+        // it toggles world flags that only its own fixture rooms read. Nothing after it to disturb.
+        GatePlaceholderCues();
     }
 
     // ---- The harness itself ----------------------------------------------
@@ -98,15 +124,38 @@ public static class SliceVerifier
 
         Check("the live RoomView was handed to the verifier", _view != null);
         Check("the live Hud was handed to the verifier", _hud != null);
+
+        // The boot room, asserted here because this is the last moment before a gate moves us. It
+        // looks like a tautology and is not quite one: it asserts that `Main.StartGame` *arrived*,
+        // catching a navigation that lands somewhere other than where it aimed. The harder case —
+        // a starting room that will not load at all — never reaches this line, because `StartGame`
+        // gives up before calling the verifier; that one is covered by the `Quit(1)` beside the
+        // error it pushes, added the same day for the same reason.
+        Check($"a new game begins in {GameConfig.StartingRoomId}",
+            NavigationManager.Instance.CurrentRoomId == GameConfig.StartingRoomId);
+
+        // And it must be a camp. Crafting, the cache and the respawn destination are all gated on
+        // standing at a bench, and `CampManager` falls back to the starting room when you collapse
+        // before finding one — so a boot room with no `Workbench` hotspot means a player who dies
+        // early wakes somewhere they cannot make anything, with no way to bind a return point.
+        Check("and the room it begins in is a camp",
+            CampManager.IsCamp(NavigationManager.Instance.CurrentRoom));
     }
 
-    // ---- M1: two screens, a toggle, and a doorway ------------------------
+    // ---- M1: two screens and a doorway -----------------------------------
 
     private static void GateM1_TwoScreenNavigation()
     {
         Section("M1  two-screen prototype");
 
-        Check("starts in the Waystation yard",
+        // The boot moved to `ch1_cottage` on 2026-08-02 and every prototype gate below rode the old
+        // one — M1, M2 and M3 all acted on "wherever the game put me" and silently meant the yard.
+        // Walking there explicitly is the first half of the re-anchoring the retirement needs anyway:
+        // a gate that names its fixture can have the fixture swapped under it, and a gate that
+        // inherits it cannot. **Nothing below this line should read `GameConfig.StartingRoomId`.**
+        NavigationManager.Instance.GoToRoom("waystation_yard");
+
+        Check("the prototype yard is still walkable",
             NavigationManager.Instance.CurrentRoomId == "waystation_yard");
         Check("starts in the Waking world",
             RealmTransitionManager.Instance.CurrentRealm == GameRealm.Waking);
@@ -114,28 +163,19 @@ public static class SliceVerifier
             NavigationManager.Instance.GetRoom("waystation_yard") != null &&
             NavigationManager.Instance.GetRoom("waystation_shed") != null);
 
-        SetRealm(GameRealm.Dream);
-        Check("Tab reaches the Pixel Realm",
-            RealmTransitionManager.Instance.CurrentRealm == GameRealm.Dream);
-
-        // Realm-scoped hotspots: the phantom door exists only in the Dream.
-        Check("Dream-only hotspot appears in the Dream",
-            IsAvailable("yard_dream_door", GameRealm.Dream));
-        Check("Dream-only hotspot is absent from the Waking world",
-            !IsAvailable("yard_dream_door", GameRealm.Waking));
-        Check("Waking-only hotspot is absent from the Dream",
-            !IsAvailable("yard_sign", GameRealm.Dream));
-
-        SetRealm(GameRealm.Waking);
-        Check("Tab returns to the Waking world",
-            RealmTransitionManager.Instance.CurrentRealm == GameRealm.Waking);
+        // Five checks stood here until 2026-08-02: Tab reaching the Pixel Realm and back, and three
+        // on realm-scoped hotspots — the phantom door that existed only in the Dream, the carved
+        // marker that existed only in the Waking world. All three of those authored hotspots and the
+        // field they were scoped by are gone with the great swap, so the checks went with them
+        // rather than being reworded. `yard_dream_door` was deleted from waystation_yard.tres too:
+        // it was a hotspot with no reason to exist except to demonstrate the mechanism.
     }
 
-    // ---- M2: state x realm, and the signals that carry it ----------------
+    // ---- M2: state presentation, and the signals that carry it -----------
 
-    private static void GateM2_StateRealmTable()
+    private static void GateM2_StatePresentationTable()
     {
-        Section("M2  state x realm presentation table");
+        Section("M2  state presentation table");
 
         var entities = EntityStateManager.Instance;
         var rat = Placement(Rat)?.Entity;
@@ -143,17 +183,16 @@ public static class SliceVerifier
         Check("the rat was registered on first sight", entities.IsKnown(Rat));
         Check("the rat starts Corrupted", entities.GetState(Rat) == EntityState.Corrupted);
 
-        // Corrupted x Waking = Form 1: a nightmare squatting in the road.
-        var wakingCorrupt = entities.Resolve(rat, Rat, GameRealm.Waking);
-        Check("Form 1 blocks the path", wakingCorrupt.BlocksPath);
-        Check("Form 1 is named as the cursed beast", wakingCorrupt.Label == "Cursed Giant Rat");
+        // Form 1: a nightmare squatting in the road.
+        var corrupt = entities.Resolve(rat, Rat);
+        Check("Form 1 blocks the path", corrupt.BlocksPath);
+        Check("Form 1 is named as the cursed beast", corrupt.Label == "Cursed Giant Rat");
 
-        // Corrupted x Dream = Form 2: the same creature, as porcelain royalty.
-        var dreamCorrupt = entities.Resolve(rat, Rat, GameRealm.Dream);
-        Check("Form 2 is the spirit anchor", dreamCorrupt.Label == "The Gnawing Baron");
-        Check("Form 2 offers Sever", dreamCorrupt.Verb == "Sever");
-        Check("Form 2 does not block the path", !dreamCorrupt.BlocksPath);
-        Check("one state, two different faces", wakingCorrupt.Label != dreamCorrupt.Label);
+        // Five Form 2 checks sat here — the porcelain Baron, its "Sever" verb, and the unattackable
+        // Dream echo. Deleted 2026-08-02: `ResolveDream` is gone, so there is no second face to
+        // compare against. Form 2 is not cancelled, it moved to the 3D pocket, and **it will need
+        // its own checks there** — this comment is the note that this gate got smaller because
+        // something was taken out of scope, not because it stopped mattering.
 
         // A signal must actually carry the change, not just the field.
         var heard = new List<string>();
@@ -165,15 +204,16 @@ public static class SliceVerifier
         Check("EntityStateChanged fires on transition",
             heard.Contains($"{Rat}:{EntityState.Severed}"));
 
-        var wakingSevered = entities.Resolve(rat, Rat, GameRealm.Waking);
-        Check("Severed clears the road", !wakingSevered.BlocksPath);
+        var severed = entities.Resolve(rat, Rat);
+        Check("Severed clears the road", !severed.BlocksPath);
+        // The name is deliberately the same — it is still the cursed thing, just hollowed out — so
+        // the only thing that distinguishes Form 1 from Form 1-deformed on screen is the wash.
+        Check("and a severed body reads as drained", severed.Modulate != corrupt.Modulate);
 
         entities.SetState(Rat, EntityState.Purified);
-        var purifiedWaking = entities.Resolve(rat, Rat, GameRealm.Waking);
-        var purifiedDream = entities.Resolve(rat, Rat, GameRealm.Dream);
-        Check("Form 3 is a plain animal in reality", purifiedWaking.Label == "Field Rat");
-        Check("Form 3 does not block", !purifiedWaking.BlocksPath);
-        Check("the Dream echo cannot be attacked", !purifiedDream.Interactable);
+        var purified = entities.Resolve(rat, Rat);
+        Check("Form 3 is a plain animal in reality", purified.Label == "Field Rat");
+        Check("Form 3 does not block", !purified.BlocksPath);
 
         // Put it back — M3 walks the loop properly from the top.
         entities.SetState(Rat, EntityState.Corrupted);
@@ -197,20 +237,21 @@ public static class SliceVerifier
             !InteractionService.ActivateHotspot(Hotspot("yard_to_shed")));
         Check("and the player did not move",
             NavigationManager.Instance.CurrentRoomId == "waystation_yard");
-        Check("the bitterroot is not there yet", !IsAvailable("yard_bitterroot", GameRealm.Waking));
+        Check("the bitterroot is not there yet", !IsAvailable("yard_bitterroot"));
         Check("the relic is hidden until the cairn is searched",
-            !IsAvailable("yard_relic", GameRealm.Waking));
+            !IsAvailable("yard_relic"));
 
-        // 2. Spectral vision shows you the problem but cannot solve it.
-        SetRealm(GameRealm.Dream);
-        Check("you cannot sever by looking through spectral vision",
+        // 2. The problem is visible and cannot be solved from out here. This used to be phrased as
+        // "you cannot sever by looking through spectral vision", flipping the realm first; the
+        // refusal survives the deletion of the peek, because it was never the peek that refused —
+        // it is that the anchor is not in this world. Kept, reworded, still falsifiable.
+        Check("you cannot sever the anchor from the Waking world",
             !InteractionService.ActivateEntity(Rat));
         Check("the rat is still Corrupted", entities.GetState(Rat) == EntityState.Corrupted);
-        SetRealm(GameRealm.Waking);
 
         // 3. The puzzle stands in for the entry minigame.
         Check("searching the cairn succeeds", InteractionService.ActivateHotspot(Hotspot("yard_cairn")));
-        Check("the relic is now exposed", IsAvailable("yard_relic", GameRealm.Waking));
+        Check("the relic is now exposed", IsAvailable("yard_relic"));
 
         // 4. Cross over and rob the place.
         Check("touching the relic begins the heist",
@@ -252,7 +293,7 @@ public static class SliceVerifier
         Check("a stripped node refuses a second take",
             !InteractionService.ActivateHotspot(Hotspot("shed_gravecap")));
         Check("the consumed node is gone from the screen",
-            !IsAvailable("shed_gravecap", GameRealm.Waking));
+            !IsAvailable("shed_gravecap"));
         Check("the bench sets its flag", InteractionService.ActivateHotspot(Hotspot("shed_bench")));
         Check("waystation.bench_found is recorded", world.GetFlag("waystation.bench_found"));
 
@@ -269,11 +310,11 @@ public static class SliceVerifier
             Mathf.IsZeroApprox(world.ZoneCorruptionScalar("waystation")));
 
         // 8. And the payoff is reachable.
-        Check("the bitterroot has appeared", IsAvailable("yard_bitterroot", GameRealm.Waking));
+        Check("the bitterroot has appeared", IsAvailable("yard_bitterroot"));
         Check("it harvests", InteractionService.ActivateHotspot(Hotspot("yard_bitterroot")));
         Check("two bitterroot in the satchel", inv.GetCount("herb_bitterroot") == 2);
 
-        var form3 = entities.Resolve(Placement(Rat).Entity, Rat, GameRealm.Waking);
+        var form3 = entities.Resolve(Placement(Rat).Entity, Rat);
         Check("Form 3 is a plain animal", form3.Label == "Field Rat");
         Check("the animal is farmable", InteractionService.ActivateEntity(Rat));
         Check("tallow taken", inv.GetCount("rat_tallow") == 1);
@@ -351,7 +392,7 @@ public static class SliceVerifier
         Check("and the collapse is announced", depletions == 1);
         Check("and something picked you up off the floor", !vitality.IsEmpty);
 
-        // A hazard that keeps hitting a downed player must not announce it again. The clamp is
+        // A wound that keeps hitting a downed player must not announce it again. The clamp is
         // what makes this true rather than any latch: a wound that cannot lower the bar is not
         // a change, so no event is raised at all. Reached through Import, which writes zero without
         // announcing — in play the respawn means you never *stay* down, so this is the only honest
@@ -399,17 +440,23 @@ public static class SliceVerifier
         Check("and is drawn at full strength out here",
             _hud == null || Mathf.IsEqualApprox(_hud.VitalityOpacity, 1f));
 
-        // Spectral vision must not reorder or dim them. Peeking flips the realm without Resolve
-        // moving, and you are still standing in the Waking world with a body that can be hurt
-        // (invariant 4 — spectral vision is a look, not a place).
+        // Being in the Dream must not, by itself, reorder or dim them: the HUD keys on a live run,
+        // not on the realm. This was written against spectral vision (peeking flipped the realm with
+        // no run behind it) and it outlives it, because unit 6's **quiet** pockets are the same
+        // shape — squarely in the Dream, no clock, Resolve not moving, body still the pool at risk.
+        // Forcing the realm with no run is exactly that situation, so the check keeps its teeth.
         SetRealm(GameRealm.Dream);
-        Check("and peeking with spectral vision does not reorder them",
+        Check("standing in the Dream with no run does not reorder them",
             _hud == null || _hud.TopPoolLabel == "VITALITY");
-        Check("nor dim the body while you are only looking",
+        Check("nor dim the body when nothing is hunting you",
             _hud == null || Mathf.IsEqualApprox(_hud.VitalityOpacity, 1f));
         SetRealm(GameRealm.Waking);
 
-        GateHazards(vitality);
+        // The debug wound key needs its action to exist in project.godot; a hand-edited input map
+        // fails silently, and the symptom is a key that simply does nothing in play. It lived in
+        // GateHazards until that gate was deleted on 2026-08-01 — F2 is now the only way to wound
+        // the body outside a fight, so if anything it matters more here than it did there.
+        Check("the debug wound key is bound", InputMap.HasAction("debug_wound"));
 
         // No odd value is handed downstream any more. This gate used to leave the bar at 64 for
         // GatePersistence to save and restore, and camps made that contract unsafe: any gate in
@@ -418,83 +465,12 @@ public static class SliceVerifier
         vitality.ResetAll();
     }
 
-    /// <summary>
-    /// Hazards: a Vitality cost on an ordinary hotspot. Built here in code rather than read from
-    /// a room, because the mechanism should be provable without depending on authored content
-    /// that Jeremy owns and may re-tune in the inspector at any time.
-    /// </summary>
-    private static void GateHazards(VitalityManager vitality)
-    {
-        Section("hazards  the world costing you the body");
-
-        var hazard = new HotspotData
-        {
-            Id = "verify_hazard",
-            Label = "A Bad Idea",
-            Kind = HotspotKind.Interact,
-            VitalityCost = 12f,
-            HazardText = "verify: it bit.",
-        };
-
-        vitality.ResetAll();
-        Check("a plain hotspot with no cost is not a hazard",
-            !new HotspotData { Kind = HotspotKind.Interact }.IsHazard);
-        Check("one with a cost is", hazard.IsHazard);
-
-        SetRealm(GameRealm.Waking);
-        Check("using it succeeds", InteractionService.ActivateHotspot(hazard));
-        Check("and it takes exactly what it says",
-            Mathf.IsEqualApprox(vitality.Current, vitality.Max - 12f));
-
-        // Repeatable on purpose: RequiredFlag / SetsFlag already let an author make any single
-        // hazard a one-time event, so no new mechanism is needed for that.
-        InteractionService.ActivateHotspot(hazard);
-        Check("and can bite twice unless authoring says otherwise",
-            Mathf.IsEqualApprox(vitality.Current, vitality.Max - 24f));
-
-        // -- Invariant 2, enforced in code rather than trusted to authoring --
-        vitality.ResetAll();
-        SetRealm(GameRealm.Dream);
-        Check("using a hazard through spectral vision still succeeds",
-            InteractionService.ActivateHotspot(hazard));
-        Check("but costs the body nothing, because Vitality is never spent in the Dream",
-            Mathf.IsEqualApprox(vitality.Current, vitality.Max));
-        SetRealm(GameRealm.Waking);
-
-        // -- A refused action must not wound you --
-        // An already-stripped harvest node returns false; charging for it would let the player
-        // grind themselves down on something that did nothing at all.
-        var strippedNode = new HotspotData
-        {
-            Id = "verify_hazard_harvest",
-            Kind = HotspotKind.Harvest,
-            ItemId = "herb_bitterroot",
-            HarvestedFlag = "verify.hazard.stripped",
-            VitalityCost = 30f,
-        };
-        WorldStateManager.Instance.SetFlag("verify.hazard.stripped");
-
-        vitality.ResetAll();
-        Check("a refused action reports failure",
-            !InteractionService.ActivateHotspot(strippedNode));
-        Check("and does not wound you",
-            Mathf.IsEqualApprox(vitality.Current, vitality.Max));
-
-        // -- Wounding a downed player is silent, not a fresh injury every click --
-        // Import rather than SetTo, so the bar is held on the floor without announcing a collapse
-        // that CampManager would answer by refilling it and moving you. What is under test here is
-        // the clamp inside ApplyHazard, not the respawn.
-        vitality.Import(0f);
-        InteractionService.ActivateHotspot(hazard);
-        Check("a hazard cannot push the bar below the floor",
-            Mathf.IsZeroApprox(vitality.Current));
-
-        vitality.ResetAll();
-
-        // The debug wound key needs its action to exist in project.godot; a hand-edited input
-        // map fails silently, and the symptom is a key that simply does nothing in play.
-        Check("the debug wound key is bound", InputMap.HasAction("debug_wound"));
-    }
+    // GateHazards lived here and was deleted 2026-08-01 with the hazard machinery it covered
+    // (`combat.md` §22 — the Waking world no longer damages you). Fourteen checks went with it and
+    // none of them were load-bearing for anything that survives: the collapse, `SurvivesDeath` and
+    // the respawn are driven by `vitality.Damage(...)` directly in this gate and in GateCamps, which
+    // is the question §22 asked to have answered before the field was touched. Its one check that
+    // was not about hazards — the debug wound key binding — moved up into GateVitalityPool.
 
     // ---- Crafting, knowledge and item use --------------------------------
 
@@ -1149,10 +1125,13 @@ public static class SliceVerifier
         Check("a stale arrival at a camp is ignored",
             Mathf.IsEqualApprox(vitality.Current, vitality.Max - 30f));
 
-        // -- Invariant 2: the bench is off inside the Dream, on while merely looking --
+        // -- Invariant 2: the bench is off inside a run, not merely inside the Dream --
+        // The distinction matters because unit 6's quiet pockets put you in the Dream with no run,
+        // and a camp reached from one must still be a camp. So the realm alone must not close it;
+        // only the live run below does.
         nav.GoToRoom("verify_camp");
         SetRealm(GameRealm.Dream);
-        Check("peeking with spectral vision does not close the bench", camp.AtCamp);
+        Check("the realm alone does not close the bench", camp.AtCamp);
         SetRealm(GameRealm.Waking);
 
         var run = DreamRunManager.Instance;
@@ -1299,7 +1278,77 @@ public static class SliceVerifier
         nav.DebugRegisterRoom(VerifyRoom("verify_camp", "A Bench Under Canvas", withBench: true));
         nav.DebugRegisterRoom(VerifyRoom("verify_camp_two", "A Second Bench", withBench: true));
         nav.DebugRegisterRoom(VerifyRoom("verify_wilds", "Open Ground", withBench: false));
+
+        nav.DebugRegisterRoom(CueRoom("verify_cues", painted: false));
+        nav.DebugRegisterRoom(CueRoom("verify_cues_painted", painted: true));
     }
+
+    /// <summary>
+    /// A fixture for <see cref="GatePlaceholderCues"/>, holding one of each case the layer has to
+    /// tell apart: an open hotspot, a door, a hotspot shut by a flag, and a harvest node already
+    /// taken. Built in code rather than authored because the *point* of it is a shut gate and a
+    /// spent node existing simultaneously in one room, which no authored room usefully does.
+    ///
+    /// <para>
+    /// The painted variant carries a 4x4 texture. Nothing looks at the pixels — it exists so the
+    /// "cues switch themselves off when art lands" promise is checked against
+    /// <c>WakingBackground != null</c>, which is the actual condition the code branches on.
+    /// </para>
+    /// </summary>
+    private static RoomData CueRoom(string id, bool painted)
+    {
+        var room = new RoomData
+        {
+            Id = id,
+            DisplayName = painted ? "A Painted Screen" : "An Unpainted Screen",
+            ChapterId = "verify",
+        };
+
+        if (painted)
+            room.WakingBackground = ImageTexture.CreateFromImage(
+                Image.CreateEmpty(4, 4, false, Image.Format.Rgba8));
+
+        room.Hotspots.Add(new HotspotData
+        {
+            Id = $"{id}_door",
+            Label = "A Way Out",
+            Kind = HotspotKind.Navigate,
+            TargetRoomId = "verify_wilds",
+        });
+
+        room.Hotspots.Add(new HotspotData
+        {
+            Id = $"{id}_open",
+            Label = "Something Open",
+            Kind = HotspotKind.Examine,
+            ExamineText = "verify: scenery.",
+        });
+
+        room.Hotspots.Add(new HotspotData
+        {
+            Id = $"{id}_shut",
+            Label = "Something Shut",
+            Kind = HotspotKind.Harvest,
+            ItemId = "herb_bitterroot",
+            ItemAmount = 1,
+            RequiredFlag = CueShutFlag,
+        });
+
+        room.Hotspots.Add(new HotspotData
+        {
+            Id = $"{id}_spent",
+            Label = "Something Already Taken",
+            Kind = HotspotKind.Harvest,
+            ItemId = "herb_bitterroot",
+            ItemAmount = 1,
+            HarvestedFlag = CueSpentFlag,
+        });
+
+        return room;
+    }
+
+    private const string CueShutFlag = "verify.cues.opened";
+    private const string CueSpentFlag = "verify.cues.taken";
 
     /// <summary>
     /// A room built in code for <see cref="GateCamps"/>. Kept clean enough to pass the authoring
@@ -1308,7 +1357,7 @@ public static class SliceVerifier
     /// </summary>
     private static RoomData VerifyRoom(string id, string displayName, bool withBench)
     {
-        var room = new RoomData { Id = id, DisplayName = displayName, ZoneId = "verify" };
+        var room = new RoomData { Id = id, DisplayName = displayName, ChapterId = "verify" };
 
         room.Hotspots.Add(new HotspotData
         {
@@ -1339,13 +1388,6 @@ public static class SliceVerifier
     /// that look set but do nothing, which the inspector will never warn about and playing rarely
     /// reveals.
     ///
-    /// Deliberately **value-agnostic**. It never asserts a particular cost, label or room, because
-    /// those are his to retune and a gate that fights the author is a gate that gets deleted. It
-    /// asserts shapes: that a hazard exists somewhere, and that no hotspot is quietly inert.
-    ///
-    /// Nothing here activates anything — an arbitrary authored hotspot could navigate, or start a
-    /// heist. The hazard *mechanism* is proven with synthetic data in <see cref="GateHazards"/>.
-    /// </summary>
     /// <summary>
     /// The satchel panel, asserted through its own drawn state rather than its intentions.
     ///
@@ -1463,38 +1505,43 @@ public static class SliceVerifier
         Check("it is left closed for whatever runs next", !panel.IsOpen);
     }
 
+    /// <summary>
+    /// Sweeps every registered room and checks the *authoring*, not the engine. Jeremy owns content
+    /// (see handoff.md, "Who does what"), so this is the safety net under that: it catches fields
+    /// that look set but do nothing, which the inspector will never warn about and playing rarely
+    /// reveals.
+    ///
+    /// <para>Deliberately **value-agnostic**. It never asserts a particular cost, label or room,
+    /// because those are his to retune and a gate that fights the author is a gate that gets
+    /// deleted. It asserts shapes and relationships: that somewhere is craftable-at and walkable-to,
+    /// and that no hotspot is quietly inert.</para>
+    ///
+    /// <para>Nothing here activates anything — an arbitrary authored hotspot could navigate, or
+    /// start a heist.</para>
+    ///
+    /// <para>This comment was detached from the method and stranded above the inventory-panel gate
+    /// until 2026-08-01; it also promised a hazard sweep that was deleted with the field
+    /// (`combat.md` §22). <b>This is the gate that grows into the bill checker</b> — the placement
+    /// audit's fifteen rules are almost all relationships between two authored values, which is
+    /// exactly what belongs here. See `docs/build-plan.md` §6.</para>
+    /// </summary>
     private static void GateAuthoredContent()
     {
         Section("content  the authoring, swept for silent mistakes");
 
         // GateCamps registers synthetic camps into the same registry. They are not authored content,
-        // so sweeping them would both dilute "at least one hazard is authored" and point any failure
-        // at a room Jeremy cannot open in the editor.
+        // so sweeping them would point any failure at a room Jeremy cannot open in the editor.
         var rooms = NavigationManager.Instance.Rooms
             .Where(kv => !kv.Key.StartsWith("verify_"))
             .ToDictionary(kv => kv.Key, kv => kv.Value);
 
         Check("authored rooms are registered", rooms.Count > 0);
 
-        // -- At least one hazard exists, and can actually bite --
-        var hazards = 0;
-        var biteableHazards = 0;
-        foreach (var (_, room) in rooms)
-        {
-            foreach (var h in room.Hotspots)
-            {
-                if (h is not { IsHazard: true }) continue;
-                hazards++;
-
-                // A hazard only reachable from the Dream can never charge you: ApplyHazard refuses
-                // in the Dream (invariant 2), so a DreamOnly hazard is authored cost that is
-                // unreachable by construction.
-                if (h.Visibility != RealmVisibility.DreamOnly) biteableHazards++;
-            }
-        }
-
-        Check("at least one hazard is authored", hazards > 0);
-        Check("and at least one of them is reachable in the Waking world", biteableHazards > 0);
+        // Two checks stood here until 2026-08-01 — that a hazard was authored somewhere, and that at
+        // least one was reachable in the Waking world rather than stranded behind spectral vision.
+        // Both went with the field (`combat.md` §22). **The pair is the model for the blight sweep**:
+        // one check that the content type exists at all, and one that it is not authored into a place
+        // where the engine will silently refuse it.
 
         // -- Somewhere to craft, and a way to get there --
         // Crafting, the shared cache and the respawn point are all gated on standing at a camp, and a
@@ -1527,7 +1574,10 @@ public static class SliceVerifier
         var inertFlagGate = new List<string>();
         var harvestNoItem = new List<string>();
         var navNowhere = new List<string>();
-        var costNoText = new List<string>();
+        var blankRequired = new List<string>();
+        var dupRequired = new List<string>();
+        var doubleGated = new List<string>();
+        var examineSilent = new List<string>();
 
         foreach (var (roomId, room) in rooms)
         {
@@ -1550,30 +1600,197 @@ public static class SliceVerifier
                 if (!h.RequiredFlagValue && string.IsNullOrEmpty(h.RequiredFlag))
                     inertFlagGate.Add(where);
 
+                // A blank entry in RequiredFlags holds the gate shut forever (IsAvailable treats it
+                // as unmet on purpose), so it fails closed rather than open — but it is still a
+                // door nobody can ever walk through, which no ledger row ever wants.
+                if (h.RequiredFlags != null)
+                {
+                    var seen = new HashSet<string>();
+                    foreach (var flag in h.RequiredFlags)
+                    {
+                        if (string.IsNullOrEmpty(flag)) { blankRequired.Add(where); continue; }
+
+                        // The same fact stored twice, in two fields able to disagree.
+                        if (flag == h.RequiredFlag) doubleGated.Add($"{where}: {flag}");
+                        if (!seen.Add(flag)) dupRequired.Add($"{where}: {flag}");
+                    }
+                }
+
                 if (h.Kind == HotspotKind.Harvest && string.IsNullOrEmpty(h.ItemId))
                     harvestNoItem.Add(where);
 
                 if (h.Kind == HotspotKind.Navigate && string.IsNullOrEmpty(h.TargetRoomId))
                     navNowhere.Add(where);
 
-                // Harmless, but it means someone wrote the flavour and forgot the cost.
-                if (!h.IsHazard && !string.IsNullOrEmpty(h.HazardText))
-                    costNoText.Add(where);
+                // The Examine equivalent of the two above. `InteractionService` guards on empty text
+                // and emits nothing, so a wordless Examine is a region that swallows a click and
+                // gives no feedback whatsoever — indistinguishable in play from a dead hotspot.
+                if (h.Kind == HotspotKind.Examine && string.IsNullOrEmpty(h.ExamineText))
+                    examineSilent.Add(where);
             }
         }
 
         Check($"no hotspot is blank or missing an Id{Listing(blank)}", blank.Count == 0);
         Check($"no hotspot gates on RequiredFlagValue with no RequiredFlag{Listing(inertFlagGate)}",
             inertFlagGate.Count == 0);
+        Check($"no blank entry in a hotspot's RequiredFlags{Listing(blankRequired)}",
+            blankRequired.Count == 0);
+        Check($"no flag listed twice in one hotspot's RequiredFlags{Listing(dupRequired)}",
+            dupRequired.Count == 0);
+        Check($"no flag in both RequiredFlag and RequiredFlags{Listing(doubleGated)}",
+            doubleGated.Count == 0);
         Check($"every Harvest hotspot yields an item{Listing(harvestNoItem)}",
             harvestNoItem.Count == 0);
         Check($"every Navigate hotspot goes somewhere{Listing(navNowhere)}",
             navNowhere.Count == 0);
-        Check($"no HazardText is stranded on a costless hotspot{Listing(costNoText)}",
-            costNoText.Count == 0);
+        Check($"every Examine hotspot says something{Listing(examineSilent)}",
+            examineSilent.Count == 0);
 
+        GateWorldGraph(rooms);
         GateCombatShapes(rooms);
+        GateFights(rooms);
     }
+
+    /// <summary>
+    /// The world as a <i>graph</i>, rather than as a bag of rooms — added 2026-08-02 with the 59
+    /// pass-1 skeleton screens (<c>build-plan.md</c> §5).
+    ///
+    /// <para>
+    /// The sweep above asks whether each hotspot is internally coherent. None of it can see the
+    /// failure that actually matters once there are dozens of screens: a door whose target is spelled
+    /// slightly wrong, a branch nothing connects to, two harvest nodes that turn out to be the same
+    /// node. Those are invisible in the inspector and invisible in a single room, and they are exactly
+    /// what a generator gets wrong at scale — which is why the gate lands with the generated content
+    /// and not after it. <b>Never hand-edit a <c>.tres</c> typed array without a gate asserting the
+    /// contents loaded</b>; this is that gate for <c>RoomData.Hotspots</c>.
+    /// </para>
+    /// </summary>
+    private static void GateWorldGraph(Dictionary<string, RoomData> rooms)
+    {
+        Section("graph  the world as doors, not as rooms");
+
+        // -- Every file on disk actually became a room --
+        // The blind spot this gate was born from, on the day the 59 skeletons landed. A `.tres` with a
+        // syntax error does not crash and does not fail anything: `GD.Load` returns null,
+        // `LoadRoomRegistry` pushes a warning into a console nobody reads headlessly, and the room is
+        // simply *absent*. Every sweep in this file iterates the registry, so all of them keep passing
+        // — the suite went green on a run where none of the 59 had loaded. Counting the directory is
+        // the only check here that does not trust the registry it is checking.
+        var onDisk = 0;
+        using (var dir = DirAccess.Open(GameConfig.RoomDataDir))
+        {
+            if (dir != null)
+            {
+                dir.ListDirBegin();
+                for (var f = dir.GetNext(); f != ""; f = dir.GetNext())
+                    if (!dir.CurrentIsDir() && (f.EndsWith(".tres") || f.EndsWith(".tres.remap")))
+                        onDisk++;
+            }
+        }
+
+        Check($"every room file on disk registered a room ({rooms.Count} of {onDisk})",
+            onDisk > 0 && rooms.Count == onDisk);
+
+        // -- Doors that lead nowhere real --
+        // `navNowhere` above only asks whether the string is blank. A *populated* target that names no
+        // registered room is the far likelier mistake and the far worse symptom: the hotspot draws, it
+        // takes the click, and nothing happens. Silent in the editor, silent in the log.
+        var brokenDoor = new List<string>();
+        foreach (var (roomId, room) in rooms)
+            foreach (var h in Doors(room))
+                if (!rooms.ContainsKey(h.TargetRoomId))
+                    brokenDoor.Add($"{roomId}/{h.Id} -> {h.TargetRoomId}");
+
+        Check($"every door names a room that exists{Listing(brokenDoor)}", brokenDoor.Count == 0);
+
+        // -- Two nodes that are secretly one node --
+        // `Flags.Harvested` keys off the hotspot Id alone, so two nodes sharing an Id share a flag:
+        // pick one and the other vanishes a chapter away, having yielded nothing. Ids are scoped by
+        // room in the editor and by nothing at all here, which is the trap.
+        var seenHarvest = new Dictionary<string, string>();
+        var collided = new List<string>();
+        foreach (var (roomId, room) in rooms)
+            foreach (var h in room.Hotspots)
+            {
+                if (h is not { Kind: HotspotKind.Harvest } || string.IsNullOrEmpty(h.Id)) continue;
+                if (!seenHarvest.TryAdd(h.Id, roomId))
+                    collided.Add($"{h.Id}: {seenHarvest[h.Id]} + {roomId}");
+            }
+
+        Check($"no two harvest nodes share an Id, and so a flag{Listing(collided)}",
+            collided.Count == 0);
+
+        // -- The chapter spine --
+        // Scoped to `ch*` chapters because the waystation and its Dream graph are the retiring
+        // prototype and were never authored to these rules. Everything below is about the ledger.
+        var spine = rooms
+            .Where(kv => kv.Value?.ChapterId?.StartsWith("ch") == true)
+            .ToDictionary(kv => kv.Key, kv => kv.Value);
+
+        Check("the chapter spine is authored", spine.Count > 0);
+
+        // Every door can be walked back through. A one-way door in a point-and-click is a softlock
+        // waiting for a player who forgot something, and nothing in any ledger asks for one — so if
+        // this ever goes red it is either a typo or a decision that should be written down first.
+        var oneWay = new List<string>();
+        foreach (var (roomId, room) in spine)
+            foreach (var h in Doors(room))
+            {
+                if (!spine.TryGetValue(h.TargetRoomId, out var target)) continue;
+                if (!Doors(target).Any(back => back.TargetRoomId == roomId))
+                    oneWay.Add($"{roomId} -> {h.TargetRoomId}");
+            }
+
+        Check($"every door in the spine can be walked back through{Listing(oneWay)}",
+            oneWay.Count == 0);
+
+        // One component, all three chapters. This is what proves the two chapter seams exist: drop
+        // the bridge or the cart road and ch2/ch3 fall off in a single named list. Started from an
+        // arbitrary room rather than a hard-coded entry id, because the property being asserted is
+        // connectedness, and pinning a start would make the gate a second place to keep in sync.
+        var start = spine.Keys.OrderBy(k => k, StringComparer.Ordinal).First();
+        var reached = new HashSet<string> { start };
+        var queue = new Queue<string>(reached);
+        while (queue.Count > 0)
+        {
+            if (!spine.TryGetValue(queue.Dequeue(), out var room)) continue;
+            foreach (var h in Doors(room))
+                if (spine.ContainsKey(h.TargetRoomId) && reached.Add(h.TargetRoomId))
+                    queue.Enqueue(h.TargetRoomId);
+        }
+
+        var stranded = spine.Keys.Where(k => !reached.Contains(k)).OrderBy(k => k).ToList();
+        Check($"and the whole spine is one connected world{Listing(stranded)}", stranded.Count == 0);
+
+        // -- The unwritten marker, and where it must never survive to --
+        // Dormant by design, exactly like GateCombatShapes: no screen is painted yet, so this is zero
+        // offenders today. The point of writing it now is that pass 3 hands art and prose to different
+        // sittings, and the failure it catches — a finished screen still emitting `[unwritten]` when
+        // clicked — is one nobody would find except by clicking every hotspot in the game.
+        var unwrittenOnArt = new List<string>();
+        foreach (var (roomId, room) in rooms)
+        {
+            if (room?.WakingBackground == null) continue;
+            foreach (var h in room.Hotspots)
+                if (h != null && h.ExamineText.Contains(UnwrittenMark))
+                    unwrittenOnArt.Add($"{roomId}/{h.Id}");
+        }
+
+        Check($"no painted screen still reads {UnwrittenMark}{Listing(unwrittenOnArt)}",
+            unwrittenOnArt.Count == 0);
+    }
+
+    /// <summary>The sentinel pass 1 leaves in every Examine stub, for pass 3 to replace.</summary>
+    private const string UnwrittenMark = "[unwritten]";
+
+    /// <summary>
+    /// A room's usable exits. Navigate hotspots with a target, availability ignored — a flag-gated
+    /// door is design and still an edge in the graph; a blank one is already reported by the sweep
+    /// above and would otherwise be counted twice here.
+    /// </summary>
+    private static IEnumerable<HotspotData> Doors(RoomData room) =>
+        (room?.Hotspots ?? new Godot.Collections.Array<HotspotData>())
+        .Where(h => h is { Kind: HotspotKind.Navigate } && !string.IsNullOrEmpty(h.TargetRoomId));
 
     /// <summary>
     /// The same sweep, over the combat fields added on 2026-07-30 (docs/combat.md §18).
@@ -1680,9 +1897,442 @@ public static class SliceVerifier
         Check($"and none of those words is blank{Listing(blankWord)}", blankWord.Count == 0);
     }
 
+    /// <summary>
+    /// The bodies on the map — added 2026-08-02 with pass 2, which placed the 30 regular fights, the
+    /// person each of the 24 human ones frees, and the carcass each of the 6 Beasts leaves.
+    ///
+    /// <para>
+    /// <see cref="GateCombatShapes"/> already sweeps each creature's own fields. Nothing there can see
+    /// the failures that only exist once creatures are <i>placed</i>: two placements sharing an
+    /// instance id and therefore a flag, a freed person whose flag is misspelled so they never appear,
+    /// a Warden that blocks nothing, or two of the same creature on adjoining screens. Those are
+    /// invisible in the inspector and invisible in any single room.
+    /// </para>
+    ///
+    /// <para>
+    /// Every check is a <b>relationship</b> between two authored values, and none of them counts. A
+    /// gate asserting 30 placements would go red the day unit 6 adds the three bosses, which is how a
+    /// suite teaches people to stop running it — so the totals are printed and not asserted.
+    /// </para>
+    /// </summary>
+    private static void GateFights(Dictionary<string, RoomData> rooms)
+    {
+        Section("fights  the bodies on the map, and what each one leaves behind");
+
+        // -- The placement equivalent of "no hotspot is blank or missing an Id" --
+        // Replacing an array element with a fresh resource in the inspector does exactly this, and a
+        // placement with no Entity draws nothing at all: the screen simply reads as empty, with no
+        // warning anywhere, which is indistinguishable from a screen nobody has authored yet.
+        var blank = new List<string>();
+        var noEntity = new List<string>();
+        var collided = new List<string>();
+        var placedIn = new Dictionary<string, string>();
+
+        foreach (var (roomId, room) in rooms)
+        {
+            var placements = room?.Entities;
+            if (placements == null) continue;
+
+            for (var i = 0; i < placements.Count; i++)
+            {
+                var p = placements[i];
+                if (p == null || string.IsNullOrEmpty(p.InstanceId)) { blank.Add($"{roomId}[{i}]"); continue; }
+                if (p.Entity == null) noEntity.Add($"{roomId}/{p.InstanceId}");
+
+                // Entity state is keyed by instance id alone, so two placements sharing one are one
+                // creature standing in two rooms: beat it once and the other screen clears itself.
+                // The exact shape of the harvest-id collision the graph section guards.
+                if (!placedIn.TryAdd(p.InstanceId, roomId))
+                    collided.Add($"{p.InstanceId}: {placedIn[p.InstanceId]} + {roomId}");
+            }
+        }
+
+        Check($"no placement is blank or missing an InstanceId{Listing(blank)}", blank.Count == 0);
+        Check($"every placement names an entity{Listing(noEntity)}", noEntity.Count == 0);
+        Check($"no two placements share an InstanceId, and so a state{Listing(collided)}",
+            collided.Count == 0);
+
+        // -- Twelve creatures because four damage types give twelve pairs (items.md §10) --
+        // Two creatures answering to the same tool and resisting the same tool are one creature in two
+        // costumes, so a repeated pair means either a copy-paste or a roster that has outgrown the
+        // matrix. The Beast's three variants deliberately share a pair, and share it by *design* —
+        // they are keyed by entity id, so they are three placements of three files with one pair, and
+        // this check has to allow that. It compares pairs across ids that differ in more than a
+        // variant suffix, which is why the Beast files are named `beast_*` and the humans `creature_*`.
+        var pairs = new Dictionary<string, string>();
+        var repeated = new List<string>();
+        foreach (var e in PlacedEntities(rooms))
+        {
+            if (e.VulnerableTo == DamageType.None || e.ResistantTo == DamageType.None) continue;
+            if (e.Id.StartsWith("beast_")) continue;
+
+            var key = $"{e.VulnerableTo}/{e.ResistantTo}";
+            if (!pairs.TryAdd(key, e.Id)) repeated.Add($"{key}: {pairs[key]} + {e.Id}");
+        }
+
+        Check($"no two creatures answer to the same pair of types{Listing(repeated)}",
+            repeated.Count == 0);
+
+        // -- placement.md rule 2: never the same creature on two adjacent screens --
+        // Newly checkable, because this is the first pass where placements and the door graph both
+        // exist. It is the one rule in §5 that is a property of the *map* rather than of a file, so it
+        // could not be gated at all before today and had to be held in someone's head.
+        var adjacent = new List<string>();
+        var reported = new HashSet<string>();
+        foreach (var (roomId, room) in rooms)
+        {
+            if (room?.ChapterId?.StartsWith("ch") != true) continue;
+
+            foreach (var h in Doors(room))
+            {
+                if (!rooms.TryGetValue(h.TargetRoomId, out var target)) continue;
+                if (target?.ChapterId?.StartsWith("ch") != true) continue;
+
+                foreach (var here in Species(room))
+                    if (Species(target).Contains(here))
+                    {
+                        // One complaint per pair of screens, whichever direction it is found from.
+                        var edge = string.CompareOrdinal(roomId, h.TargetRoomId) < 0
+                            ? $"{here}: {roomId} + {h.TargetRoomId}"
+                            : $"{here}: {h.TargetRoomId} + {roomId}";
+                        if (reported.Add(edge)) adjacent.Add(edge);
+                    }
+            }
+        }
+
+        Check($"no creature stands on two adjoining screens{Listing(adjacent)}", adjacent.Count == 0);
+
+        // -- What a fight leaves behind --
+        // A freed person and a Beast carcass are the same machinery: a hotspot the room already holds,
+        // gated on a flag the fight sets. So the failure mode is a *flag* failure, and a misspelled
+        // flag is silent in the worst way — the hotspot is drawn dimmed exactly as an unearned one is,
+        // so the screen looks correct until someone wins the fight and nobody appears.
+        var danglingFlag = new List<string>();
+        foreach (var (roomId, room) in rooms)
+            foreach (var h in room.Hotspots)
+            {
+                if (h == null) continue;
+                foreach (var instance in AftermathOf(h))
+                    if (!placedIn.ContainsKey(instance))
+                        danglingFlag.Add($"{roomId}/{h.Id} -> {instance}");
+            }
+
+        Check($"every freed / defeated gate names a creature that is placed{Listing(danglingFlag)}",
+            danglingFlag.Count == 0);
+
+        // The coverage half, and it is keyed on the data rather than on a list of names: a creature
+        // with a `PurifiedName` is one there is a person left to recover, so it owes a freed hotspot.
+        // A blank `PurifiedName` means there is nobody in there — the Beast, and the bosses, which are
+        // destroyed and never purified — so those owe nothing and this stays quiet when unit 6 places
+        // a boss in a room with no aftermath at all.
+        //
+        // Scoped to `ch*` for the same reason the spine checks in GateWorldGraph are: the waystation
+        // is the retiring prototype and was authored to the *old* model, where a purified creature was
+        // farmable wildlife reached through EntityState rather than a person reached through a hotspot.
+        // `waystation.rat_01` therefore has a PurifiedName and owes nobody, and it is the one placement
+        // in the game that legitimately fails this. It goes away with the retirement, not before.
+        var noOneToFree = new List<string>();
+        foreach (var (roomId, room) in rooms)
+        {
+            if (room?.ChapterId?.StartsWith("ch") != true) continue;
+
+            var freed = room.Hotspots
+                .Where(h => h != null)
+                .SelectMany(AftermathOf)
+                .ToHashSet();
+
+            foreach (var p in room.Entities)
+            {
+                if (p?.Entity == null || string.IsNullOrEmpty(p.InstanceId)) continue;
+                if (string.IsNullOrEmpty(p.Entity.PurifiedName)) continue;
+                if (!freed.Contains(p.InstanceId)) noOneToFree.Add($"{roomId}/{p.InstanceId}");
+            }
+        }
+
+        Check($"every creature with someone inside it leaves them behind{Listing(noOneToFree)}",
+            noOneToFree.Count == 0);
+
+        // -- Wardens, and the trap that EntityData.BlocksPath defaults to true --
+        // Stated as a relationship in both directions rather than as "only the Stable Master blocks",
+        // which would write one chapter's content into the suite. The direction that matters is the
+        // first: forget `BlocksPath = false` on a generated creature and *every* screen it stands on
+        // becomes a dead end, which is the single most expensive silent mistake available in this pass.
+        var blocksNothing = new List<string>();
+        var guardedByAPasser = new List<string>();
+
+        var wardens = new HashSet<string>();
+        foreach (var (_, room) in rooms)
+            foreach (var p in room.Entities)
+                if (p?.Entity is { BlocksPath: true } && !string.IsNullOrEmpty(p.InstanceId))
+                    wardens.Add(p.InstanceId);
+
+        var guards = new HashSet<string>();
+        foreach (var (roomId, room) in rooms)
+            foreach (var h in room.Hotspots)
+            {
+                if (h == null || string.IsNullOrEmpty(h.BlockedByEntityId)) continue;
+                guards.Add(h.BlockedByEntityId);
+
+                if (!wardens.Contains(h.BlockedByEntityId))
+                    guardedByAPasser.Add($"{roomId}/{h.Id} -> {h.BlockedByEntityId}");
+            }
+
+        foreach (var warden in wardens.Where(w => !guards.Contains(w)).OrderBy(w => w))
+            blocksNothing.Add(warden);
+
+        Check($"every creature that bars the path bars a door{Listing(blocksNothing)}",
+            blocksNothing.Count == 0);
+        Check($"and every barred door names a creature that bars it{Listing(guardedByAPasser)}",
+            guardedByAPasser.Count == 0);
+
+        // Printed, never asserted — see the summary. Reading these against `placement.md` is how a
+        // content pass gets checked; failing on them is how a suite gets ignored. Counted over the
+        // chapter spine only, so the figures are the bill's figures and the prototype rat is not
+        // quietly making every total one too many. Today it reads 30 / 11 / 3, and 24 freed to 6
+        // defeated; unit 6 takes the fights to 33.
+        var spine = rooms.Where(kv => kv.Value?.ChapterId?.StartsWith("ch") == true)
+            .ToDictionary(kv => kv.Key, kv => kv.Value);
+
+        var aftermath = spine
+            .SelectMany(kv => kv.Value.Hotspots.Where(h => h != null))
+            .SelectMany(Gates)
+            .ToList();
+
+        // -- And now the same thing in play, on one real authored screen --
+        // Everything above reads the .tres files. None of it proves a creature *appears*: the whole
+        // pass could parse perfectly and still put nothing on screen, because the Approach hotspot is
+        // generated from the overlay's bounds rather than authored (see RoomView.AddEntityHotspots),
+        // and an overlay whose presentation resolves to invisible is silent about it. That is the
+        // blind spot handoff.md §3 names as the one that hides the rest — a layer the verifier never
+        // questions — so pass 2 drives one screen for real rather than trusting thirty files.
+        //
+        // ch1_low_track is chosen because it is the first fight in the game: the screen a player
+        // reaches third, and the one where a broken placement would be most obvious and least
+        // excusable. It is not a camp, so standing here refills nothing and disturbs no later gate.
+        const string firstFight = "ch1.logger_01";
+        NavigationManager.Instance.GoToRoom("ch1_low_track");
+        var onScreen = Live();
+
+        var creature = onScreen.FirstOrDefault(h => h.EntityInstanceId == firstFight);
+        Check("the first creature in the game is on screen", Blind || creature != null);
+        Check("and it is labelled with the name it was authored with",
+            Blind || creature?.Label == "The Logger");
+
+        // The person it frees is drawn from the start and shut, which is the whole point of unit 1.5:
+        // the screen tells you there is something here to earn without letting you have it.
+        var person = Find(onScreen, "ch1_low_track_freed");
+        Check("the person inside it is drawn but shut", Blind || person?.Locked == true);
+        Check("and it names the flag that will free them",
+            Blind || person?.LockedBy == Flags.Freed(firstFight));
+        Check("drawing them did not make them available",
+            !InteractionService.IsAvailable(person?.Data));
+
+        var world = WorldStateManager.Instance;
+        world.SetFlag(Flags.Freed(firstFight));
+        var afterwards = Find(Live(), "ch1_low_track_freed");
+        Check("winning the fight brings them out", Blind || afterwards?.Locked == false);
+        Check("and they can be spoken to", InteractionService.IsAvailable(afterwards?.Data));
+        world.SetFlag(Flags.Freed(firstFight), false);
+
+        GD.Print($"       spine: {spine.Sum(kv => kv.Value.Entities.Count)} fights, "
+            + $"{PlacedEntities(spine).Count()} creature types, "
+            + $"{wardens.Count(w => spine.ContainsKey(placedIn[w]))} warden(s); aftermath "
+            + $"{aftermath.Count(f => f.StartsWith("freed."))} freed / "
+            + $"{aftermath.Count(f => f.StartsWith("defeated."))} defeated");
+    }
+
+    /// <summary>Every distinct <see cref="EntityData"/> reachable through a placement. There is no registry.</summary>
+    private static IEnumerable<EntityData> PlacedEntities(Dictionary<string, RoomData> rooms)
+    {
+        var seen = new HashSet<string>();
+        foreach (var (_, room) in rooms)
+            foreach (var p in room?.Entities ?? new Godot.Collections.Array<EntityPlacement>())
+                if (p?.Entity is { } e && !string.IsNullOrEmpty(e.Id) && seen.Add(e.Id))
+                    yield return e;
+    }
+
+    /// <summary>Which creature <i>types</i> stand on a screen — rule 2 is about the type, not the individual.</summary>
+    private static HashSet<string> Species(RoomData room) =>
+        (room?.Entities ?? new Godot.Collections.Array<EntityPlacement>())
+        .Where(p => p?.Entity != null && !string.IsNullOrEmpty(p.Entity.Id))
+        .Select(p => p.Entity.Id)
+        .ToHashSet();
+
+    /// <summary>
+    /// The instance id a hotspot is waiting on the death of, read back out of its gate. Both domains,
+    /// because a freed person and a Beast carcass are the same shape — see <see cref="Flags.Defeated"/>.
+    /// </summary>
+    private static IEnumerable<string> AftermathOf(HotspotData h)
+    {
+        foreach (var flag in Gates(h))
+        {
+            if (flag.StartsWith("freed.")) yield return flag["freed.".Length..];
+            else if (flag.StartsWith("defeated.")) yield return flag["defeated.".Length..];
+        }
+    }
+
+    /// <summary>Every flag holding a hotspot shut, across both gating fields.</summary>
+    private static IEnumerable<string> Gates(HotspotData h)
+    {
+        if (!string.IsNullOrEmpty(h.RequiredFlag)) yield return h.RequiredFlag;
+        foreach (var f in h.RequiredFlags ?? Array.Empty<string>())
+            if (!string.IsNullOrEmpty(f)) yield return f;
+    }
+
     /// <summary>Appends the offenders to a check's description, so a failure says where to look.</summary>
     private static string Listing(List<string> offenders) =>
         offenders.Count == 0 ? "" : $"  [{string.Join(", ", offenders)}]";
+
+    // ---- The placeholder readability layer (unit 1.5) --------------------
+
+    /// <summary>
+    /// Unit 1.5's cues. Two different kinds of check live here and it is worth saying which is which.
+    ///
+    /// <para>
+    /// <b>The totality check is one of the few guards that genuinely goes red on its own.</b> Add a
+    /// <see cref="HotspotKind"/>, forget its colour, the suite fails — and <b>unit 4 adds
+    /// <c>Station</c></b>, so it fires for real within two units. That is only true because the
+    /// palette is a dictionary; a <c>switch</c> would need a default arm, and a default arm makes
+    /// the same check unfalsifiable (handoff.md's "guards that cannot fail").
+    /// </para>
+    ///
+    /// <para>
+    /// <b>The rest guard a real regression risk.</b> The view now instantiates hotspots that
+    /// <see cref="InteractionService.IsAvailable"/> refuses — a shut gate, drawn as a picture of
+    /// itself. If one of those ever became clickable, every flag gate in the game would be
+    /// bypassable by walking into the room, and it would look exactly like a working feature. So
+    /// "drawn" and "inert" are asserted separately, and availability is re-asserted underneath.
+    /// </para>
+    ///
+    /// <para>
+    /// <b>What this cannot check.</b> Headless runs the dummy renderer, so no <c>_Draw</c> body
+    /// executes: nothing here proves a label is legible, or that hover beats the idle cue, or that
+    /// lime survives purified ground. Those are eyes-on questions and the screenshot tool is where
+    /// they get answered. What is asserted is structure — which nodes exist, in what state.
+    /// </para>
+    /// </summary>
+    private static void GatePlaceholderCues()
+    {
+        Section("cues  the placeholder readability layer");
+
+        // -- Totality: every kind has a colour, and no two share one --
+        var missing = new List<string>();
+        var seen = new Dictionary<string, string>();
+        var collisions = new List<string>();
+
+        foreach (HotspotKind kind in Enum.GetValues<HotspotKind>())
+        {
+            if (!PlaceholderCues.KindColors.TryGetValue(kind, out var colour))
+            {
+                missing.Add(kind.ToString());
+                continue;
+            }
+
+            var hex = colour.ToHtml(false);
+            if (seen.TryGetValue(hex, out var other)) collisions.Add($"{kind}={other}");
+            else seen[hex] = kind.ToString();
+        }
+
+        Check($"every hotspot kind has a placeholder colour{Listing(missing)}", missing.Count == 0);
+        Check($"and no two kinds share one{Listing(collisions)}", collisions.Count == 0);
+        Check("an unmapped kind would fall back to something obviously wrong",
+            PlaceholderCues.ColorFor((HotspotKind)9999) == Colors.Magenta);
+
+        // -- An unpainted screen cues; a painted one does not --
+        var world = WorldStateManager.Instance;
+        world.SetFlag(CueShutFlag, false);
+        world.SetFlag(CueSpentFlag, true);
+
+        NavigationManager.Instance.GoToRoom("verify_cues");
+        Check("the unpainted screen is cueing", _view == null || _view.CuesVisible);
+
+        var live = Live();
+        Check("the open hotspot is on screen", Blind || Present(live, "verify_cues_open"));
+        Check("and it is drawing its cue",
+            Blind || Find(live, "verify_cues_open")?.ShowCue == true);
+        Check("the door is on screen too", Blind || Present(live, "verify_cues_door"));
+
+        // -- A shut gate is drawn, and is a picture of itself --
+        var shut = Find(live, "verify_cues_shut");
+        Check("a hotspot shut by a flag is still drawn", Blind || shut != null);
+        Check("it is marked locked", Blind || shut?.Locked == true);
+        Check("it names the flag holding it", Blind || shut?.LockedBy == CueShutFlag);
+        Check("it does not take the mouse",
+            Blind || shut?.MouseFilter == Control.MouseFilterEnum.Ignore);
+
+        // The one real regression risk in this whole unit: the view now instantiates hotspots that
+        // `IsAvailable` refuses. Drawn and clickable are asserted apart, and availability is
+        // re-asserted underneath, so a locked hotspot going live would show up here as a flag gate
+        // bypass rather than as a cosmetic slip.
+        Check("and drawing it did not make it available",
+            !InteractionService.IsAvailable(shut?.Data));
+
+        // -- A spent node is gone, not "locked" --
+        // Different reason, different treatment: a shut gate is waiting to open, a picked herb is
+        // finished. Drawing the second forever would fill every cleansed screen with ghosts.
+        Check("a harvest node already taken is not drawn at all",
+            Blind || !Present(live, "verify_cues_spent"));
+
+        // -- Open the gate and the picture becomes the thing --
+        world.SetFlag(CueShutFlag, true);
+        live = Live();
+        var opened = Find(live, "verify_cues_shut");
+        Check("opening the flag leaves it on screen", Blind || opened != null);
+        Check("no longer locked", Blind || opened?.Locked == false);
+        Check("and it takes the mouse now",
+            Blind || opened?.MouseFilter == Control.MouseFilterEnum.Stop);
+
+        // -- Paint the screen and every cue switches itself off --
+        // The promise is that there is nothing to remember and no way to ship the cues by accident.
+        // It only holds if the condition is the art itself, which is what this asserts.
+        world.SetFlag(CueShutFlag, false); // shut it again — the block above left the gate open
+        NavigationManager.Instance.GoToRoom("verify_cues_painted");
+        Check("a painted screen is not cueing", _view == null || !_view.CuesVisible);
+
+        var painted = Live();
+        Check("its hotspots draw no cue",
+            Blind || Find(painted, "verify_cues_painted_open")?.ShowCue == false);
+        Check("and a shut hotspot is absent again, as it ships",
+            Blind || !Present(painted, "verify_cues_painted_shut"));
+
+        // -- The debug toggle is the manual override for art --
+        // A painting can hide a clickable region as well as a grey box can.
+        if (_view != null) _view.ShowHotspotOutlines = true;
+        var forced = Live();
+        Check("forcing outlines cues a painted screen", Blind || _view.CuesVisible);
+        Check("and brings its shut hotspots back to look at",
+            Blind || Present(forced, "verify_cues_painted_shut"));
+        if (_view != null) _view.ShowHotspotOutlines = false;
+
+        world.SetFlag(CueShutFlag, false);
+        world.SetFlag(CueSpentFlag, false);
+    }
+
+    private static IReadOnlyList<Hotspot> Live() =>
+        _view?.LiveHotspots ?? (IReadOnlyList<Hotspot>)Array.Empty<Hotspot>();
+
+    private static Hotspot Find(IReadOnlyList<Hotspot> live, string hotspotId)
+    {
+        foreach (var h in live)
+            if (h.Data?.Id == hotspotId) return h;
+        return null;
+    }
+
+    private static bool Present(IReadOnlyList<Hotspot> live, string hotspotId) =>
+        Find(live, hotspotId) != null;
+
+    /// <summary>
+    /// No view handed in, so every view check above short-circuits to pass.
+    ///
+    /// <para>
+    /// Written as its own name rather than as an inline <c>_view == null ||</c> because half the
+    /// checks in this gate assert an *absence*, and the naive form inverts to <c>!(...)</c> — which
+    /// turns the politeness into a guaranteed failure the moment there is no view. Same intent as
+    /// the rest of the file, spelled so it survives negation. <see cref="GateHarness"/> is what
+    /// keeps the politeness from hiding a wiring fault.
+    /// </para>
+    /// </summary>
+    private static bool Blind => _view == null;
 
     // ---- Plumbing --------------------------------------------------------
 
@@ -1708,6 +2358,180 @@ public static class SliceVerifier
     private static EntityPlacement Placement(string instanceId) =>
         NavigationManager.Instance.FindPlacement(instanceId);
 
+    /// <summary>
+    /// The Snarl shape (ledger-ch3 row 12): one door that opens only when all three knot pockets
+    /// are cut. Driven against synthetic hotspots rather than authored ones, because no .tres uses
+    /// <c>RequiredFlags</c> yet — the three authoring sweeps in <see cref="GateAuthoredContent"/>
+    /// are vacuous until pass 1 generates the mine, and a vacuous gate proves nothing.
+    /// </summary>
+    private static void GateMultiFlagGating()
+    {
+        Section("Multi-flag gating — the Snarl");
+
+        var world = WorldStateManager.Instance;
+        var knots = new[] { "verify.knot.a.cut", "verify.knot.b.cut", "verify.knot.c.cut" };
+        foreach (var k in knots) world.SetFlag(k, false);
+
+        var snarl = new HotspotData
+        {
+            Id = "verify_snarl",
+            Kind = HotspotKind.Navigate,
+            TargetRoomId = "verify_tear",
+            RequiredFlags = knots,
+        };
+
+        Check("the Snarl is shut with no knots cut",
+            !InteractionService.IsAvailable(snarl));
+
+        world.SetFlag(knots[0]);
+        Check("still shut with one cut", !InteractionService.IsAvailable(snarl));
+
+        world.SetFlag(knots[1]);
+        Check("still shut with two cut", !InteractionService.IsAvailable(snarl));
+
+        world.SetFlag(knots[2]);
+        Check("open with all three cut", InteractionService.IsAvailable(snarl));
+
+        // Order must not matter — a partial gate that happened to read only the last entry would
+        // pass every check above.
+        world.SetFlag(knots[1], false);
+        Check("shut again when a middle knot is undone",
+            !InteractionService.IsAvailable(snarl));
+        world.SetFlag(knots[1]);
+
+        world.SetFlag(knots[0], false);
+        Check("shut again when the first knot is undone",
+            !InteractionService.IsAvailable(snarl));
+        world.SetFlag(knots[0]);
+
+        // The scalar gate still composes: the Snarl is also behind the chapter's tool.
+        snarl.RequiredFlag = "verify.mine_pick.known";
+        Check("all three cut is not enough while the scalar gate is unmet",
+            !InteractionService.IsAvailable(snarl));
+        world.SetFlag("verify.mine_pick.known");
+        Check("open once the scalar gate is met too",
+            InteractionService.IsAvailable(snarl));
+
+        // A blank entry fails closed. It is an authoring slip either way, but the direction it
+        // fails in is the difference between a stuck door and a door that opens the boss early.
+        var halfAuthored = new HotspotData
+        {
+            Id = "verify_half",
+            Kind = HotspotKind.Navigate,
+            TargetRoomId = "verify_tear",
+            RequiredFlags = new[] { knots[0], "" },
+        };
+        Check("a blank RequiredFlags entry holds the gate shut, not open",
+            !InteractionService.IsAvailable(halfAuthored));
+
+        // An empty array must not gate at all, or every hotspot in the game vanishes.
+        var ungated = new HotspotData { Id = "verify_open", Kind = HotspotKind.Examine };
+        Check("an empty RequiredFlags gates nothing",
+            InteractionService.IsAvailable(ungated));
+
+        foreach (var k in knots) world.SetFlag(k, false);
+        world.SetFlag("verify.mine_pick.known", false);
+    }
+
+    /// <summary>
+    /// The material refill (items.md §7) and the ordinal-keyed knot beat (combat.md §23). Both are
+    /// mechanisms without callers — the refill fires on a boss death and the beat on a cut knot, and
+    /// neither of those exists until units 3 and 6 — so both are driven here against synthetic rooms.
+    /// </summary>
+    private static void GateChapterSpine()
+    {
+        Section("Chapter spine — refill and knot beats");
+
+        var world = WorldStateManager.Instance;
+
+        RoomData NodeRoom(string id, string chapter, string nodeId, bool refills)
+        {
+            var room = new RoomData { Id = id, DisplayName = id, ChapterId = chapter };
+            room.Hotspots.Add(new HotspotData
+            {
+                Id = nodeId,
+                Kind = HotspotKind.Harvest,
+                ItemId = "herb_bitterroot",
+                RefillsAtMilestone = refills,
+            });
+            return room;
+        }
+
+        var common1 = NodeRoom("verify_ch1_room", "ch1", "verify_ch1_tallow", refills: true);
+        var scarce1 = NodeRoom("verify_ch1_stone", "ch1", "verify_ch1_cairnstone", refills: false);
+        var common2 = NodeRoom("verify_ch2_room", "ch2", "verify_ch2_pitch", refills: true);
+        var common3 = NodeRoom("verify_ch3_room", "ch3", "verify_ch3_pitch", refills: true);
+        var rooms = new[] { common1, scarce1, common2, common3 };
+
+        string Node(RoomData r) => r.Hotspots[0].ResolvedHarvestedFlag;
+
+        Check("a harvested flag is the published name",
+            Node(common1) == Flags.Harvested("verify_ch1_tallow"));
+
+        Check("a refill milestone is named per chapter",
+            Flags.MaterialRefill("ch2") == "milestone.ch2.material_refill");
+
+        foreach (var r in rooms) world.SetFlag(Node(r));
+
+        Check("nothing refills before the milestone",
+            world.RefillMaterialNodes(rooms) == 0);
+
+        // Each chapter refills at its own boss, so a chapter 1 boss must leave chapter 2 alone.
+        // This is the check the old pooled call could not make.
+        Check("the chapter 1 boss refills one node", world.RefillMaterialNodes(rooms, "ch1") == 1);
+        Check("the ch1 common node is back", !world.GetFlag(Node(common1)));
+        Check("the ch2 common node is untouched by the ch1 boss", world.GetFlag(Node(common2)));
+
+        Check("the chapter 2 boss refills one node", world.RefillMaterialNodes(rooms, "ch2") == 1);
+        Check("the ch2 common node is back", !world.GetFlag(Node(common2)));
+
+        // The two that carry the whole point of the field's default.
+        Check("the scarce node stays taken", world.GetFlag(Node(scarce1)));
+        Check("chapter 3 is terminal and does not refill", world.GetFlag(Node(common3)));
+
+        Check("refilling twice restores nothing the second time",
+            world.RefillMaterialNodes(rooms, "ch1", "ch2") == 0);
+
+        // A non-Harvest hotspot marked to refill must not have its flag cleared — the flag means
+        // something else entirely on any other kind.
+        var oddity = new RoomData { Id = "verify_odd", DisplayName = "odd", ChapterId = "ch1" };
+        oddity.Hotspots.Add(new HotspotData
+        {
+            Id = "verify_odd_door", Kind = HotspotKind.Navigate,
+            TargetRoomId = "verify_ch1_room", RefillsAtMilestone = true,
+        });
+        world.SetFlag(oddity.Hotspots[0].ResolvedHarvestedFlag);
+        Check("only Harvest nodes refill",
+            world.RefillMaterialNodes(new[] { oddity }, "ch1") == 0);
+        world.SetFlag(oddity.Hotspots[0].ResolvedHarvestedFlag, false);
+
+        // ---- The knot beat ----------------------------------------------
+
+        var knots = new[] { "verify_lit", "verify_high", "verify_far" };
+        foreach (var k in knots) world.SetFlag(Flags.KnotCut(k), false);
+
+        Check("no knots cut yet", world.CutKnotCount(knots) == 0);
+        Check("the first cut plays beat 1", world.NextKnotBeatOrdinal(knots) == 1);
+
+        // Cut them out of order. The ordinal must follow the count, not the pocket — cutting the
+        // *last* listed knot first still has to play beat 1, which is the whole decision.
+        world.SetFlag(Flags.KnotCut("verify_far"));
+        Check("cutting the last-listed knot first still leaves beat 2 next",
+            world.NextKnotBeatOrdinal(knots) == 2);
+
+        world.SetFlag(Flags.KnotCut("verify_lit"));
+        Check("the third cut plays beat 3", world.NextKnotBeatOrdinal(knots) == 3);
+
+        world.SetFlag(Flags.KnotCut("verify_high"));
+        Check("all three are cut", world.CutKnotCount(knots) == 3);
+        Check("there is no fourth beat", world.NextKnotBeatOrdinal(knots) == 0);
+
+        Check("an empty knot list has no beat", world.NextKnotBeatOrdinal(System.Array.Empty<string>()) == 0);
+
+        foreach (var k in knots) world.SetFlag(Flags.KnotCut(k), false);
+        foreach (var r in rooms) world.SetFlag(Node(r), false);
+    }
+
     private static HotspotData Hotspot(string hotspotId)
     {
         var room = NavigationManager.Instance.CurrentRoom;
@@ -1717,11 +2541,11 @@ public static class SliceVerifier
         return found;
     }
 
-    private static bool IsAvailable(string hotspotId, GameRealm realm)
+    private static bool IsAvailable(string hotspotId)
     {
         var room = NavigationManager.Instance.CurrentRoom;
         var data = room?.Hotspots.FirstOrDefault(h => h != null && h.Id == hotspotId);
-        return data != null && InteractionService.IsAvailable(data, realm);
+        return data != null && InteractionService.IsAvailable(data);
     }
 
     private static void Section(string title)

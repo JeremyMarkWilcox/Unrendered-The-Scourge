@@ -1,0 +1,65 @@
+[gd_resource type="Resource" script_class="RoomData" load_steps=9 format=3]
+
+[ext_resource type="Script" uid="uid://b0jetcphiy2cm" path="res://src/Data/HotspotData.cs" id="1_hs"]
+[ext_resource type="Script" uid="uid://v0juosv2w310" path="res://src/Data/RoomData.cs" id="2_room"]
+
+[sub_resource type="Resource" id="hs_0"]
+script = ExtResource("1_hs")
+Id = "ch3_old_workings_to_main_drift"
+Label = "The Main Drift"
+Kind = 0
+Region = Rect2(70, 390, 290, 410)
+TargetRoomId = "ch3_main_drift"
+
+[sub_resource type="Resource" id="hs_1"]
+script = ExtResource("1_hs")
+Id = "ch3_old_workings_to_rise"
+Label = "The Rise"
+Kind = 0
+Region = Rect2(1560, 390, 290, 410)
+TargetRoomId = "ch3_rise"
+
+[sub_resource type="Resource" id="hs_2"]
+script = ExtResource("1_hs")
+Id = "ch3_old_workings_to_sealed_drift"
+Label = "The Sealed Drift"
+Kind = 0
+Region = Rect2(815, 250, 290, 250)
+TargetRoomId = "ch3_sealed_drift"
+RequiredFlag = "learned.tool_mine_pick"
+
+[sub_resource type="Resource" id="hs_3"]
+script = ExtResource("1_hs")
+Id = "ch3_old_workings_look"
+Label = "The Old Workings"
+Kind = 1
+Region = Rect2(700, 550, 520, 250)
+ExamineText = "[unwritten]"
+
+[sub_resource type="Resource" id="hs_4"]
+script = ExtResource("1_hs")
+Id = "ch3_old_workings_bitterroot"
+Label = "Bitterroot"
+Kind = 3
+Region = Rect2(120, 870, 220, 160)
+ItemId = "herb_bitterroot"
+ItemAmount = 2
+RefillsAtMilestone = true
+
+[sub_resource type="Resource" id="hs_5"]
+script = ExtResource("1_hs")
+Id = "ch3_old_workings_heartwood"
+Label = "Heartwood"
+Kind = 3
+Region = Rect2(370, 870, 220, 160)
+ItemId = "mat_heartwood"
+ItemAmount = 1
+RefillsAtMilestone = true
+
+[resource]
+script = ExtResource("2_room")
+Id = "ch3_old_workings"
+DisplayName = "The Old Workings"
+ChapterId = "ch3"
+PlaceholderStyle = 1
+Hotspots = Array[ExtResource("1_hs")]([SubResource("hs_0"), SubResource("hs_1"), SubResource("hs_2"), SubResource("hs_3"), SubResource("hs_4"), SubResource("hs_5")])

@@ -172,8 +172,23 @@ Guesses, to be tuned in play. These six numbers **are** the material economy.
 | **Graveflower** | 2 | 4 | 6 | **12** | 8 |
 | **Cairnstone** | **1** | **3** | **2** | **6** | 4 |
 
-Gated by **story milestone**, never by a clock or a step counter (§19). Chapters 1 and 2 both refill
-when the chapter 2 boss falls; chapter 3 is terminal.
+Gated by **story milestone**, never by a clock or a step counter (§19). ~~Chapters 1 and 2 both refill
+when the chapter 2 boss falls~~ — **each chapter refills when that chapter's own boss is defeated**
+(Jeremy, 2026-08-02); chapter 3 is terminal, because its boss is the finale and there is nothing left
+to resupply for.
+
+> **The pooling sentence below was reasoning from the wrong mechanism, and the correction costs the
+> arithmetic nothing.** It said ch1 and ch2 "pool, since both refill at the same milestone." They do
+> pool — but not for that reason. **Scarce nodes never re-arm at any milestone**, so the refill timing
+> has never governed Cairnstone at all: the 1 from ch1 and the 3 from ch2 are together in your satchel
+> by the time the three ch2 sinks are reachable simply because you kept them. Four against three still
+> holds, and it held under either trigger.
+>
+> What the per-chapter trigger actually changes is **when common material comes back** — salve stock,
+> trap stock — and moving that to each chapter's own boss makes it a reward at the end of each chapter
+> instead of one lump two thirds of the way in. Built as `RefillMaterialNodes(rooms, "ch1")` at the
+> chapter 1 boss and `(rooms, "ch2")` at the chapter 2 boss; the gates now prove a chapter 1 boss
+> leaves chapter 2's nodes alone, which the pooled call could not check.
 
 > **Cairnstone was cut from 3 / 5 / 8 to 1 / 3 / 2 on 2026-08-01, and the cut is a consequence rather
 > than a balance tweak.** 16 was sized for a **repeating** sink. §3 made traps permanent, so every
@@ -271,7 +286,7 @@ salve slots are two healing items, trap slots are two traps, and nothing arbitra
 
 | Trap | Type | Fires | Inputs | Family |
 |---|---|---|---|---|
-| **Snare** | — (it loses its next turn) | itself | Heartwood + Cured Hide | Mechanical |
+| **Snare** | — (it loses its next turn) | itself | Heartwood + **Pitch** | Mechanical |
 | **Spiked Pit** | Edge | itself | Heartwood + Scrap Iron | Mechanical |
 | **Deadfall** | Blunt, one-shot, large | itself | Heartwood + 1 Cairnstone | Mechanical |
 | **Chime** | — (lures; reveals its condition) | itself | Scrap Iron + Heartwood | Mechanical |
@@ -281,6 +296,26 @@ salve slots are two healing items, trap slots are two traps, and nothing arbitra
 **Two families, not six — so two knowledge pockets.** The Mechanical variants are Waking-world
 refinements gated on holding the base, per §15's family rule, and that is the largest workload saving
 in this document.
+
+> **The Snare cost Cured Hide until 2026-08-02, and that made chapter 1's one trap unbuildable.** Caught
+> laying out the chapter 1 ledger. Three statements in this document were each correct and jointly
+> impossible: §7 lists **Snare** as chapter 1's only trap, this table priced it in **Cured Hide**, and §1
+> and §7 both put **Cured Hide in chapter 2**. So chapter 1 could build *no* trap at all, which deletes
+> half of *"one damage type, one trap"* and — worse — makes the Mechanical pocket a pocket that pays off
+> a chapter late. [[journal-two-knowledge-sides]] names that exact failure: **the pocket must pay off
+> immediately.**
+>
+> **Fixed by repricing rather than by moving a material**, because §1 already assigns Pitch the role the
+> recipe needs — *"binder, and the fuel in fire traps"* — and because moving Cured Hide into the woodland
+> would take a village noun (the tannery's stock) and cost chapter 2 its shape as the arsenal chapter.
+> **Nothing else moves:** Cured Hide still has three armours and the Vitriol Flask, Pitch is a dormant
+> common with slack, and a trap is permanent (`combat.md` §22) so chapter 1's whole non-salve demand is
+> **one Snare, once.**
+>
+> **The reconciliation note below is also slightly off and is left standing**: it says the other three
+> Mechanical traps *"need Scrap Iron"*, but only Spiked Pit and Chime do — **Deadfall needs a Cairnstone**,
+> and `placement.md` §2 independently rules that nothing in chapter 1 spends its one cairn. The
+> conclusion survives on both counts; only the reason given for Deadfall is wrong.
 
 > **How the Mechanical family spans two chapters — settled 2026-08-01.** The pocket that teaches it is in
 > chapter 1, but §7 lists only the Snare as chapter 1 content and the other three as chapter 2. Both
@@ -525,6 +560,46 @@ chapter is where a player should be learning, and the last one is where they sho
 have while the story closes. **Chapter 3's only new capability is the Mine Pick** *(corrected 2026-08-01 —
 the Smock moved to ch2, see §4)*; everything else it offers is material and the engine.
 
+### If supply runs short, these are the levers, cheapest first
+
+**Offered 2026-08-02 by Jeremy, and recorded rather than spent:** *"if we feel like the players need more
+of the items in the level I would be good with NPCs giving a second item after bridge is fixed. And
+whatever items you find on the map or respawned. If we feel like there is enough than it isn't needed but
+I want to put that out there as an option I am good with."*
+
+**Nothing is short yet, and nothing can be proven short until fights have numbers** — this is a play-test
+question, not a design one. What matters now is that the levers exist in a known order, so a shortfall in
+testing is a dial rather than a redesign:
+
+| | Lever | Costs | Changes a rule? |
+|---|---|---|---|
+| **1** | **Raise the node counts in the chapter ledger** | nothing — *"seed thick"* is already the rule and the numbers are placeholders | no |
+| **2** | **Raise the milestone refill** at chapter boundaries | a balance number that already exists and is already the throttle (`combat.md`) | no |
+| **3** | **A freed NPC gives a second item once the bridge is rebuilt** | one authored gift per person, and a flag that already exists | **no** — a person still gives *finitely*, just twice |
+| **4** | **Material nodes regrow in a cleansed chapter** | — | **yes**, and see the warning |
+
+**Reach for 1 and 2 first, and they will almost certainly be enough.** The demand they feed is *salves*,
+and salves are the only repeating cost in the game (§1) — so the shortfall, if it comes, will be
+**Bitterroot and Tallow specifically**, and both are levers-1 materials by design. Chapter 1's entire
+non-salve demand is one Snare.
+
+> **Lever 4 is the one to think twice about, and the reason is not farming.** *"Nothing ever respawns on a
+> cleared screen"* (`combat.md` §21) is load-bearing for something other than economy: it is what makes a
+> screen **a memorised place that stays changed**, which is the same property that lets a body stay where
+> it fell and lets *"the zone cleanses, the sun comes out"* mean anything. A regrowing node is a much
+> smaller exception than a respawning creature — but it is the first crack in *never*, and the rule reads
+> as absolute today in two documents. **If it is taken, scope it explicitly to the two repeating commons
+> and say so in both places**, rather than softening the word.
+>
+> **Lever 3 has no such problem** and is the better second-order fix: a returning player being *thanked
+> again* is a scene, where a regrown bush is a resource. It also quietly repairs what §10's struck
+> paragraph left behind — the cleansed chapter needing a reason to be walked through.
+
+**None of these four levers touches a creature, and that boundary is now `placement.md` rule 16.**
+Jeremy, drawing the line the moment the word *"respawned"* appeared above: *"I only want to fight each
+enemy once (obviously all 3 of each type once) — that was the bigger rule I wanted to state."* **33
+encounters, 33 fights, and a body stays where it fell.** Lever 4, if it is ever taken, is about bushes.
+
 ### Chapter 3 is rising action, not falling — and its supply has to match
 
 **An earlier line here called chapter 3 "the deliberate falling action". That was wrong and is
@@ -606,10 +681,24 @@ the chapter 2 boss, squarely on the path — but the apothecary who teaches Corr
 the path and comes first. The chapter teaches the answer to its own boss. That is the intended shape for
 every chapter, not an exception carved out for one fight.
 
-**And the rule fixes the last loose end in the refill schedule.** Backtracking to chapter 1 for materials
-was a walk through cleared ground with nothing in it; now the creatures you could not kill are still
-standing there and you can. **The restock trip and the come-back-later trip are the same trip**, and
-neither was designed to make the other work.
+~~**And the rule fixes the last loose end in the refill schedule.** Backtracking to chapter 1 for
+materials was a walk through cleared ground with nothing in it; now the creatures you could not kill are
+still standing there and you can. **The restock trip and the come-back-later trip are the same trip**,
+and neither was designed to make the other work.~~
+
+> **Struck 2026-08-02 — this paragraph rested on a misreading, and the misreading was mine, not the
+> rule's.** The three Messengers were never unwinnable in chapter 1; §21 two paragraphs above says a
+> wrong-typed fight is *expensive rather than impossible*, and the clause directly above says the wrong
+> type **halves** damage and never zeroes it. Jeremy, 2026-08-02: *"I would rather give the player a
+> chance to do it all and have the chance to do it again if and when they want to."* **Off the critical
+> path means the player may defer it, not that the game defers it for them.**
+>
+> The placement rule is untouched — a Fire-vulnerable creature still stays off the path, because *may
+> defer* only exists where the fight is skippable. What is lost is the free content this paragraph
+> claimed for the backtrack. **The restock trip now contains what you walked past, not what you could not
+> beat**, and `combat.md` §17's *"author something into a cleansed zone that was not there before"* stops
+> being a nice-to-have and becomes the thing that makes a return trip worth walking. See
+> [`ledger-ch1.md`](ledger-ch1.md) finding 4.
 
 ---
 

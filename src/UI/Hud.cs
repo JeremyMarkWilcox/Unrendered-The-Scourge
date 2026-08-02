@@ -159,7 +159,7 @@ public partial class Hud : CanvasLayer
         bottom.AddChild(_hoverLabel);
 
         // -- Controls reminder --
-        var hint = MakeLabel("[Tab] spectral vision   [F3] debug   [F5] save   [F9] load",
+        var hint = MakeLabel("[I] satchel   [F3] debug   [F5] save   [F9] load",
                              16, new Color(0.62f, 0.62f, 0.66f, 0.65f));
         hint.SetAnchorsPreset(Control.LayoutPreset.BottomLeft);
         hint.Position = new Vector2(40, -44);
@@ -168,8 +168,7 @@ public partial class Hud : CanvasLayer
         _dreadLabel = MakeLabel("", 28, new Color("#8a93a0"));
         _dreadLabel.HorizontalAlignment = HorizontalAlignment.Center;
         _dreadLabel.SetAnchorsPreset(Control.LayoutPreset.CenterTop);
-        // Top centre: clear of the room name on the left, the meter on the right, and the
-        // vanishing point in the middle of every Dream backdrop.
+        // Top centre: clear of the room name on the left and the meter on the right.
         _dreadLabel.Position = new Vector2(-400, 30);
         _dreadLabel.CustomMinimumSize = new Vector2(800, 0);
         root.AddChild(_dreadLabel);
@@ -210,14 +209,13 @@ public partial class Hud : CanvasLayer
     /// <summary>
     /// Puts whichever pool is currently at risk on top, and fades the one that cannot move.
     ///
-    /// **Keyed on a live Dream run, deliberately not on the current realm.** Spectral vision
-    /// flips <c>CurrentRealm</c> to Dream on every <c>Tab</c> press while Resolve does not move
-    /// at all — there is no ambient drain (combat.md §6) — so keying on realm would make both
-    /// bars jump position and change opacity every time the player peeked at the other world.
-    /// Worse, it would be *wrong*: spectral vision is a look, not a place (invariant 4), so you
-    /// are still standing in the Waking world with a body that can still be hurt. Entering a
-    /// heist, by contrast, is a deliberate transition that already changes the room and locks the
-    /// realm, so a reflow there reads as part of that transition.
+    /// **Keyed on a live Dream run, deliberately not on the current realm.** This began as a guard
+    /// against spectral vision, which flipped <c>CurrentRealm</c> on every <c>Tab</c> press while
+    /// Resolve did not move at all — keying on realm would have made both bars jump and dim every
+    /// time the player peeked. That mechanism was deleted on 2026-08-02, and the distinction
+    /// survives it for a better reason: unit 6's pockets come in a **quiet** version with no clock,
+    /// where you are squarely in the Dream and Resolve still is not draining. Realm answers *where
+    /// are you*; the run answers *what can move*, which is the question a bar should be sized by.
     ///
     /// **Resolve is never faded, by decision** — inside a heist it is the clock you are playing
     /// against, and out here it still tells you what you have to cross with. Only the body dims,

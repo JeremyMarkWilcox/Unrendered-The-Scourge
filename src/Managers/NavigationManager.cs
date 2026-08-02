@@ -119,10 +119,10 @@ public partial class NavigationManager : Node
             EntityStateManager.Instance?.Register(placement);
 
         // First footfall in a zone opens the front: respawns stop, drain eases slightly.
-        if (!string.IsNullOrEmpty(room.ZoneId) &&
-            WorldStateManager.Instance?.GetZonePhase(room.ZoneId) == ZonePhase.Corrupted)
+        if (!string.IsNullOrEmpty(room.ChapterId) &&
+            WorldStateManager.Instance?.GetZonePhase(room.ChapterId) == ZonePhase.Corrupted)
         {
-            WorldStateManager.Instance.SetZonePhase(room.ZoneId, ZonePhase.ActiveFront);
+            WorldStateManager.Instance.SetZonePhase(room.ChapterId, ZonePhase.ActiveFront);
         }
 
         EventBus.Instance?.EmitRoomEntered(room.Id);

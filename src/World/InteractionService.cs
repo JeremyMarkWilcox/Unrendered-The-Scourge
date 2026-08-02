@@ -16,11 +16,9 @@ public static class InteractionService
     /// Whether an authored hotspot should exist at all right now. Gating removes a hotspot
     /// rather than disabling it — an invisible ungrabbable herb reads better than a grey one.
     /// </summary>
-    public static bool IsAvailable(HotspotData data, GameRealm realm)
+    public static bool IsAvailable(HotspotData data)
     {
         if (data == null) return false;
-
-        if (!MatchesRealm(data.Visibility, realm)) return false;
 
         var world = WorldStateManager.Instance;
 
@@ -28,18 +26,24 @@ public static class InteractionService
             world?.GetFlag(data.RequiredFlag) != data.RequiredFlagValue)
             return false;
 
+        // Every entry must be true. A blank entry is treated as unmet rather than skipped, so a
+        // half-authored gate stays shut instead of quietly opening the door it was meant to hold.
+        if (data.RequiredFlags != null)
+        {
+            foreach (var flag in data.RequiredFlags)
+                if (string.IsNullOrEmpty(flag) || world?.GetFlag(flag) != true)
+                    return false;
+        }
+
         if (data.Kind == HotspotKind.Harvest && world?.GetFlag(data.ResolvedHarvestedFlag) == true)
             return false;
 
         return true;
     }
 
-    public static bool MatchesRealm(RealmVisibility visibility, GameRealm realm) => visibility switch
-    {
-        RealmVisibility.WakingOnly => realm == GameRealm.Waking,
-        RealmVisibility.DreamOnly => realm == GameRealm.Dream,
-        _ => true,
-    };
+    // `MatchesRealm` and the realm parameter above went on 2026-08-02 with spectral vision. A
+    // hotspot's availability is now a question about the world's flags alone, which is why this
+    // method no longer needs to be told where the player is looking from.
 
     // ---- Hotspots --------------------------------------------------------
 
@@ -58,54 +62,17 @@ public static class InteractionService
             return false;
         }
 
-        // Sampled before the action, because the action itself can move you: a CrossToDream
-        // relic puts you in the Pixel Realm mid-call, and the wound belongs to the Waking-world
-        // choice you just made rather than to where that choice landed you.
-        var realmAtClick = RealmTransitionManager.Instance?.CurrentRealm ?? GameRealm.Waking;
-        var runAtClick = DreamRunManager.Instance?.IsRunning == true;
-
-        var performed = Perform(data);
-
-        // Only a *successful* action wounds you. Otherwise a stripped-bare harvest node or a
-        // refused door would let you grind yourself down on something that did nothing.
-        if (performed) ApplyHazard(data, realmAtClick, runAtClick);
-
-        return performed;
+        // `ApplyHazard` was called here until 2026-08-01 and is deleted with the rest of the hazard
+        // machinery (`combat.md` §22 — the Waking world no longer damages you). It also carried the
+        // only in-code enforcement of invariant 2 on the Vitality side: a cost was refused if you
+        // clicked through spectral vision or inside a live run, sampled *before* the action because
+        // a CrossToDream relic moves you mid-call. **Nothing spends Vitality outside a fight now, so
+        // there is nothing left to refuse** — but if anything ever charges the body from a hotspot
+        // again, that sample-then-act shape is the part to bring back, not the field.
+        return Perform(data);
     }
 
-    /// <summary>
-    /// Takes the Vitality a hotspot costs. Silently does nothing for the overwhelming majority
-    /// of hotspots, which cost nothing.
-    ///
-    /// **Invariant 2 is enforced here, in code, not left to authoring.** Vitality must never
-    /// appear in the Dream — every ending in there is an ejection priced in Resolve, and if the
-    /// body could be hurt inside a heist the two-pool split collapses along with the reason the
-    /// two routes cost different currencies. So a cost is refused if you were looking through
-    /// spectral vision or standing inside a live run when you clicked. Authoring a Dream-side
-    /// hazard is therefore harmless rather than dangerous: it simply will not bite.
-    /// </summary>
-    private static void ApplyHazard(HotspotData data, GameRealm realmAtClick, bool runAtClick)
-    {
-        if (data is not { IsHazard: true }) return;
-        if (realmAtClick != GameRealm.Waking || runAtClick) return;
-
-        var vitality = VitalityManager.Instance;
-        if (vitality == null) return;
-
-        var before = vitality.Current;
-        vitality.Damage(data.VitalityCost);
-
-        // Nothing to say if the bar was already on the floor — VitalityManager announces the
-        // collapse itself, and repeating it every click would read as a new injury each time.
-        if (Mathf.IsEqualApprox(vitality.Current, before)) return;
-
-        EventBus.Instance?.EmitNotify(string.IsNullOrEmpty(data.HazardText)
-            ? "That cost you. You can feel it settling in."
-            : data.HazardText);
-    }
-
-    /// <summary>The action itself, with no hazard accounting. Split out so the caller can tell
-    /// success from refusal before deciding whether to charge for it.</summary>
+    /// <summary>The action itself.</summary>
     private static bool Perform(HotspotData data)
     {
         switch (data.Kind)
@@ -172,25 +139,13 @@ public static class InteractionService
         var entities = EntityStateManager.Instance;
         if (entities == null) return false;
 
-        var realm = RealmTransitionManager.Instance?.CurrentRealm ?? GameRealm.Waking;
         var state = entities.GetState(instanceId);
 
-        // Spectral vision is a *look*, not a place. You can see the anchor from here; you
-        // cannot reach it. Reaching it means finding the relic and crossing over properly.
-        if (realm == GameRealm.Dream)
-        {
-            EventBus.Instance?.EmitNotify(state switch
-            {
-                EntityState.Corrupted =>
-                    $"{placement.Entity.SpiritName} does not look up. Whatever holds it here is "
-                    + "somewhere behind all this, and you are only looking through glass.",
-                EntityState.Severed => "The crown is broken. It has stopped pretending to be calm.",
-                _ => "Only warmth, where a crown used to be.",
-            });
-            return false;
-        }
+        // A Dream branch stood here until 2026-08-02: three lines of refusal for clicking a body
+        // while peering at it through spectral vision. The refusal it enforced — you cannot sever
+        // from out here — is not lost, because the Waking `Corrupted` cell already says so and
+        // returns false at the bottom of this method. What went was the second way of saying it.
 
-        // Waking world.
         if (state == EntityState.Purified && !string.IsNullOrEmpty(placement.Entity.HarvestItemId))
             return Harvest(placement.Entity.HarvestItemId, 1, $"harvested.{instanceId}");
 
@@ -206,7 +161,7 @@ public static class InteractionService
             return true;
         }
 
-        var presentation = entities.Resolve(placement.Entity, instanceId, realm);
+        var presentation = entities.Resolve(placement.Entity, instanceId);
         EventBus.Instance?.EmitNotify(string.IsNullOrEmpty(presentation.InteractText)
             ? "Nothing happens."
             : presentation.InteractText);
@@ -222,15 +177,15 @@ public static class InteractionService
         if (!placement.IsZoneLieutenant) return;
 
         var room = NavigationManager.Instance?.CurrentRoom;
-        if (room == null || string.IsNullOrEmpty(room.ZoneId)) return;
+        if (room == null || string.IsNullOrEmpty(room.ChapterId)) return;
 
         var world = WorldStateManager.Instance;
-        if (world == null || world.IsZoneCleansed(room.ZoneId)) return;
+        if (world == null || world.IsZoneCleansed(room.ChapterId)) return;
 
-        world.SetZonePhase(room.ZoneId, ZonePhase.Purified);
+        world.SetZonePhase(room.ChapterId, ZonePhase.Purified);
 
         // Content gates on a plain flag rather than having to query zone phase.
-        world.SetFlag($"zone.{room.ZoneId}.purified");
+        world.SetFlag($"zone.{room.ChapterId}.purified");
 
         var entities = EntityStateManager.Instance;
         if (entities != null)

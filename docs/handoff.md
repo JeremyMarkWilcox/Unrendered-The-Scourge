@@ -1,6 +1,6 @@
 # Handoff — where we left off
 
-Last updated: **2026-08-01.** Read this first, then `docs/combat.md` — which is the source of
+Last updated: **2026-08-02.** Read this first, then `docs/combat.md` — which is the source of
 truth for combat, Resolve, the Dream and camps, and whose §19–22 are the newest material. **§18 is
 the ratified fight design and the authority on how combat works** — it closes the item, trap and
 equipment vocabulary that the rest of that document defers, and it deletes Defence as a number.
@@ -10,6 +10,186 @@ equipment vocabulary that the rest of that document defers, and it deletes Defen
 pocket, blight, camp, NPC, node, tool and set piece counted per chapter, with the constraint on each,
 so the mock-up map can be drawn. It is a rearrangement of `combat.md` §17–23 and `items.md`, not a new
 authority: **where it disagrees with them, they win.**
+
+**Spectral vision is deleted — done 2026-08-02.** `Tab` and its input action, `RealmVisibility` and
+`HotspotData.Visibility`, `BackdropStyle.Dream`, `EntityPlacement.DreamPosition` / `DreamScale`,
+`EntityData.SpiritTexture` / `ShatteredTexture` / `EchoTexture`, `RoomData.DreamBackground`, the
+Dream column of the state×realm table (`ResolveDream`), `EntityPresentation.PlaceholderCrowned`, the
+Dream `SubViewport` subtree in `RoomView.tscn`, `GameConfig`'s Dream palette and crossfade, and every
+gate that asserted realm-filtered behaviour. **347 → 338 checks, exit 0.** Jeremy on `Tab`:
+*"I think it was just to test tbh."* It was. Anything below this line that describes the dual-realm
+overlay, a Dream-only hotspot, or seeing Form 2 from a Waking screen is history.
+
+**`GameRealm` and `RealmTransitionManager` survive** and change meaning: not *which way you are
+looking* but *where you are*, which is what the 3D pockets need. `EntityData.SpiritName` survives
+too, and is deliberately unread — it is authored prose, not an empty shape, and unit 6 will want it.
+
+**The rest of the swap is deferred, on purpose.** The waystation, the six 2D `dream_way_*` rooms, the
+rat and the heist **stay until their gates are re-anchored**, because 154 checks stand on them and
+would otherwise be deleted rather than moved. (`StartingRoomId` was on that list until later the same
+day — it moved to `ch1_cottage` ahead of the rest, and the paragraph further down on what that cost
+is the most useful thing in this section.) Spectral vision had to
+go first regardless: unit 1.5 touches `BackdropStyle.Dream` and the realm filter, and the prototype
+rooms do not. The six `dream_way_*` rooms were remapped from `PlaceholderStyle = 2` to `1` to stay
+loadable in the meantime. `DreamHeistData` / `DreamRunManager` retire in **unit 6**, with the seam —
+not before, because they are what makes the slice play end to end today.
+
+**Unit 1.5, the placeholder readability layer, is built — 2026-08-02, 338 → 359 checks.** Every screen
+with no `WakingBackground` now names itself in a corner card (id, display name, chapter, exit list) and
+draws each hotspot's `Label` in place, filled and outlined in a colour per `HotspotKind`, with the
+destination room id on a door. **The condition is the art, not a flag** — paint a screen and its cues
+vanish for it, so there is nothing to remember and no way to ship them by accident;
+`ShowHotspotOutlines` remains the manual override for painted screens. New files `PlaceholderCues.cs`
+and `RoomCard.cs`; `Hotspot._Draw` is now three named states, of which only **hover** outlives the
+placeholder.
+
+Two things worth knowing before you touch it. **A flag-shut hotspot is drawn dimmed with `⊘ {flag}`
+under its label; a spent harvest node is not drawn at all** — the first is waiting to open and is how a
+gate gets tested by walking into the room, the second is finished, and drawing it would fill every
+cleansed screen with ghosts. And **`RoomView` now instantiates hotspots that `IsAvailable` refuses**, so
+*drawn* and *inert* are gated separately with availability re-asserted underneath: if a locked hotspot
+ever went live, every flag gate in the game would be bypassable. That is the one thing in this unit that
+can fail dangerously, and it is the one thing break-tested twice.
+
+**The map exists. Pass 1 landed the same day — all 59 skeleton rooms, all three chapters, 359 → 367
+checks.** Generated from the three ledgers by a one-shot script kept in `/tmp` rather than the repo, and
+it wrote only files that did not exist. Each room carries its identity, one `Navigate` per ledger exit
+labelled with the destination's name, an `Examine` stub reading `[unwritten]`, and a `Harvest` node per
+material. Regions follow a fixed template, so with unit 1.5 on top you can walk the entire game from the
+cottage to the Wound right now and read every screen. What is *not* there is everything pass 2 owns —
+~~no fights, no blights, no pocket doors, no NPCs, **and no bench**: `Workbench` is a station, so ch1's
+cottage camp is pass-2 work that nonetheless has to land **with or before the retirement**, because
+`waystation_shed` is currently the only camp `GateAuthoredContent` can find.~~ **Pass 2 landed later the
+same day and took five of those nine — see below.** The bench worry is closed twice over: `ch1_cottage`
+got one with the boot move and `ch2_first_house` and `ch3_dry_store` got theirs in pass 2, so there are
+**three real camps** and `waystation_shed` is no longer load-bearing for anything. Blights, pocket doors,
+major repairs and field stations are still outstanding, each behind a unit rather than a decision.
+
+**Later the same day the boot moved, and the map became reachable in play — 367 → 369.** Three edits:
+`ch1_cottage.tres` gained a `Workbench` (`ch1_cottage_bench`), `GameConfig.StartingRoomId` moved from
+`waystation_yard` to `ch1_cottage`, and the fourth navigation slot moved from the bottom-right corner
+to **centre-down**, so exits now read spatially — left, right, centre-up is away from you, centre-down
+is back toward you. All 59 rooms were regenerated for that last one. The prototype is *unreferenced*
+now, not gone: the waystation, the shed, the six `dream_way_*` rooms and the rat all still load, and
+nothing in the game walks to them.
+
+**One claim made while planning that turned out to be false, because it is the useful part:** *"every
+gate that navigates to waystation_yard keeps working, because the room still exists."* They do not
+navigate. M1, M2 and M3 all acted on wherever the boot had put them and silently meant the yard, so
+moving `StartingRoomId` turned 32 checks red at once and then hung on a null. The whole fix is **one
+line** — `GoToRoom("waystation_yard")` at the head of M1 — and it is the first half of the
+re-anchoring the retirement needs anyway: a gate that *names* its fixture can have the fixture swapped
+under it, and a gate that inherits it cannot. Worth generalising past this instance: **a fixture that
+arrives by default is a dependency nobody wrote down**, and it will read as unrelated breakage the day
+the default changes. When re-anchoring the rest onto `verify_` rooms, the test for whether a gate has
+been re-anchored is whether it says out loud where it stands.
+
+Three checks came out of it. Two in the harness section, which is the last moment before a gate
+moves anyone: **the game begins in the room `GameConfig` names**, and **that room is a camp** — the
+second is required rather than tidy, since `CampManager` falls back to the starting room when you
+collapse before finding a bench, so a boot room without one strands an early death somewhere they
+cannot craft or bind a return point. The third replaces M1's `"starts in the Waystation yard"`, which
+asserted a fact about `GameConfig` that had changed, with **`"the prototype yard is still walkable"`**
+— a gate that will go red on the day the retirement lands, which is exactly when someone should be
+looking at M1.
+
+Three things in those files were derived, not read from the ledger, and each is one field to overrule:
+`PlaceholderStyle` per room (judged from the name), ch2's cellar cache given counts the ledger left
+blank (Cured Hide ×3 + Scrap Iron ×3 — node counts are supply lever 1 and provisional anyway), and five
+materials referenced by string id with **no `ItemData` file yet** (`mat_heartwood`, `mat_pitch`,
+`mat_scrap_iron`, `mat_cured_hide`, `mat_cairnstone`). `items.md` §1 defers those files deliberately;
+`AddItem` takes an uncatalogued id without complaint, so the nodes work and get names later.
+
+**And it produced a genuinely new blind spot, which §3 now carries.** The first generated batch had one
+malformed line and *all 59 files failed to parse* — and the suite went green anyway, at the same 359 it
+had before, because `GD.Load` returns null, `LoadRoomRegistry` warns into a headless console nobody
+reads, and **every sweep in the verifier iterates the registry**. A room that never reached the registry
+is invisible to every gate that reads it. The first check in the new `graph` section is the answer: count
+the `.tres` files on disk and compare to the rooms registered.
+
+**Pass 2 landed the bodies — 2026-08-02, 369 → 385 checks.** All **30 regular fights** are placed, each
+with what it leaves behind: **24 freed people** and **6 Beast carcasses**. With them went the three
+tool-gated doors, the Snarl's three-flag gate, the three Warden doors, the two missing camps and her four
+notes. New: eleven `EntityData` files in `data/entities/` (8 human creatures + the Beast's 3 variants,
+from `items.md` §10), `Flags.Defeated`, and a `fights` section in the verifier. **Generated by a one-shot
+script kept outside the repo, appending to the pass-1 files rather than regenerating them** — the pass-1
+generator was never kept, so reproducing all 59 would have meant re-deriving its region template and its
+per-room `PlaceholderStyle` judgements by hand, silently rewriting 59 files to add content to 36.
+
+**What pass 2 deliberately did not do, and it is a bigger share than it looks.** Pass 2 has nine content
+types and **only five of them need no new code.** The other four are blocked on a missing `HotspotKind`,
+not on a missing decision: **12 blights** and **3 major repairs** want `Blight` and the jigsaw (unit 2),
+**14 pocket doors** and the **3 boss placements** want the pocket format (unit 6), and the **field
+stations** want `Station` (unit 4). Authoring any of them now would mean adding a hotspot kind ahead of
+the verb that gives it meaning, which is what `ZoneData` was deleted for. So every ledger cell this pass
+filled is one no later unit can invalidate — and the four it left are each one line in a table with the
+unit that unblocks it written next to it.
+
+**`Flags.Freed` said "all 30 regular fights" and that was `placement.md` §6 correction 1 in miniature.**
+The Beast is seen six times and frees nobody, so `freed.*` is **24**, and the six that free nobody now set
+**`Flags.Defeated`** instead. A separate domain rather than a reused one, because the class comment
+promises that a bill checker can count a class of thing by prefix — and sharing the name would have been
+cheaper by a line and made both counts unreadable.
+
+Three things worth knowing before touching it:
+
+- **`EntityData.BlocksPath` defaults to `true`**, so ten of the eleven creatures had to set it `false`
+  explicitly, and forgetting it turns every screen a creature stands on into a dead end. It is gated as a
+  **relationship in both directions** — a creature that bars the path must bar a door, and a barred door
+  must name a creature that bars it — rather than as *"only the Stable Master blocks"*, which would write
+  one chapter's content into the suite. Break-tested: one missed `false` reports all three of that
+  creature's sightings by name.
+- **`placement.md` rule 2 is gateable at last.** *"Never the same creature on two adjacent screens"* is a
+  property of the **map**, not of a file, so it could not be checked before placements and the door graph
+  both existed — it had to be held in someone's head. It holds on every edge in all three ledgers, so it
+  landed green, and break-testing it took moving one Hunter.
+- **Whether a fight leaves a person is read off the data, not a list of names.** A non-blank
+  `PurifiedName` means there is someone in there to recover, so that placement owes a freed hotspot; a
+  blank one means there is not — the Beast, and the bosses, which are destroyed and never purified. That
+  is why the check stays quiet when unit 6 places a boss with no aftermath at all, instead of going red
+  and teaching that red means *not yet*.
+
+**The one failure this pass produced was correct, and it was pointing at the prototype.**
+`waystation.rat_01` has a `PurifiedName` and owes nobody, because the waystation was authored to the
+**old** model, where a purified creature was farmable wildlife reached through `EntityState` rather than a
+person reached through a hotspot. It is the single placement in the game that legitimately fails the
+coverage check, so that check is scoped to `ch*` for exactly the reason the `graph` section already scopes
+its spine sweeps. It goes away with the retirement, not before.
+
+**And pass 2 closed a live instance of §3's worst blind spot rather than only guarding against it.** Every
+structural check in the new section reads `.tres` files, and **none of them can see whether a creature
+actually appears** — the Approach hotspot is generated from the overlay's bounds rather than authored, so
+thirty perfectly-parsing placements could put nothing on screen and every sweep would stay green. So the
+section ends by **driving `ch1_low_track` for real**: the Logger is on screen under its authored name, and
+the woodcutter is drawn-but-shut naming `freed.ch1.logger_01` until the flag is set. Break-tested three
+ways, and the one worth keeping is **BT7 — deleting the freed hotspot's gate**, which ships a freed NPC
+*open*: a spoiler and a bypassed flag gate at once, and it is caught four times over.
+
+> **A smaller lesson, paid for twice in one session.** A build error meant the verify run that followed
+> reported **385 green off the stale assembly**. §5 already records *"restoring a file without touching
+> its timestamp gives you a stale assembly"*; the sharper form is that **the exit code of a suite says
+> nothing about which code it ran**, so a build must be *read* rather than chained blindly into the run
+> after it. `.tres` edits are exempt — data is loaded at runtime — which is why the seven content
+> break-tests needed no rebuild and the two code ones did.
+
+**If what you need is "in what order does the remaining work happen," read
+[`build-plan.md`](build-plan.md)** — written 2026-08-01 off the back of the placement bill. Two parallel
+streams (Claude closing six systems, Jeremy drawing the map and laying out screen skeletons), the content
+counted as files, a proposed `--verify-content` that turns the bill's seventeen rules into a report, and
+**six open decisions** — the first two of which change the shape of everything after them. Its one
+finding worth reading even if you skip the schedule: **three of the six remaining systems are not on the
+"systems still unbuilt" list in §1**, because the decisions that created them were taken after it was
+written — the **blight/mend layer** (§22), the **camp menu rework** (§17 amended), and the **chapter
+spine** (§23 plus the material milestones).
+
+**The suite is 385, exit 0** as of 2026-08-02. It has moved twice by deletion and five times by
+building: 328 → 315 on 2026-08-01 when `ContentSeeder` / `--seed-content` and the Waking-world hazard
+(`VitalityCost` and everything that read it) were cut; 315 → 347 when unit 1 landed; 347 → 338 with
+spectral vision; 338 → 359 with unit 1.5; 359 → 367 with the pass-1 rooms and the `graph` section that
+guards them; 367 → 369 with the boot move; 369 → 385 with the pass-2 bodies and the `fights` section that
+guards them. Every deletion is recorded where the feature used to be documented. **A falling gate
+count is the expected shape of the content pass** — the prototype scaffolding comes out as the real
+thing goes in.
 
 **Nothing is currently known to be broken.** The whole slice plays end to end. Commands live in
 `README.md`; Claude runs `--verify-slice` before and after code changes, so there is no start-of-
@@ -258,8 +438,8 @@ exception at six: **3 path + 3 optional**, three visual variants, one damage pai
 **What this changes for code, when the code pass happens** (none of it urgent, all of it cheaper before
 content exists):
 
-- `EntityData.SpiritTexture` / `ShatteredTexture` / `EchoTexture` are **dead** — written when both realms
-  were 2D. Delete them and fix the class comment that still says "six in total".
+- ~~`EntityData.SpiritTexture` / `ShatteredTexture` / `EchoTexture` are **dead**~~ — **done 2026-08-02**
+  with the great swap; the class comment went with them.
 - `EntityData.HarvestItemId` is **unused, and stays unused even though Beasts drop materials.** The drop
   is a **harvest hotspot the room places, gated on the fight's flag** — exactly mirroring the NPC hotspot
   a freed person spawns as. Same machinery, no new fields, and two Beasts can drop different things
@@ -343,9 +523,11 @@ What arriving does, and what it deliberately does not:
 - **It only speaks when something changed.** Walking in and out while topped up narrates nothing —
   the same restraint `VitalityManager.SetTo` applies to a wound that cannot lower the bar.
 - **Invariant 2 is enforced here, not merely respected.** A camp refills Vitality, so a camp is only
-  recognised in the Waking realm with no run live. Peeking with `Tab` keeps the bench open (peeking is
-  a look, not a place); *being* in the Dream closes it. A workbench authored into a Dream room is
-  therefore a harmless authoring mistake rather than a broken invariant.
+  recognised with **no run live** — keyed on the run, never on the realm. A workbench authored into a
+  Dream room is therefore a harmless authoring mistake rather than a broken invariant. The run-keying
+  was written against spectral vision (peeking flipped the realm and had to keep the bench open) and
+  outlives it, because a **quiet** pocket is the same shape: in the Dream, nothing hunting you, so a
+  bench found there should still be a bench.
 
 **The cache is one shared box, readable from any bench** — per-camp storage was considered and
 rejected. `Deposit`/`Withdraw` sit behind `InspectDeposit`/`InspectWithdraw` returning a `StashBlock`,
@@ -547,7 +729,7 @@ editor pass. `waystation_shed` holds the first `Workbench`, so a craft there is 
 want of a venue whenever that panel does get built.
 
 **What Jeremy can author in parallel, as of 2026-07-30:** all Waking-world rooms — layout, Navigate
-hotspots, Examine text, hazards, harvest nodes, and more benches. Combat adds nothing to `RoomData`
+hotspots, Examine text, ~~hazards~~ *(deleted 2026-08-01)*, harvest nodes, and more benches. Combat adds nothing to `RoomData`
 or `HotspotData`, so none of that can be invalidated by items 2–3. **Items and creatures are now
 open too** — the shapes landed, so a `.tres` written today will not need reopening; fill in
 `VulnerableTo`, `ResistantTo`, `Deals` and `Durability` on a creature and `Deals`/`Slot`/
@@ -587,6 +769,9 @@ Two things still to hold off on, and the reasons are now different from each oth
   first-person 3D pocket has no use for `RoomData.DreamBackground`, so the 2D Dream authoring model
   is going regardless of how the creature question lands. The hold now has a definite end — when
   step 4 of "The Dream in 3D" produces a pocket format — rather than a decision-shaped one.
+  **2026-08-02: `DreamBackground` is deleted**, which makes this a hold with nothing left to hold —
+  there is now no way to author a 2D Dream room even if someone wanted to. The pocket format is
+  unit 6's.
 - **Creature art**, though not creature *data*. `EntityData`'s combat fields are safe to fill in
   today — and as of 2026-07-31 there is a roster to fill them *from*, in [`items.md`](items.md) §10:
   twelve entities with their vulnerable/resistant/deals triples and chapter placement already settled.
@@ -1196,8 +1381,8 @@ last thing that could still invalidate the direction.
 
 | | |
 |---|---|
-| `RoomData.DreamBackground` | **Dies.** A 2D texture per room means nothing in a 3D pocket. |
-| `EntityPlacement.DreamPosition` / `DreamScale` | Position becomes a `Vector3` under **either** enemy answer. `DreamScale` survives for billboards and stops meaning much for models — the one field the open question actually touches. |
+| `RoomData.DreamBackground` | **Dies.** A 2D texture per room means nothing in a 3D pocket. *(Done 2026-08-02.)* |
+| `EntityPlacement.DreamPosition` / `DreamScale` | Position becomes a `Vector3` under **either** enemy answer. `DreamScale` survives for billboards and stops meaning much for models — the one field the open question actually touches. *(Both **deleted** 2026-08-02 rather than converted: a `Vector3` with nothing reading it is an empty shape, and unit 6 will add whatever it actually needs.)* |
 | the six `dream_way_*` rooms | Throwaway, and already recorded as such. They were prototype content and they did their job. |
 | the node-stealth heist | **Survives, and is not to be deleted until the 3D pocket beats it.** It answered "is being hunted frightening?" at low fidelity and the answer was yes, which is the evidence this whole section rests on. It is also the fallback if the 3D pocket does not read. |
 | `RealmTransitionManager`, `EntityStateManager`, `SaveService` | Untouched. None of them cares what the Dream looks like. |
@@ -1259,12 +1444,22 @@ deals, alternating turns, the turn-cost rule, traps firing per `TriggersItself`,
 a parting strike, the weak baseline attack that replaces `InteractionService`'s one-click Severed
 finish, and the boss aura draining Resolve while `Corrupted` only.
 
-### Authoring a hazard into a room — done, and what it taught
+### Authoring a hazard into a room — done, then deleted, and what it taught
 
-**`yard_cairn` is a hazard** (`VitalityCost = 10`), authored 2026-07-29 and confirmed in play.
-`HotspotData` carries `VitalityCost` and `HazardText`; `InteractionService` charges it on any
-successful activation. `F2` still takes a debug wound, which is the quickest way to exercise the
-collapse path without hunting for a hazard.
+> **⚠ The whole mechanic below is gone as of 2026-08-01** — `VitalityCost`, `HazardText`, `IsHazard`,
+> `ApplyHazard`, the debug panel's hazard list and `GateHazards`, thirteen checks (**328 → 315, exit
+> 0**). `combat.md` §22 removed Waking-world damage from the design and Jeremy closed the field's fate:
+> *"vit cost was when the environment damaged you and since nothing does now we don't really need it."*
+> **`yard_cairn` survives with the cost stripped off it**, because its actual job was always the
+> prototype's entry puzzle — it sets `waystation.relic_found`, which is step one of the M3 loop.
+>
+> **The section is kept for the two authoring lessons under it, which outlived the mechanic** — they
+> are about the inspector, not about hazards, and both still have gates. `F2` still takes a debug
+> wound and is now the *only* way to exercise the collapse path outside a fight.
+
+**`yard_cairn` was a hazard** (`VitalityCost = 10`), authored 2026-07-29 and confirmed in play.
+`HotspotData` carried `VitalityCost` and `HazardText`; `InteractionService` charged it on any
+successful activation.
 
 **Two authoring mistakes came out of that first pass, and both now have gates** (see "content" in
 `--verify-slice`), because both were invisible in the inspector and nearly invisible in play:
@@ -1278,49 +1473,39 @@ collapse path without hunting for a hazard.
   appeared at the default region in the middle of the yard. Restored from the seeder's values. If
   you mean to add a hotspot, grow the array — never re-type an existing slot.
 
-The content sweep is deliberately **value-agnostic**: it asserts a hazard exists somewhere and that
-no hotspot is quietly inert, and never pins a cost, label or room, because those are Jeremy's to
-retune and a gate that argues with the author is a gate that gets deleted.
+The content sweep is deliberately **value-agnostic**: it asserts shapes and relationships, never a
+cost, label or room, because those are Jeremy's to retune and a gate that argues with the author is a
+gate that gets deleted. *(It used to assert "a hazard exists somewhere"; that pair of checks went with
+the field, and `build-plan.md` §6 keeps them as the model for the blight sweep — one check that the
+content type exists at all, one that it is not authored where the engine will silently refuse it.)*
 
-**`F3` is the authoring aid.** The debug panel's top block now carries `vitality` beside `resolve`
-(with no rate, because the body has no clock) and a `hazards` line listing every hazard in the
-current room with its cost and kind. So a `VitalityCost` you typed in the inspector can be
-confirmed without clicking into it: if the line still says "(none in this room)", the edit did not
-land. Both live in the top block on purpose — the flag list underneath can grow past the bottom of
-the screen, and an authoring aid you cannot see is no aid.
+**`F3` is the authoring aid.** The debug panel's top block carries `vitality` beside `resolve`, with no
+rate, because the body has no clock. It also carried a `hazards` line — every hazard in the current room
+with its cost and kind — so an inspector edit could be confirmed without clicking into it. **That line
+went with the field, and the idea should come back for blights**, in the same block: the flag list
+underneath can grow past the bottom of the screen, and an authoring aid you cannot see is no aid.
 
-**A hazard is not a trap.** Traps are the player's own crafted tools (`combat.md` §4) and are
-blocked on M4. A hazard is the world costing you the body, and is blocked on nothing.
+**What the deleted mechanic is worth remembering for.** Four things in it were right, and three of them
+outlive it:
 
-Recipe, in the inspector, on any existing hotspot:
+- **A cost only fires when the player chooses to click.** `combat.md:231` records that Resolve was
+  deliberately given **no ambient drain**, because a drain you cannot act on teaches nothing. That is
+  why the cost lived on a hotspot rather than on a room or a step. **If anything ever reaches for
+  "walking through this region hurts", that is the rejected pattern coming back in through a side
+  door** — the rule outlived the field.
+- **The label has to warn you** — "Cross the Broken Floor", not "Floor". Authoring is what made a cost
+  fair, and the same is true of anything that asks the player to commit.
+- **Invariant 2 was enforced in code, not authoring.** `ApplyHazard` sampled the realm *before* the
+  action and refused to charge if you were in the Dream or inside a live run, because a `CrossToDream`
+  relic moves you mid-call. **That sample-then-act shape is the part to restore** if the body is ever
+  charged from a hotspot again.
+- ~~**A hazard is not a trap.**~~ Still true and no longer needs saying: traps are the player's own
+  crafted tools (`combat.md` §4) and there is nothing left for them to be confused with.
 
-| Field | Value |
-|---|---|
-| `VitalityCost` | how much body it takes; keep it modest (see the zero-Vitality note below) |
-| `HazardText` | what it feels like when it lands |
-| `Label` | **has to warn you** — "Cross the Broken Floor", not "Floor" |
-
-It composes with the kinds that already exist, which is why there is no `HotspotKind.Hazard`: a
-cost on `Navigate` is a route you may take but will pay for, on `Harvest` it is thorns, on
-`Interact` it is reaching into something you should not have. Hazards repeat by default; use
-`RequiredFlag` / `SetsFlag` to make any single one a one-time event.
-
-**The design constraint, which is not optional.** `combat.md:231` records that Resolve was
-deliberately given **no ambient drain**, on the grounds that a drain the player cannot act on
-teaches nothing. A per-click cost is discrete and avoidable *by construction*, which is exactly
-why it was built as a cost on hotspots rather than as a per-room or per-step tax. If you later
-reach for "walking through this region hurts", that is the rejected pattern coming back in through
-a side door.
-
-Invariant 2 is enforced in **code**, not authoring: `ApplyHazard` refuses to charge if you were in
-the Dream or inside a live run when you clicked, so authoring a Dream-side hazard is harmless
-rather than dangerous — it simply will not bite. Gated both ways.
-
-**Closed 2026-07-30.** Authoring a hazard made 0 Vitality reachable in play for the first time, and
-for a day it had no consequence — the documented placeholder, chosen over inventing a stopgap
-respawn, because "you wake at a camp" had nowhere to point until camps existed. Camps now exist, so
-emptying the bar costs you your reagents and sends you back. Keep hazard costs modest anyway: the
-collapse is now a real punishment rather than a dead end.
+**Closed 2026-07-30, and then made moot 2026-08-01.** Authoring a hazard made 0 Vitality reachable in
+play for the first time, and camps gave the collapse a consequence — you lose what you can remake and
+wake at a camp. **All of that machinery stays**; what is gone is the only *out-of-combat* way to reach
+it, so from here the collapse belongs to fights, and `F2` is how you exercise it until unit 3 lands.
 
 ### Where the project stands
 
@@ -1335,12 +1520,14 @@ with no art:
           →  finish it  →  zone cleanses, sun comes out, bitterroot appears to harvest
 ```
 
-Plus spectral vision, navigation, flag-gated hotspots, harvest-once nodes, zero-respawn
-persistence, JSON save/load, a debug panel (`F3`) and procedural placeholder art for everything.
+Plus navigation, flag-gated hotspots, harvest-once nodes, zero-respawn persistence, JSON save/load,
+a debug panel (`F3`) and procedural placeholder art for everything. (Spectral vision was on this list
+until 2026-08-02.)
 
 **Content is 2 Waking rooms, 6 Dream rooms, 1 entity, 1 heist, 5 items, 1 recipe, 1 zone, and no
 camp** — all `.tres` under `data/`, all editable in the Godot inspector. New rooms are authored there
-from now on; do not run `--seed-content`, which overwrites.
+from now on. *(The warning that used to end this line — do not run `--seed-content` — is obsolete: the
+flag and `ContentSeeder` were deleted 2026-08-01.)*
 
 The missing camp is the one gap between "gated" and "playable": add a hotspot with
 `Kind = HotspotKind.Workbench` to whichever room should be the first camp, and crafting, the cache and
@@ -1449,11 +1636,13 @@ full-strength; inside a heist Resolve takes the top slot and the body dims.
 
 Three decisions baked into that, each with a gate:
 
-- **Keyed on `DreamRunManager.IsRunning`, never on the current realm.** Spectral vision flips the
-  realm on every `Tab` press while Resolve does not move at all, so realm-keying would make both
-  bars hop and dim every time the player peeked — and it would be *wrong*, because peeking is a
-  look, not a place (invariant 4): you are still standing in the Waking world with a body that can
-  be hurt. Entering a heist already changes the room and locks the realm, so a reflow there reads
+- **Keyed on `DreamRunManager.IsRunning`, never on the current realm.** Written against spectral
+  vision — `Tab` flipped the realm without Resolve moving at all, so realm-keying would have made
+  both bars hop and dim every time the player peeked. The peek is gone and the decision is unchanged,
+  because unit 6's **quiet** pockets are the same shape: squarely in the Dream, no clock, Resolve not
+  moving, and the body still the pool that can be spent when you come back out. Reordering the bars
+  there would promise a threat that is not in the room. Entering a heist already changes the room and
+  locks the realm, so a reflow *there* reads
   as part of that transition. When Waking boss fights land, this widens to include a fight against
   a still-`Corrupted` boss — the question it asks, "which pool can move right now?", survives.
 - **Resolve is never faded** (decided 2026-07-29). In a heist it is the clock you are playing
@@ -1509,8 +1698,10 @@ job instead of a renegotiation. See "The panel node contract" below.
 
 Three standing rules that make this work, all learned the hard way:
 
-- **Claude never runs `--seed-content`** — it overwrites everything under `data/`, which is
-  Jeremy's work.
+- ~~**Claude never runs `--seed-content`**~~ — **deleted 2026-08-01, rule and tool together.** The
+  rule was right and it was the weaker of the two available fixes: a discipline where a deletion
+  would do. The thing it protected — *`data/` is Jeremy's work* — is unchanged and now holds against
+  a mistake as well as against a habit.
 - **Claude never hand-edits a `.tres` typed array** without a gate that asserts the contents
   loaded. A malformed `Array[...]` line yields an empty collection and no error. The recipe added
   in Phase 1 is gated exactly this way.
@@ -1622,7 +1813,7 @@ Things that *work* but are not the real implementation, or that will mislead you
 | `GateHeistMechanics` | Calls `run.ForceClear()` before `GatePersistence`, so save/load is only tested from a Waking room with no run. This is exactly where the save/load soft lock hid. |
 | headless runs | `_Process` never ticks meaningfully, so the pursuer only moves when a test calls `DebugSetPursuerRoom`. **Pursuit timing is untested.** |
 | the view, in gates | `RoomView` and `Hud` *are* live in a headless run and now have gates asserting the room they display — but only the room. Backdrops, overlays, tweens and hotspot rects are still unasserted, and `--shots` is the only thing that looks at a pixel. |
-| `ContentSeeder.cs:219` | The entry puzzle is a plain `Interact` hotspot ("search the cairn"). The minigame does not exist. |
+| `yard_cairn`, in `data/rooms/waystation_yard.tres` | The entry puzzle is a plain `Interact` hotspot ("search the cairn"). The minigame does not exist. *(Cited `ContentSeeder.cs:219` until that file was deleted 2026-08-01; the authored `.tres` is the only copy now.)* |
 | `InteractionService.cs:136` | Finishing a `Severed` body is **one click**. This is where the turn-based item fight goes. |
 | ~~**No camp is authored**~~ | **Closed 2026-07-30.** `shed_bench` in `waystation_shed.tres` went from `Kind = 4` (Interact) to `Kind = 7` (Workbench) — a one-value edit to a hotspot that was already authored, labelled and positioned. Crafting, the cache and the respawn destination are live. Two gates now hold it: a camp exists, and it is walkable to from `StartingRoomId`. |
 | `ItemData.VitalityRestore` | Read at last, by `UseItem`. Only salves use it. |
@@ -1690,6 +1881,48 @@ obvious one and the weaker one; "and you can walk to one from where the game sta
 earns its place, because a bench in a room with no door into it would remove crafting from the entire
 game while every other camp gate stayed green on its synthetic `verify_` rooms. Break-tested both
 ways: severing the bench reddens both, severing only the yard→shed door reddens the second alone.
+
+**A fifth, and the nastiest so far, found generating the 59 skeleton rooms on 2026-08-02: content that
+never reached the registry is invisible to every gate that reads the registry.** The first generated
+batch had one malformed line in its typed-array declaration, and all 59 files failed to parse. Nothing
+turned red. The suite printed the same 359 it had printed before the files existed, because `GD.Load`
+returns null, `LoadRoomRegistry` pushes a warning into a headless console with three thousand lines of
+Godot output in it, and **every content sweep in `SliceVerifier` begins by enumerating
+`NavigationManager.Rooms`**. Fifty-nine rooms of nothing is indistinguishable from fifty-nine rooms of
+perfect content when your first act is to ask the registry what it holds.
+
+The general shape is worth naming, because it is not specific to rooms: **a gate that enumerates a
+collection can only ever check the members that got in.** Every "for each X, assert P(X)" is silently
+conditional on X being loaded, and the louder and more numerous those checks are, the more convincing
+the false green. The answer is one check per collection that does *not* consult the collection — here,
+counting `.tres` files on disk with `DirAccess` and comparing to `rooms.Count`, which is the first line
+of the `graph` section and the only thing in it that distrusts its own input. Anywhere else the project
+loads a directory into a registry (items, recipes, entities, zones, heists) has the same hole and does
+not yet have the same check.
+
+There is a second, smaller lesson in the same failure. The batch was **generated**, so the defect was
+uniform: all 59 or none. A hand-authored mistake would have hit one file and been caught by eye the next
+time that room was opened. Generation converts small random errors into large systematic ones, which is
+an argument for gating generated content *in the same sitting that generates it* — the `graph` section
+went in beside the rooms, not after them, and it caught the second defect (`HotspotKind` misread, every
+stub an `Interact` and every node an `Examine`) before anyone had to click a hotspot to find it.
+
+**A sixth, found the same day moving the boot room, and it is about the harness rather than the gates:
+a suite that hangs is not a suite that failed, and the two look identical from a terminal.** Twice in
+one afternoon a broken fixture produced no result at all — an empty chapter spine reaching `.First()`,
+then a mistyped room id leaving every downstream lookup null. Godot's C# layer logs the exception and
+keeps the main loop alive, so `--verify-slice` sat there until a `timeout` killed it, and the useful
+information (which check went red *before* the throw) never printed. There were two holes and both are
+now shut: `SliceVerifier.Run` wraps the gate sequence in a `try`/`catch` that records the throw as a
+failure named `[crash]` and falls through to the summary — so the run exits 1 in seconds with a short
+count that says how far it got — and `Main.StartGame` calls `Quit(1)` instead of returning when the
+starting room will not load under `--verify-slice`, since that path never reaches the verifier at all.
+
+The reason to care is that this class *hides* the other five. Every rule above is about a green run
+that should have been red; this one is about a run that is neither, and the honest reflex on seeing no
+output is to assume the machine is slow. **Always run the verifier under a `timeout` and read the file
+afterwards** (`> /tmp/vs.txt 2>&1`) — piping to `grep` has hung the terminal too. A short check count
+in the summary now means "a gate threw", and is worth more attention than a long list of failures.
 
 ---
 
@@ -1832,8 +2065,11 @@ Learned the hard way over several design passes. Each one is load-bearing:
    inside a run — a silent return there would hide the upstream bug.
 3. **The anchor→body loop runs one way only.** Severing weakens the body. Wounding the body does
    *not* weaken the spirit. (Proposed and explicitly rejected.)
-4. **Spectral vision is a look, not a place.** `Tab` shows Form 2 and the aura; you cannot sever
-   through it. Otherwise the relic and the whole heist are pointless.
+4. **You cannot sever from the Waking world.** The anchor is only reachable by *travelling* into
+   the pocket. Otherwise the relic and the whole heist are pointless. This used to read "spectral
+   vision is a look, not a place" — `Tab` showed you Form 2 and the aura and refused to let you cut
+   through them. The peek died on 2026-08-02; **the refusal is the part that mattered and it stands**,
+   now enforced by there being no way to reach the anchor at all from out here.
 5. **No stat multiplies damage.** All progression gates *access*. Out-statting the horror is what
    kills horror. Crafting grants variety and access — tools, not tiers.
 6. **Fights run 3–6 turns.** Overkill must be expensive, never long.
@@ -1879,7 +2115,7 @@ Learned the hard way over several design passes. Each one is load-bearing:
 | `docs/handoff.md` | this file |
 | `src/Tools/SliceVerifier.cs` | what "working" means, as executable assertions — and see "Placeholders and traps" for what it does *not* cover |
 | `data/recipes/` | `RecipeData` `.tres` files. Hand-authored, and gated — a malformed typed array loads as empty with no error. |
-| `src/Tools/ContentSeeder.cs` | wrote the starting `data/*.tres`. Retired — **overwrites**, so never run it now that rooms are edited in the inspector. Harmless as it sits; it only runs on an explicit `--seed-content`. |
+| ~~`src/Tools/ContentSeeder.cs`~~ | **Deleted 2026-08-01**, with `--seed-content` and the "Claude never runs it" rule. It wrote the starting `data/*.tres` and then overwrote them on every run. *"Harmless as it sits"* was true beside five rooms and stops being true beside ~58 (`build-plan.md` §6), and its payload was superseded content anyway — the rat, the 2D dream maze, the heist. The writer idiom returns in the ledger generator, **write-if-absent**. Original: `git show bb665ad:src/Tools/ContentSeeder.cs`. |
 
 Code comments cite handoff **section names**, not numbers — numbers have churned twice now.
 

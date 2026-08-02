@@ -1,0 +1,64 @@
+[gd_resource type="Resource" script_class="RoomData" load_steps=9 format=3]
+
+[ext_resource type="Script" uid="uid://b0jetcphiy2cm" path="res://src/Data/HotspotData.cs" id="1_hs"]
+[ext_resource type="Script" uid="uid://v0juosv2w310" path="res://src/Data/RoomData.cs" id="2_room"]
+
+[sub_resource type="Resource" id="hs_0"]
+script = ExtResource("1_hs")
+Id = "ch2_green_to_first_house"
+Label = "The First House"
+Kind = 0
+Region = Rect2(70, 390, 290, 410)
+TargetRoomId = "ch2_first_house"
+
+[sub_resource type="Resource" id="hs_1"]
+script = ExtResource("1_hs")
+Id = "ch2_green_to_apothecary"
+Label = "The Apothecary's Shop"
+Kind = 0
+Region = Rect2(1560, 390, 290, 410)
+TargetRoomId = "ch2_apothecary"
+
+[sub_resource type="Resource" id="hs_2"]
+script = ExtResource("1_hs")
+Id = "ch2_green_to_back_lane"
+Label = "Back Lane"
+Kind = 0
+Region = Rect2(815, 250, 290, 250)
+TargetRoomId = "ch2_back_lane"
+
+[sub_resource type="Resource" id="hs_3"]
+script = ExtResource("1_hs")
+Id = "ch2_green_look"
+Label = "The Village Green"
+Kind = 1
+Region = Rect2(700, 550, 520, 250)
+ExamineText = "[unwritten]"
+
+[sub_resource type="Resource" id="hs_4"]
+script = ExtResource("1_hs")
+Id = "ch2_green_cairnstone"
+Label = "Cairnstone"
+Kind = 3
+Region = Rect2(120, 870, 220, 160)
+ItemId = "mat_cairnstone"
+ItemAmount = 1
+RefillsAtMilestone = false
+
+[sub_resource type="Resource" id="hs_5"]
+script = ExtResource("1_hs")
+Id = "ch2_green_bitterroot"
+Label = "Bitterroot"
+Kind = 3
+Region = Rect2(370, 870, 220, 160)
+ItemId = "herb_bitterroot"
+ItemAmount = 1
+RefillsAtMilestone = true
+
+[resource]
+script = ExtResource("2_room")
+Id = "ch2_green"
+DisplayName = "The Village Green"
+ChapterId = "ch2"
+PlaceholderStyle = 0
+Hotspots = Array[ExtResource("1_hs")]([SubResource("hs_0"), SubResource("hs_1"), SubResource("hs_2"), SubResource("hs_3"), SubResource("hs_4"), SubResource("hs_5")])

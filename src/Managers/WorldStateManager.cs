@@ -41,6 +41,82 @@ public partial class WorldStateManager : Node
         EventBus.Instance?.EmitWorldFlagChanged(flag, value);
     }
 
+    // ---- Material refill (items.md §7) -------------------------------------
+
+    /// <summary>
+    /// Re-arms every material node that is marked to come back, in the chapters named. Returns how
+    /// many nodes were restored, so a caller can stay silent when nothing changed.
+    /// </summary>
+    /// <remarks>
+    /// The one legal supply change in the game, and it fires on a <b>story milestone</b> — never a
+    /// clock, never a step counter (items.md §7, combat.md §19). It takes its rooms as an argument
+    /// rather than asking <c>NavigationManager</c> for them, which is what lets the gates drive it
+    /// against synthetic content with no scene tree.
+    /// <para>
+    /// Idempotent: refilling twice restores nothing the second time, because clearing a flag that is
+    /// already clear is not a restore. That matters because the trigger is a boss death, and a boss
+    /// death that gets replayed through a save reload must not double the world's supply.
+    /// </para>
+    /// </remarks>
+    public int RefillMaterialNodes(IEnumerable<Data.RoomData> rooms, params string[] chapterIds)
+    {
+        if (rooms == null || chapterIds == null || chapterIds.Length == 0) return 0;
+
+        var wanted = new HashSet<string>(chapterIds);
+        var restored = 0;
+
+        foreach (var room in rooms)
+        {
+            if (room?.Hotspots == null || !wanted.Contains(room.ChapterId)) continue;
+
+            foreach (var h in room.Hotspots)
+            {
+                if (h == null || !h.RefillsAtMilestone) continue;
+                if (h.Kind != HotspotKind.Harvest) continue;
+
+                var flag = h.ResolvedHarvestedFlag;
+                if (!GetFlag(flag)) continue;
+
+                SetFlag(flag, false);
+                restored++;
+            }
+        }
+
+        return restored;
+    }
+
+    // ---- Knots (combat.md §23) ---------------------------------------------
+
+    /// <summary>How many of the given knot pockets have been cut.</summary>
+    public int CutKnotCount(IEnumerable<string> knotPocketIds) =>
+        knotPocketIds?.Count(id => !string.IsNullOrEmpty(id) && GetFlag(Flags.KnotCut(id))) ?? 0;
+
+    /// <summary>
+    /// Which beat the <b>next</b> cut plays: 1-based, and driven by the count of cuts already made
+    /// rather than by which pocket the player walked into.
+    /// </summary>
+    /// <remarks>
+    /// Returns 0 once every knot is cut, meaning there is no beat left to play. Callers should treat
+    /// 0 as "say nothing" rather than clamping to the last beat and repeating it.
+    /// <para>
+    /// <b>The authoring rule this shape produces, recorded here because the text has no home yet:</b>
+    /// a beat may not mention the pocket it fires in. No darkness, no height, no distance — beat 2
+    /// plays wherever the player happens to be, so it can only talk about the knot itself, which is
+    /// the same craft in all three (combat.md §23). Three atmospheric paragraphs that each describe
+    /// their own room is the easy way to break this, and it breaks silently: it reads fine in the
+    /// editor and wrong in play for two thirds of players. The three strings land in <b>unit 6</b>,
+    /// with the rest of the pocket's grant-and-report contract.
+    /// </para>
+    /// </remarks>
+    public int NextKnotBeatOrdinal(IEnumerable<string> knotPocketIds)
+    {
+        var ids = knotPocketIds?.Where(id => !string.IsNullOrEmpty(id)).ToList();
+        if (ids == null || ids.Count == 0) return 0;
+
+        var cut = CutKnotCount(ids);
+        return cut >= ids.Count ? 0 : cut + 1;
+    }
+
     // ---- Zones -----------------------------------------------------------
 
     public ZonePhase GetZonePhase(string zoneId)

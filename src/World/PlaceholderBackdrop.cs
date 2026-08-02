@@ -6,12 +6,11 @@ namespace Unrendered.World;
 
 /// <summary>
 /// Draws a room procedurally when no painted background exists yet. This is not
-/// programmer-art-as-apology: it is deliberately readable, so the realm toggle and the
-/// zone purification are legible as *changes* long before a single asset is authored.
+/// programmer-art-as-apology: it is deliberately readable, so zone purification is legible
+/// as a *change* long before a single asset is authored.
 ///
-/// Everything is drawn in normalised proportions of <see cref="Control.Size"/>, so the
-/// same code produces a 1920x1080 Waking screen and a 480x270 Dream screen — and inside
-/// the Dream SubViewport the 480x270 result gets nearest-upscaled into real chunky pixels.
+/// Everything is drawn in normalised proportions of <see cref="Control.Size"/>, so it does not
+/// care what it is sized to.
 /// </summary>
 public partial class PlaceholderBackdrop : Control
 {
@@ -83,7 +82,6 @@ public partial class PlaceholderBackdrop : Control
 
         switch (_style)
         {
-            case BackdropStyle.Dream: DrawDream(w, h); break;
             case BackdropStyle.Interior: DrawInterior(w, h); break;
             default: DrawWilderness(w, h); break;
         }
@@ -154,49 +152,16 @@ public partial class PlaceholderBackdrop : Control
         DrawFogBands(w, h, floor);
     }
 
-    private void DrawDream(float w, float h)
-    {
-        var floor = h * 0.72f;
-
-        DrawRect(new Rect2(0, 0, w, h), _sky);
-
-        // A cold sun that is not a sun.
-        var sunR = h * 0.17f;
-        DrawCircle(new Vector2(w * 0.5f, h * 0.30f), sunR, _accent.Darkened(0.15f));
-        DrawCircle(new Vector2(w * 0.5f, h * 0.30f), sunR * 0.72f, _sky);
-
-        // Colonnade receding to the vanishing point. High contrast, no atmosphere.
-        var pairs = 5;
-        for (var i = pairs; i >= 1; i--)
-        {
-            var t = i / (float)pairs;
-            var inset = Mathf.Lerp(w * 0.46f, w * 0.02f, t);
-            var pillarW = Mathf.Lerp(w * 0.012f, w * 0.075f, t);
-            var top = Mathf.Lerp(h * 0.42f, h * 0.06f, t);
-            var shade = _mid.Lerp(_ground, 1f - t);
-
-            DrawRect(new Rect2(inset, top, pillarW, floor - top), shade);
-            DrawRect(new Rect2(w - inset - pillarW, top, pillarW, floor - top), shade);
-        }
-
-        DrawRect(new Rect2(0, floor, w, h - floor), _ground);
-
-        // Floor tiling, converging, to sell the depth.
-        var lines = 7;
-        for (var i = 1; i < lines; i++)
-        {
-            var t = i / (float)lines;
-            var y = Mathf.Lerp(floor, h, t * t);
-            DrawLine(new Vector2(0, y), new Vector2(w, y), _mid.Darkened(0.4f), MathF.Max(1f, h * 0.004f));
-        }
-    }
+    // `DrawDream` — a void sun, a five-deep colonnade and a converging tile floor, drawn flat with
+    // no atmosphere. Deleted 2026-08-02: the Dream is 3D, so a fake 2D perspective of it is not a
+    // placeholder for anything that will ever exist. Kept in git if the *composition* is ever wanted
+    // as reference for the real pocket.
 
     // ---- Pieces ----------------------------------------------------------
 
     /// <summary>
     /// Faked with stacked bands rather than a gradient shader. Enough of them and the
-    /// stepping stops reading as stepping — at 480x270 in the Dream it would be visible
-    /// anyway, which is the point there.
+    /// stepping stops reading as stepping.
     /// </summary>
     private void DrawSkyGradient(float w, float horizon)
     {

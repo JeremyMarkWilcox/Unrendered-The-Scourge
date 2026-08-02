@@ -4,9 +4,9 @@ using Unrendered.Core;
 namespace Unrendered.Data;
 
 /// <summary>
-/// A creature or spirit archetype. Carries one texture per (state, realm) cell of the
-/// presentation table — six in total, all optional. Anything left null falls back to the
-/// procedural placeholder so the loop is playable before art exists.
+/// A creature or spirit archetype. Carries one texture per state — three, all optional.
+/// Anything left null falls back to the procedural placeholder so the loop is playable
+/// before art exists.
 /// </summary>
 [GlobalClass]
 public partial class EntityData : Resource
@@ -17,22 +17,29 @@ public partial class EntityData : Resource
     /// <summary>Form 1 — the mutated host. "Cursed Giant Rat".</summary>
     [Export] public string CorruptedName { get; set; } = "";
 
-    /// <summary>Form 2 — the pristine dark noble in the Pixel Realm. "The Gnawing Baron".</summary>
+    /// <summary>
+    /// Form 2 — the pristine dark noble in the Dream. "The Gnawing Baron".
+    ///
+    /// <b>Deliberately kept with no reader as of 2026-08-02.</b> The great swap deleted every
+    /// Waking-side path that could show Form 2, so nothing in code reads this today. It survives
+    /// where <c>ZoneData</c> did not, for the opposite reason: that class was an empty shape held
+    /// against a future need, and this is <i>authored writing</i> already sitting in the .tres files.
+    /// The 3D pocket that shows Form 2 is unit 6's job, and it will want the name that was written
+    /// for it.
+    /// </summary>
     [Export] public string SpiritName { get; set; } = "";
 
     /// <summary>Form 3 — what it was all along. "Field Rat".</summary>
     [Export] public string PurifiedName { get; set; } = "";
 
-    [ExportGroup("Waking textures")]
+    [ExportGroup("Textures")]
     [Export] public Texture2D CorruptedTexture { get; set; }
     [Export] public Texture2D SeveredTexture { get; set; }
     [Export] public Texture2D PurifiedTexture { get; set; }
 
-    /// <summary>Form 2, the attackable anchor.</summary>
-    [ExportGroup("Dream textures")]
-    [Export] public Texture2D SpiritTexture { get; set; }
-    [Export] public Texture2D ShatteredTexture { get; set; }
-    [Export] public Texture2D EchoTexture { get; set; }
+    // `SpiritTexture` / `ShatteredTexture` / `EchoTexture` — the Dream half of the six-cell texture
+    // table. Deleted 2026-08-02: there is no 2D Dream layer to draw them into. Unlike SpiritName
+    // above, no .tres ever filled these in, so nothing authored was lost.
 
     [ExportGroup("Behaviour")]
     [Export] public EntityState InitialState { get; set; } = EntityState.Corrupted;
@@ -121,16 +128,10 @@ public partial class EntityData : Resource
     [ExportGroup("Purified yield")]
     [Export] public string HarvestItemId { get; set; } = "";
 
-    /// <summary>Best-effort display name for the given state and realm.</summary>
-    public string NameFor(EntityState state, GameRealm realm)
+    /// <summary>Best-effort display name for the given state.</summary>
+    public string NameFor(EntityState state) => state switch
     {
-        if (realm == GameRealm.Dream)
-            return string.IsNullOrEmpty(SpiritName) ? CorruptedName : SpiritName;
-
-        return state switch
-        {
-            EntityState.Purified => string.IsNullOrEmpty(PurifiedName) ? CorruptedName : PurifiedName,
-            _ => CorruptedName,
-        };
-    }
+        EntityState.Purified => string.IsNullOrEmpty(PurifiedName) ? CorruptedName : PurifiedName,
+        _ => CorruptedName,
+    };
 }

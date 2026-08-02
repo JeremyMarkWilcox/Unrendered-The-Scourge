@@ -1,0 +1,62 @@
+[gd_resource type="Resource" script_class="RoomData" load_steps=9 format=3]
+
+[ext_resource type="Script" uid="uid://b0jetcphiy2cm" path="res://src/Data/HotspotData.cs" id="1_hs"]
+[ext_resource type="Script" uid="uid://v0juosv2w310" path="res://src/Data/RoomData.cs" id="2_room"]
+
+[sub_resource type="Resource" id="hs_0"]
+script = ExtResource("1_hs")
+Id = "ch1_wet_hollow_to_crossroads"
+Label = "The Crossroads"
+Kind = 0
+Region = Rect2(70, 390, 290, 410)
+TargetRoomId = "ch1_crossroads"
+
+[sub_resource type="Resource" id="hs_1"]
+script = ExtResource("1_hs")
+Id = "ch1_wet_hollow_to_fern_gully"
+Label = "Fern Gully"
+Kind = 0
+Region = Rect2(1560, 390, 290, 410)
+TargetRoomId = "ch1_fern_gully"
+
+[sub_resource type="Resource" id="hs_2"]
+script = ExtResource("1_hs")
+Id = "ch1_wet_hollow_to_burnt_stand"
+Label = "The Burnt Stand"
+Kind = 0
+Region = Rect2(815, 250, 290, 250)
+TargetRoomId = "ch1_burnt_stand"
+
+[sub_resource type="Resource" id="hs_3"]
+script = ExtResource("1_hs")
+Id = "ch1_wet_hollow_to_old_road"
+Label = "The Old Road"
+Kind = 0
+Region = Rect2(860, 860, 300, 190)
+TargetRoomId = "ch1_old_road"
+
+[sub_resource type="Resource" id="hs_4"]
+script = ExtResource("1_hs")
+Id = "ch1_wet_hollow_look"
+Label = "Standing Water"
+Kind = 1
+Region = Rect2(700, 550, 520, 250)
+ExamineText = "[unwritten]"
+
+[sub_resource type="Resource" id="hs_5"]
+script = ExtResource("1_hs")
+Id = "ch1_wet_hollow_bitterroot"
+Label = "Bitterroot"
+Kind = 3
+Region = Rect2(120, 870, 220, 160)
+ItemId = "herb_bitterroot"
+ItemAmount = 2
+RefillsAtMilestone = true
+
+[resource]
+script = ExtResource("2_room")
+Id = "ch1_wet_hollow"
+DisplayName = "The Wet Hollow"
+ChapterId = "ch1"
+PlaceholderStyle = 0
+Hotspots = Array[ExtResource("1_hs")]([SubResource("hs_0"), SubResource("hs_1"), SubResource("hs_2"), SubResource("hs_3"), SubResource("hs_4"), SubResource("hs_5")])

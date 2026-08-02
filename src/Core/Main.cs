@@ -31,6 +31,12 @@ public partial class Main : Node
         if (NavigationManager.Instance?.GoToRoom(GameConfig.StartingRoomId) != true)
         {
             GD.PushError($"[Main] Could not enter starting room '{GameConfig.StartingRoomId}'.");
+
+            // Quit rather than return when the gates are the reason we booted. Returning leaves a
+            // headless run sitting in an empty scene tree forever, which reads as a hung machine
+            // instead of a broken build — found 2026-08-02 break-testing an unparseable starting
+            // room, which produced no output at all rather than a red check.
+            if (Boot.VerifySlice) GetTree().Quit(1);
             return;
         }
 
@@ -48,7 +54,7 @@ public partial class Main : Node
             return;
         }
 
-        EventBus.Instance?.EmitNotify("Cold. The track keeps going. Press Tab to look the other way.");
+        EventBus.Instance?.EmitNotify("Cold. The track keeps going.");
     }
 
     // ---- Debug -----------------------------------------------------------

@@ -26,7 +26,11 @@ public partial class HotspotData : Resource
     /// <summary>Optional polygon for a tighter hit shape. Overrides <see cref="Region"/> when non-empty.</summary>
     [Export] public Vector2[] Polygon { get; set; } = System.Array.Empty<Vector2>();
 
-    [Export] public RealmVisibility Visibility { get; set; } = RealmVisibility.Both;
+    // `Visibility` (RealmVisibility) sat here until 2026-08-02. It is the field spectral vision was
+    // built on: a hotspot could be authored to exist only in the Waking world or only in the Dream,
+    // and the same screen showed two different sets of things. Deleted with the great swap — a
+    // Waking screen has one set of things on it now, and Dream content lives in its own 3D pocket
+    // rather than hiding behind a key press on a Waking screen.
 
     [ExportGroup("Navigate")]
     [Export] public string TargetRoomId { get; set; } = "";
@@ -47,31 +51,30 @@ public partial class HotspotData : Resource
     [Export] public string HarvestedFlag { get; set; } = "";
 
     /// <summary>
-    /// Vitality taken when this hotspot is successfully used. Zero — the default, and almost
-    /// everything — is harmless.
-    ///
-    /// Deliberately a cost on the existing kinds rather than a <c>HotspotKind.Hazard</c> of its
-    /// own, because it then composes: a <see cref="HotspotKind.Navigate"/> with a cost is a route
-    /// you may take but will pay for, a <see cref="HotspotKind.Harvest"/> with a cost is thorns,
-    /// an <see cref="HotspotKind.Interact"/> with a cost is reaching into something you should
-    /// not have. No new enum, no new verb, no new rendering.
-    ///
-    /// **A cost only fires when the player chooses to click, which is what keeps it legal.**
-    /// `combat.md` §6 rejected ambient attrition for Resolve on the grounds that a drain the
-    /// player cannot act on teaches nothing; a per-click cost is discrete and avoidable by
-    /// construction. Authoring is what makes it *fair* — the label has to warn you.
-    ///
-    /// Not a **trap**. Traps are the player's own crafted tools (`combat.md` §4) and are blocked
-    /// on M4. This is a hazard: the world costing you something.
+    /// Whether this node comes back at the material-refill milestone (items.md §7).
     /// </summary>
-    [ExportGroup("Hazard")]
-    [Export] public float VitalityCost { get; set; }
+    /// <remarks>
+    /// <b>Defaults to false, and the direction matters.</b> Common materials are meant to re-arm once,
+    /// so salves stay makeable; the scarce ones must not, because the world holding exactly 12
+    /// Graveflower and 6 Cairnstone is the arithmetic the good ending is balanced against. A node the
+    /// generator forgets to mark therefore fails toward a supply that is tighter than intended —
+    /// visible in play and fixable in one field — rather than toward a scarce material that farms
+    /// forever, which would quietly delete the economy and never show up as a bug.
+    /// </remarks>
+    [Export] public bool RefillsAtMilestone { get; set; }
 
-    /// <summary>Said when the cost lands. Blank falls back to a generic line.</summary>
-    [Export(PropertyHint.MultilineText)] public string HazardText { get; set; } = "";
-
-    /// <summary>True when using this costs the body something.</summary>
-    public bool IsHazard => VitalityCost > 0f;
+    // `VitalityCost`, `HazardText` and `IsHazard` were deleted 2026-08-01, along with ApplyHazard,
+    // the debug panel's hazard list and GateHazards. They were the Waking world costing you the
+    // body, and `combat.md` §22 removed Waking-world damage from the design: a camp is one menu
+    // action away (§17), so no attrition outside a fight can matter. §22 asked that the field not be
+    // deleted on its own say-so without first checking what the collapse-path gates exercise — they
+    // drive `VitalityManager.Damage` directly, so the collapse, `SurvivesDeath` and the respawn kept
+    // every check they had. Jeremy: "vit cost was when the environment damaged you and since nothing
+    // does now we don't really need it."
+    //
+    // What replaces it is not a cheaper hazard, it is a different verb: a **Blight** costs a jigsaw
+    // and pays a Graveflower (§22). It shares no field with this one, which is why this is a
+    // deletion rather than a rename.
 
     [ExportGroup("Text")]
     [Export(PropertyHint.MultilineText)] public string ExamineText { get; set; } = "";
@@ -83,6 +86,22 @@ public partial class HotspotData : Resource
     [ExportGroup("Gating")]
     [Export] public string RequiredFlag { get; set; } = "";
     [Export] public bool RequiredFlagValue { get; set; } = true;
+
+    /// <summary>
+    /// Every one of these flags must be <c>true</c> as well. Empty = no extra requirement.
+    /// </summary>
+    /// <remarks>
+    /// Added 2026-08-02 for the Snarl (ledger-ch3 row 12), which opens only once all three knot
+    /// pockets are cut and so cannot be expressed by the single flag above.
+    /// <para>
+    /// Deliberately all-true with no per-entry polarity: the only gate that ever needs a
+    /// <c>false</c> is the hide-once-done shape (a relic that vanishes when taken), and that one
+    /// is always a single flag, which <see cref="RequiredFlag"/> already covers. Keeping the
+    /// multi case value-free means this is a plain string array rather than an array of
+    /// sub-resources — cheap to author and cheap to read in the inspector.
+    /// </para>
+    /// </remarks>
+    [Export] public string[] RequiredFlags { get; set; } = System.Array.Empty<string>();
 
     /// <summary>Hotspot is visible but refuses to act while this entity is still Corrupted.</summary>
     [Export] public string BlockedByEntityId { get; set; } = "";

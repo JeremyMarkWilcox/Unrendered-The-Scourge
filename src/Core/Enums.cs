@@ -168,13 +168,11 @@ public enum HeistOutcome
     Exhausted = 2,
 }
 
-/// <summary>Which realm(s) a hotspot or overlay is perceivable in.</summary>
-public enum RealmVisibility
-{
-    Both = 0,
-    WakingOnly = 1,
-    DreamOnly = 2,
-}
+// `RealmVisibility` stood here — Both / WakingOnly / DreamOnly, the per-hotspot filter that made
+// spectral vision work. Deleted 2026-08-02 with the rest of it (the great swap). A Waking screen
+// now shows everything it has; the Dream is a place you travel to in 3D, not an overlay you peek
+// through, so "which realm can you see this from" stopped being a question a 2D hotspot can answer.
+// `GameRealm` itself survives, because *where you are* is still a real distinction.
 
 /// <summary>Which procedural scene a room draws while it has no painted background.</summary>
 public enum BackdropStyle
@@ -185,8 +183,8 @@ public enum BackdropStyle
     /// <summary>Walls, a doorway, a floor. Ruins and interiors.</summary>
     Interior = 1,
 
-    /// <summary>Pillars and a void sun. Used for every room's Dream layer.</summary>
-    Dream = 2,
+    // `Dream = 2` — pillars and a void sun, drawn into the 480x270 SubViewport under every Waking
+    // screen. Deleted 2026-08-02: the Dream is 3D now and draws nothing through this class.
 }
 
 /// <summary>

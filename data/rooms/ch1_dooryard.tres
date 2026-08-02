@@ -1,0 +1,56 @@
+[gd_resource type="Resource" script_class="RoomData" load_steps=8 format=3]
+
+[ext_resource type="Script" uid="uid://b0jetcphiy2cm" path="res://src/Data/HotspotData.cs" id="1_hs"]
+[ext_resource type="Script" uid="uid://v0juosv2w310" path="res://src/Data/RoomData.cs" id="2_room"]
+
+[sub_resource type="Resource" id="hs_0"]
+script = ExtResource("1_hs")
+Id = "ch1_dooryard_to_cottage"
+Label = "His Cottage"
+Kind = 0
+Region = Rect2(70, 390, 290, 410)
+TargetRoomId = "ch1_cottage"
+
+[sub_resource type="Resource" id="hs_1"]
+script = ExtResource("1_hs")
+Id = "ch1_dooryard_to_low_track"
+Label = "The Low Track"
+Kind = 0
+Region = Rect2(1560, 390, 290, 410)
+TargetRoomId = "ch1_low_track"
+
+[sub_resource type="Resource" id="hs_2"]
+script = ExtResource("1_hs")
+Id = "ch1_dooryard_look"
+Label = "The Chopping Block"
+Kind = 1
+Region = Rect2(700, 550, 520, 250)
+ExamineText = "[unwritten]"
+
+[sub_resource type="Resource" id="hs_3"]
+script = ExtResource("1_hs")
+Id = "ch1_dooryard_bitterroot"
+Label = "Bitterroot"
+Kind = 3
+Region = Rect2(120, 870, 220, 160)
+ItemId = "herb_bitterroot"
+ItemAmount = 2
+RefillsAtMilestone = true
+
+[sub_resource type="Resource" id="hs_4"]
+script = ExtResource("1_hs")
+Id = "ch1_dooryard_tallow"
+Label = "Tallow"
+Kind = 3
+Region = Rect2(370, 870, 220, 160)
+ItemId = "rat_tallow"
+ItemAmount = 1
+RefillsAtMilestone = true
+
+[resource]
+script = ExtResource("2_room")
+Id = "ch1_dooryard"
+DisplayName = "The Dooryard"
+ChapterId = "ch1"
+PlaceholderStyle = 0
+Hotspots = Array[ExtResource("1_hs")]([SubResource("hs_0"), SubResource("hs_1"), SubResource("hs_2"), SubResource("hs_3"), SubResource("hs_4")])

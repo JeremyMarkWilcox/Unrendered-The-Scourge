@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="EntityData" format=3]
+
+[ext_resource type="Script" path="res://src/Data/EntityData.cs" id="1_ed"]
+
+[resource]
+script = ExtResource("1_ed")
+Id = "beast_settled"
+CorruptedName = "The Settled One"
+BlocksPath = false
+Durability = 38
+VulnerableTo = 4
+ResistantTo = 1
+Deals = 4
+Damage = 8

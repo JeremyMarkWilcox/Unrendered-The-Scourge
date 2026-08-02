@@ -1,0 +1,38 @@
+[gd_resource type="Resource" script_class="RoomData" load_steps=6 format=3]
+
+[ext_resource type="Script" uid="uid://b0jetcphiy2cm" path="res://src/Data/HotspotData.cs" id="1_hs"]
+[ext_resource type="Script" uid="uid://v0juosv2w310" path="res://src/Data/RoomData.cs" id="2_room"]
+
+[sub_resource type="Resource" id="hs_0"]
+script = ExtResource("1_hs")
+Id = "ch3_wound_to_breach"
+Label = "The Breach"
+Kind = 0
+Region = Rect2(70, 390, 290, 410)
+TargetRoomId = "ch3_breach"
+
+[sub_resource type="Resource" id="hs_1"]
+script = ExtResource("1_hs")
+Id = "ch3_wound_look"
+Label = "The Wound"
+Kind = 1
+Region = Rect2(700, 550, 520, 250)
+ExamineText = "[unwritten]"
+
+[sub_resource type="Resource" id="hs_2"]
+script = ExtResource("1_hs")
+Id = "ch3_wound_tallow"
+Label = "Tallow"
+Kind = 3
+Region = Rect2(120, 870, 220, 160)
+ItemId = "rat_tallow"
+ItemAmount = 2
+RefillsAtMilestone = true
+
+[resource]
+script = ExtResource("2_room")
+Id = "ch3_wound"
+DisplayName = "The Wound"
+ChapterId = "ch3"
+PlaceholderStyle = 1
+Hotspots = Array[ExtResource("1_hs")]([SubResource("hs_0"), SubResource("hs_1"), SubResource("hs_2")])

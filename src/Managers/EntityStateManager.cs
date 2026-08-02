@@ -7,19 +7,24 @@ using Unrendered.Data;
 namespace Unrendered.Managers;
 
 /// <summary>
-/// Owns the persistent condition of every entity instance in the game, and resolves the
-/// state x realm presentation table.
+/// Owns the persistent condition of every entity instance in the game, and resolves what
+/// each state looks like.
 ///
-/// The design doc lists an enum {Corrupted, Severed, Purified} and separately describes
-/// Form 1 / Form 2 / Form 3. Those are two different axes. Form 2 — the pristine porcelain
-/// noble — is what a <i>Corrupted</i> entity looks like when perceived from the Dream. So
-/// what you see is a function of both:
+/// <para>
+/// This was a two-axis table until 2026-08-02 — state x realm, six cells, because Form 2 (the
+/// pristine porcelain noble) was what a <i>Corrupted</i> entity looked like when you pressed Tab
+/// and perceived it from the Dream. The great swap deleted the realm axis. Three cells remain:
+/// </para>
 ///
-///                | Waking                      | Dream
-///   -------------|-----------------------------|------------------------------
-///   Corrupted    | Form 1: nightmare, blocks   | Form 2: spirit anchor, severable
-///   Severed      | Form 1 deformed, passable   | shattered anchor, fleeing
-///   Purified     | Form 3: mundane, farmable   | benign echo, nearly gone
+///   Corrupted  | Form 1: nightmare, blocks the road
+///   Severed    | Form 1 deformed, passable
+///   Purified   | Form 3: mundane, farmable
+///
+/// <para>
+/// Form 2 has not been cancelled — it moved. It belongs to the 3D pocket you travel into, which
+/// is unit 6's, and it will be resolved by whatever draws that, not by this. What was lost here
+/// was the claim that you could <i>see</i> Form 2 from a Waking screen.
+/// </para>
 ///
 /// State is stored per <i>instance</i> and never reset on room re-entry. That is the
 /// zero-respawn rule: purify the rat, walk away, come back, it is still a rat.
@@ -81,18 +86,14 @@ public partial class EntityStateManager : Node
     // ---- The table -------------------------------------------------------
 
     /// <summary>
-    /// Resolve what a given entity looks like and offers, from a given realm.
-    /// This is the single place in the codebase that knows the Form 1/2/3 mapping.
+    /// Resolve what a given entity looks like and offers.
+    /// This is the single place in the codebase that knows the Form 1/3 mapping.
     /// </summary>
-    public EntityPresentation Resolve(EntityData data, string instanceId, GameRealm realm)
+    public EntityPresentation Resolve(EntityData data, string instanceId)
     {
         if (data == null) return new EntityPresentation { Visible = false };
 
-        var state = GetState(instanceId);
-
-        return realm == GameRealm.Dream
-            ? ResolveDream(data, state)
-            : ResolveWaking(data, state);
+        return ResolveWaking(data, GetState(instanceId));
     }
 
     private static EntityPresentation ResolveWaking(EntityData data, EntityState state) => state switch
@@ -101,7 +102,7 @@ public partial class EntityStateManager : Node
         EntityState.Corrupted => new EntityPresentation
         {
             Texture = data.CorruptedTexture,
-            Label = data.NameFor(EntityState.Corrupted, GameRealm.Waking),
+            Label = data.NameFor(EntityState.Corrupted),
             Modulate = Colors.White,
             BlocksPath = data.BlocksPath,
             Interactable = true,
@@ -116,7 +117,7 @@ public partial class EntityStateManager : Node
         EntityState.Severed => new EntityPresentation
         {
             Texture = data.SeveredTexture ?? data.CorruptedTexture,
-            Label = data.NameFor(EntityState.Severed, GameRealm.Waking),
+            Label = data.NameFor(EntityState.Severed),
             Modulate = new Color(0.62f, 0.60f, 0.66f),
             BlocksPath = false,
             Interactable = true,
@@ -131,7 +132,7 @@ public partial class EntityStateManager : Node
         _ => new EntityPresentation
         {
             Texture = data.PurifiedTexture,
-            Label = data.NameFor(EntityState.Purified, GameRealm.Waking),
+            Label = data.NameFor(EntityState.Purified),
             Modulate = Colors.White,
             BlocksPath = false,
             Interactable = !string.IsNullOrEmpty(data.HarvestItemId),
@@ -143,55 +144,10 @@ public partial class EntityStateManager : Node
         },
     };
 
-    private static EntityPresentation ResolveDream(EntityData data, EntityState state) => state switch
-    {
-        // Form 2 — flawless, porcelain, unbothered. This is the thing you can actually kill.
-        EntityState.Corrupted => new EntityPresentation
-        {
-            Texture = data.SpiritTexture,
-            Label = data.NameFor(EntityState.Corrupted, GameRealm.Dream),
-            Modulate = Colors.White,
-            BlocksPath = false,
-            Interactable = true,
-            Verb = "Sever",
-            InteractText = "",
-            PlaceholderColor = new Color("#efe6d6"),
-            PlaceholderSize = new Vector2(70, 96),
-            PlaceholderJagged = false,
-            PlaceholderCrowned = true,
-        },
-
-        // The anchor is broken. What is left is receding.
-        EntityState.Severed => new EntityPresentation
-        {
-            Texture = data.ShatteredTexture,
-            Label = data.NameFor(EntityState.Severed, GameRealm.Dream),
-            Modulate = new Color(1f, 1f, 1f, 0.55f),
-            BlocksPath = false,
-            Interactable = true,
-            Verb = "Banish",
-            InteractText = "",
-            PlaceholderColor = new Color("#6f4a86"),
-            PlaceholderSize = new Vector2(64, 74),
-            PlaceholderJagged = true,
-            PlaceholderCrowned = true,
-        },
-
-        // A warm nothing where a noble stood.
-        _ => new EntityPresentation
-        {
-            Texture = data.EchoTexture,
-            Label = "",
-            Modulate = new Color(1f, 1f, 1f, 0.22f),
-            BlocksPath = false,
-            Interactable = false,
-            Verb = "",
-            InteractText = "",
-            PlaceholderColor = new Color("#9fd4e8"),
-            PlaceholderSize = new Vector2(40, 40),
-            PlaceholderJagged = false,
-        },
-    };
+    // `ResolveDream` stood here: the three Dream cells — the crowned porcelain noble offering
+    // "Sever", the half-transparent shattered anchor offering "Banish", and the 22%-alpha echo that
+    // could not be touched. Deleted 2026-08-02. Those three cells were the only writers of
+    // `EntityPresentation.PlaceholderCrowned`, so the crown went with them.
 
     // ---- Persistence -----------------------------------------------------
 

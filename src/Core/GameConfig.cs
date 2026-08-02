@@ -10,15 +10,11 @@ public static class GameConfig
     /// <summary>Design resolution of the Waking world. Matches the project viewport.</summary>
     public static readonly Vector2I WakingResolution = new(1920, 1080);
 
-    /// <summary>
-    /// Internal resolution of the Pixel Realm. Everything drawn in the Dream is rendered
-    /// here and then nearest-neighbour upscaled 4x to fill the screen, so pixels are real
-    /// pixels rather than a post-process imitation. All Dream art authors to this grid.
-    /// </summary>
-    public static readonly Vector2I DreamResolution = new(480, 270);
-
-    /// <summary>Seconds for the spectral-vision crossfade. Logical state flips instantly.</summary>
-    public const float RealmCrossfadeSeconds = 0.35f;
+    // `DreamResolution` (480x270) and `RealmCrossfadeSeconds` (0.35) were deleted 2026-08-02 with
+    // spectral vision. The first was the SubViewport the Dream layer rendered into and the grid all
+    // Dream art authored to; the second timed the fade between the two stacked layers. Neither
+    // survives the move to a 3D Dream — if that render target wants a pixel grid, it will pick its
+    // own, in three dimensions, and it should not inherit a number chosen for a 2D overlay.
 
     /// <summary>Seconds for the fade-to-black when walking between rooms.</summary>
     public const float RoomTransitionSeconds = 0.25f;
@@ -91,27 +87,51 @@ public static class GameConfig
     public const string EntityDataDir = "res://data/entities";
     public const string ItemDataDir = "res://data/items";
     public const string RecipeDataDir = "res://data/recipes";
-    public const string ZoneDataDir = "res://data/zones";
+    // `ZoneDataDir` and the `ZoneData`/`ChapterData` resource it pointed at were deleted 2026-08-02.
+    // The class had no reader and never had one: the constant was declared and never used, and
+    // everything chapter-shaped runs off `RoomData.ChapterId` strings. Jeremy: "no point in having
+    // more overhead than needed." A chapter has no data of its own until something needs to *show*
+    // a chapter — a title card, a save slot label — and that is the moment to bring the class back,
+    // with a loader, rather than keeping an empty one warm against the possibility.
     public const string HeistDataDir = "res://data/heists";
 
     public const string SaveFilePath = "user://savegame.json";
 
-    /// <summary>Where a new game begins.</summary>
-    public const string StartingRoomId = "waystation_yard";
+    /// <summary>
+    /// Where a new game begins. Moved off <c>waystation_yard</c> on 2026-08-02, the day the 59
+    /// skeleton screens landed — the second half of the great swap deletes the prototype, but
+    /// re-pointing the boot is independent of that and is what makes the new map reachable at all.
+    ///
+    /// <para>
+    /// The waystation and the six <c>dream_way_*</c> rooms still exist and still load; nothing walks
+    /// to them any more. They stay until the gates that use them as fixtures are re-anchored onto
+    /// synthetic <c>verify_</c> rooms, which is a separate operation on purpose — deleting a fixture
+    /// out from under a gate and authoring new content are different kinds of change, and doing both
+    /// at once makes it impossible to tell which half broke something.
+    /// </para>
+    ///
+    /// <para>
+    /// <b>This room is a camp</b> (<c>ch1_cottage_bench</c>), which is required rather than incidental:
+    /// once <c>waystation_shed</c> is gone it is the only bench in the game, and crafting, the shared
+    /// cache and the respawn destination are all gated on standing at one. It also means arriving here
+    /// refills both pools — see the fourth blind-spot class in <c>handoff.md</c> §3 before writing any
+    /// gate that carries a part-drained bar through the starting room.
+    /// </para>
+    /// </summary>
+    public const string StartingRoomId = "ch1_cottage";
 
     // ---- Placeholder palette --------------------------------------------
-    // Used by PlaceholderBackdrop until real art lands. Cold and desaturated for the
-    // Waking world; high-contrast and uncanny for the Dream.
+    // Used by PlaceholderBackdrop until real art lands. Cold and desaturated for corrupted ground,
+    // warm and open once a chapter is cleansed.
 
     public static readonly Color WakingSky = new("#2b3138");
     public static readonly Color WakingMid = new("#3a4149");
     public static readonly Color WakingGround = new("#22262b");
     public static readonly Color WakingFog = new("#8d98a3");
 
-    public static readonly Color DreamSky = new("#160d1f");
-    public static readonly Color DreamMid = new("#3d1f4d");
-    public static readonly Color DreamGround = new("#0b0710");
-    public static readonly Color DreamAccent = new("#e8dcc8");
+    // The four Dream colours — #160d1f sky, #3d1f4d mid, #0b0710 ground, #e8dcc8 accent — went with
+    // DrawDream on 2026-08-02. The Dream's real palette is settled and different anyway: black,
+    // white and grey, authored into a shader (dream-realm-monochrome-aesthetic).
 
     public static readonly Color PurifiedSky = new("#7fa8c9");
     public static readonly Color PurifiedMid = new("#6f8f5e");

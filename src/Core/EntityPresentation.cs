@@ -4,7 +4,7 @@ namespace Unrendered.Core;
 
 /// <summary>
 /// Everything a view needs to draw one entity right now — the fully resolved answer to
-/// "what does this thing look like, given its state and the realm I'm standing in".
+/// "what does this thing look like, given its state".
 /// Views never branch on state themselves; they ask for one of these and render it.
 /// </summary>
 public sealed class EntityPresentation
@@ -37,9 +37,9 @@ public sealed class EntityPresentation
     public Color PlaceholderColor { get; init; } = Colors.Magenta;
     public Vector2 PlaceholderSize { get; init; } = new(260, 200);
 
-    /// <summary>Ragged for nightmares, clean for porcelain nobles.</summary>
+    /// <summary>Ragged for a nightmare, clean for what it was before.</summary>
     public bool PlaceholderJagged { get; init; }
 
-    /// <summary>Dark royalty only. A purified field rat does not get a crown.</summary>
-    public bool PlaceholderCrowned { get; init; }
+    // `PlaceholderCrowned` — a bar above the head, drawn for dark royalty. Only the Dream cells ever
+    // set it, and they were deleted 2026-08-02 with spectral vision.
 }

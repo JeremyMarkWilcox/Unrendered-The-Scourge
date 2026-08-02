@@ -20,24 +20,25 @@ dotnet build                                    # C# assembly
 "$GODOT" --path .                               # play
 "$GODOT" --headless --path . -- --verify-slice  # assert every milestone gate (exit 0 = pass)
 "$GODOT" --path . -- --shots                    # capture the slice to .shots/
-"$GODOT" --headless --path . -- --seed-content  # regenerate data/*.tres from ContentSeeder
 
 "$GODOT" --path . scenes/dream/DreamProbe.tscn                  # the 3D Dream probe (or F6 in the editor)
 "$GODOT" --path . scenes/dream/DreamProbe.tscn -- --probe-shot  # one labelled frame to .shots/, then exit
 ```
 
-`--seed-content` **overwrites** everything under `data/`. It exists to bootstrap the starting
-content correctly; once you begin editing rooms in the inspector, stop running it.
+**`data/` is authored, and nothing overwrites it.** `--seed-content` and `ContentSeeder` wrote the
+starting content and were deleted on 2026-08-01, at the start of the content pass — a tool that
+rewrites every `.tres` in one command is a bootstrap beside five rooms and a hazard beside fifty-eight
+(`docs/build-plan.md` §6). Anything that generates content from here on **writes only files that do
+not exist**.
 
 ## Controls
 
 | Key | |
 |---|---|
-| `Tab` | Toggle spectral vision (Waking ⇄ Pixel Realm) |
 | Left click | Interact with a hotspot, or select a slot in the satchel |
 | `I` | Satchel — held stacks, what a thing is, and using it |
 | `Esc` | Close the open panel |
-| `F3` | Debug panel (pools, hazards in room, entities, inventory, flags) + hotspot outlines |
+| `F3` | Debug panel (pools, entities, inventory, flags) + hotspot outlines |
 | `F1` | Cycle every entity in the room through its states |
 | `F2` | Take a debug wound (15 Vitality) |
 | `F5` / `F9` | Save / load |
@@ -64,7 +65,7 @@ src/
   UI/         Hud, ResolveMeter, VitalityMeter, DebugPanel, InventoryPanel
   Dream/      the 3D probe's walker and look tuner   <- wired into nothing; see the handoff
   Save/       JSON round-trip of the manager state
-  Tools/      ContentSeeder, SliceVerifier, ScreenshotTool
+  Tools/      SliceVerifier, ScreenshotTool
 data/         rooms/ entities/ items/ recipes/ zones/ heists/   <- the game's content
 scenes/       Boot, Main, RoomView
 scenes/ui/    InventoryPanel + the shared PanelTheme.tres
@@ -94,32 +95,36 @@ are reached. Walking into the pursuer does exactly this: it ejects you from insi
 carried you into the Dream room lands *last*. Anything that caches per-room state must check
 the payload against the manager (`CurrentRoomId != roomId → return`) rather than trusting it.
 
-### State × realm, not state alone
+### State, and the form it wears
 
 The GDD lists an enum `{Corrupted, Severed, Purified}` *and* describes Form 1 / 2 / 3.
-These are different axes — Form 2 (the pristine porcelain noble) is what a **Corrupted**
-entity looks like **from the Dream**. `EntityStateManager.Resolve` is the only place in the
-codebase that knows the mapping:
+`EntityStateManager.Resolve` is the only place in the codebase that knows the mapping:
 
-| | Waking | Dream |
-|---|---|---|
-| **Corrupted** | Form 1 — nightmare, blocks the road | Form 2 — spirit anchor, severable |
-| **Severed** | Form 1 deformed, passable | shattered anchor, fleeing |
-| **Purified** | Form 3 — mundane, farmable | benign echo, nearly gone |
+| | on a Waking screen |
+|---|---|
+| **Corrupted** | Form 1 — nightmare, blocks the road |
+| **Severed** | Form 1 deformed, passable |
+| **Purified** | Form 3 — mundane, farmable |
+
+This was a two-axis table — state × realm, six cells — until the great swap on 2026-08-02, because
+Form 2 (the pristine porcelain noble) was what a **Corrupted** entity looked like when you pressed
+`Tab` and perceived it from the Dream. **Form 2 has not been cancelled; it moved.** It belongs to
+the 3D pocket you travel *into*, and will be resolved by whatever draws that. What died with the
+realm axis was the claim that you could see it from out here.
 
 State is stored per *instance* and never reset on room re-entry. That is the zero-respawn
 rule, mechanically.
 
-### Realm rendering
+### One realm on screen at a time
 
-Both realms are live in the same room. The Waking layer sits underneath at full opacity;
-the Dream layer fades in over it. Dream content renders into a `SubViewport` at **480×270**
-with nearest filtering and a 4× upscale — real pixels, not a post-process. All Dream art
-authors to that grid.
+A Waking screen is one layer of one world: a backdrop, an optional photo, and the entity overlays.
+There is no second live layer underneath it and nothing to crossfade between — spectral vision, the
+`SubViewport` it drew the Pixel Realm into, and the whole Dream half of `RoomData` /
+`HotspotData` / `EntityPlacement` went together on 2026-08-02 (`docs/build-plan.md` §7).
 
-That `SubViewport` is also the seam the 3D Dream drops into, which is why going 3D costs the
-architecture nothing: `RealmTransitionManager`, `EntityStateManager` and the save format do not care
-what the Dream looks like.
+The Dream is still a place you go; it is just somewhere you *travel*, and when you get there it is
+3D. `RealmTransitionManager` survives and still owns which realm you are in, because a heist — and,
+later, a quiet pocket — needs that answer even with no way to peek.
 
 ### Playable before any art exists
 
@@ -137,7 +142,27 @@ in real art one `.tres` field at a time.
 > `docs/combat.md` gained sections **15–17** and one deliberate revision to section 6.
 
 M0–M3 complete, plus the Dream heist, M4's crafting layer with its inventory panel, camps, and
-combat's wound ledger — 328 automated checks, `-- --verify-slice`.
+combat's wound ledger — 385 automated checks, `-- --verify-slice`.
+
+**The whole map is walkable, and the game boots into it.** All 59 screens of the three chapter ledgers
+exist as skeletons — ids, the navigation graph, an examine stub and the harvest nodes — and a new game
+now starts in `ch1_cottage`, so you can walk from the cottage to the Wound and read every screen on the
+way. Exits read spatially: left, right, centre-up is away from you, centre-down is back toward you.
+
+**The bodies are on it too.** All 30 regular fights are placed, with the 24 people they free and the 6
+Beast carcasses they leave, plus the three tool-gated doors, the Snarl's three-flag gate, the three doors
+a Warden bars, and the three camps. What a screen is for is still missing in four places, each waiting on
+a system rather than a decision: **blights** and the **major repairs** (unit 2), **pocket doors** and the
+**boss fights** (unit 6), and the **field stations** (unit 4).
+
+Two verifier sections hold the shape. `graph`: every door names a room that exists, every door can be
+walked back through, the three chapters are one connected world, and no two harvest nodes share the flag
+that marks them taken. `fights`: no two creatures share an instance id, no creature stands on two
+adjoining screens, every creature that bars the path bars a door, and — driven live on `ch1_low_track` —
+the first creature in the game is actually on screen with the person it frees drawn and shut behind them.
+
+The waystation, the shed, the six 2D Dream rooms and the rat still load; nothing walks to them. They
+come out once the 154 checks standing on them are re-anchored, which is deliberately a separate job.
 
 The Waking world is a point-and-click adventure; the Pixel Realm is a stealth heist. Combat is
 **designed and half-built**: `docs/combat.md` §18 is the ratified fight design, `CombatManager`
@@ -148,21 +173,17 @@ anything to do with fighting, Resolve, traps or proficiencies.
 **Two pools, and they are not interchangeable.** Resolve is nerve: it drains on a clock in the
 Dream, and an empty bar removes you from the confrontation. Vitality is the body: it has no
 clock at all and moves only when something wounds you or you treat a wound, and it must never
-appear in the Dream. Vitality is spent by **hazards** — a `VitalityCost` on any hotspot, charged
-only on a successful click, and refused outright in the Dream — and restored by salves. Emptying it
-collapses you: **death destroys what you can remake and keeps what you cannot.** Reagents and
-catalysts are gone, salves, lore and relics survive, the cache is untouched, and you wake at the
-last camp.
-
-**Hazards are not traps.** Traps are the player's own crafted tools and are blocked on M4; a hazard
-is the world costing you the body.
+appear in the Dream. **Only a fight spends it**, and only a salve restores it — the `VitalityCost`
+hotspot field that let the world charge you the body was cut on 2026-08-01 (`docs/combat.md` §22),
+so nothing outside combat can take a wound. Emptying it collapses you: **death destroys what you can
+remake and keeps what you cannot.** Reagents and catalysts are gone, salves, lore and relics survive,
+the cache is untouched, and you wake at the last camp.
 
 The HUD keeps whichever pool can currently move on top and fades the other — Vitality is uppermost
-out here, Resolve inside a heist. That keys off a live Dream run rather than the current realm,
-because spectral vision flips the realm constantly without Resolve moving at all, and peeking is a
-look rather than a place: your body is still out here and can still be hurt. Resolve is never
-faded, and Vitality dims rather than disappearing, because a readable bar is how the HUD states
-that nothing in the Dream can kill you.
+out here, Resolve inside a heist. **That keys off a live Dream run, never on the current realm** —
+a quiet pocket is squarely in the Dream with no clock running, and reordering the bars there would
+promise a threat that is not in the room. Resolve is never faded, and Vitality dims rather than
+disappearing, because a readable bar is how the HUD states that nothing in the Dream can kill you.
 
 **Camps are the safe ground, and a room is a camp precisely when it holds a `Workbench` hotspot.**
 There is no camp flag to keep in sync — the camp is the room you put the bench in. Arriving refills
@@ -175,9 +196,23 @@ rather than a silent failure.
 **The 3D Dream is walkable, in a scene wired into nothing.** `scenes/dream/DreamProbe.tscn` is the
 look shader, the 480×270 3D viewport, a first-person controller and the lighting model — the last
 architectural risk and the first thing worth showing anyone, which turned out to be the same build.
-It touches no autoload, no save format and not `RoomView`, so the suite is unchanged at 328.
+It touches no autoload, no save format and not `RoomView`, so it left the suite untouched. **Unit 1
+— the greybox pocket — is built and walkable**, and settled the creature question by looking rather
+than arguing.
 
-**Next: the greybox pocket** — one quiet knowledge pocket with a distinctive landmark, and a capsule
-beside a billboard so the creature question can be answered by looking rather than argued. Then the
-seam into `Main` with its gates, then the encounter state machine, the crafting panel and the journal.
-`docs/handoff.md`, "The Dream in 3D", has the order and what unit 1 already taught.
+**Unpainted screens read themselves out loud.** A screen with no `WakingBackground` draws a corner card
+naming the room, its chapter and its exits, and labels every hotspot in place — filled and outlined in a
+colour per kind, with the destination room id written on a door and `⊘ {flag}` under anything a gate is
+holding shut. **The condition is the art, not a setting**: paint a screen and its cues vanish for it, so
+none of this can ship by accident. `ShowHotspotOutlines` is still the manual override for painted
+screens, because a painting can hide a clickable region as well as a grey box can.
+
+**Next: retiring the prototype** — re-anchoring the gates that stand on the waystation, the six 2D Dream
+rooms and the rat onto synthetic `verify_` rooms, then deleting all of it — followed by the encounter
+state machine, the crafting panel and the journal.
+`docs/build-plan.md` has the unit order; `docs/handoff.md` has the current state and the invariants.
+
+**Expect the check count to fall during the content pass.** It is not regression — the suite grew up
+around a five-room prototype, and every gate that stands on the waystation, the rat or the heist is a
+gate whose fixture is being deleted out from under it. The swap took 347 → 338 on its own; unit 1.5 put
+it back to 359, the skeleton rooms brought their own gates to 367, and moving the boot made it 369.

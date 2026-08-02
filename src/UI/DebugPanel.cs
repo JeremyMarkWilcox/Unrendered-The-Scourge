@@ -60,11 +60,11 @@ public partial class DebugPanel : PanelContainer
         var resolve = ResolveManager.Instance;
         var vitality = VitalityManager.Instance;
 
-        sb.AppendLine($"room    {nav?.CurrentRoomId}   zone {nav?.CurrentRoom?.ZoneId}");
+        sb.AppendLine($"room    {nav?.CurrentRoomId}   ch {nav?.CurrentRoom?.ChapterId}");
         sb.AppendLine($"realm   {RealmTransitionManager.Instance?.CurrentRealm}");
 
         if (nav?.CurrentRoom != null && world != null)
-            sb.AppendLine($"phase   {world.GetZonePhase(nav.CurrentRoom.ZoneId)}");
+            sb.AppendLine($"phase   {world.GetZonePhase(nav.CurrentRoom.ChapterId)}");
 
         if (resolve != null)
             sb.AppendLine($"resolve {resolve.Current:F1}/{resolve.Max:F0}   rate {resolve.CurrentRatePerSecond():+0.00;-0.00;0.00}/s");
@@ -73,21 +73,12 @@ public partial class DebugPanel : PanelContainer
         if (vitality != null)
             sb.AppendLine($"vitality{vitality.Current,7:F1}/{vitality.Max:F0}   {(vitality.IsEmpty ? "DOWN" : "")}");
 
-        // Hazards authored into *this* room, so an inspector edit can be confirmed without having
-        // to click into it — a VitalityCost you typed but did not save shows up here as an absence.
-        // Kept in the top block with the other room-scoped lines because the flag list below can
-        // grow past the bottom of the screen, and an authoring aid you cannot see is no aid.
-        var hazards = 0;
-        if (nav?.CurrentRoom != null)
-        {
-            foreach (var h in nav.CurrentRoom.Hotspots)
-            {
-                if (h is not { IsHazard: true }) continue;
-                if (hazards++ == 0) sb.AppendLine("hazards");
-                sb.AppendLine($"  {h.Id,-28} -{h.VitalityCost:F0}  {h.Kind}");
-            }
-        }
-        if (hazards == 0) sb.AppendLine("hazards  (none in this room)");
+        // The hazard readout lived here until 2026-08-01 and went with the field (combat.md §22).
+        // The idea behind it is worth keeping for whatever replaces it: it listed what *this* room
+        // has authored on it, so an inspector edit could be confirmed without clicking into it —
+        // a value you typed but did not save showed up here as an absence. **Blights want exactly
+        // that**, and they want it in this same top block, because the flag list below can grow past
+        // the bottom of the screen and an authoring aid you cannot see is no aid.
 
         sb.AppendLine();
         sb.AppendLine("entities");

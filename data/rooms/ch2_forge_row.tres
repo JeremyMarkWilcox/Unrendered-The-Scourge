@@ -1,0 +1,64 @@
+[gd_resource type="Resource" script_class="RoomData" load_steps=11 format=3]
+
+[ext_resource type="Script" uid="uid://b0jetcphiy2cm" path="res://src/Data/HotspotData.cs" id="1_hs"]
+[ext_resource type="Script" uid="uid://v0juosv2w310" path="res://src/Data/RoomData.cs" id="2_room"]
+[ext_resource type="Script" uid="uid://c4nlnfkcu2a6u" path="res://src/Data/EntityPlacement.cs" id="3_ep"]
+[ext_resource type="Resource" path="res://data/entities/creature_innkeeper.tres" id="4_ent"]
+
+[sub_resource type="Resource" id="hs_0"]
+script = ExtResource("1_hs")
+Id = "ch2_forge_row_to_inn_yard"
+Label = "The Inn Yard"
+Kind = 0
+Region = Rect2(70, 390, 290, 410)
+TargetRoomId = "ch2_inn_yard"
+
+[sub_resource type="Resource" id="hs_1"]
+script = ExtResource("1_hs")
+Id = "ch2_forge_row_to_smithy"
+Label = "The Smithy"
+Kind = 0
+Region = Rect2(1560, 390, 290, 410)
+TargetRoomId = "ch2_smithy"
+
+[sub_resource type="Resource" id="hs_2"]
+script = ExtResource("1_hs")
+Id = "ch2_forge_row_look"
+Label = "The Anvil"
+Kind = 1
+Region = Rect2(700, 550, 520, 250)
+ExamineText = "[unwritten]"
+
+[sub_resource type="Resource" id="hs_3"]
+script = ExtResource("1_hs")
+Id = "ch2_forge_row_scrap_iron"
+Label = "Scrap Iron"
+Kind = 3
+Region = Rect2(120, 870, 220, 160)
+ItemId = "mat_scrap_iron"
+ItemAmount = 2
+RefillsAtMilestone = true
+
+[sub_resource type="Resource" id="hs_4"]
+script = ExtResource("1_hs")
+Id = "ch2_forge_row_freed"
+Label = "The Farrier"
+Kind = 1
+Region = Rect2(370, 615, 320, 240)
+ExamineText = "[unwritten]"
+RequiredFlag = "freed.ch2.innkeeper_02"
+
+[sub_resource type="Resource" id="ep_0"]
+script = ExtResource("3_ep")
+InstanceId = "ch2.innkeeper_02"
+Entity = ExtResource("4_ent")
+WakingPosition = Vector2(530, 855)
+
+[resource]
+script = ExtResource("2_room")
+Id = "ch2_forge_row"
+DisplayName = "Forge Row"
+ChapterId = "ch2"
+PlaceholderStyle = 0
+Hotspots = Array[ExtResource("1_hs")]([SubResource("hs_0"), SubResource("hs_1"), SubResource("hs_2"), SubResource("hs_3"), SubResource("hs_4")])
+Entities = Array[ExtResource("3_ep")]([SubResource("ep_0")])

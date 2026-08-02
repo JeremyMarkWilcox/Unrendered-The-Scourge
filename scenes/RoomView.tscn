@@ -13,7 +13,7 @@ grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("1_roomview")
 
-[node name="WakingLayer" type="Control" parent="."]
+[node name="WorldLayer" type="Control" parent="."]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -22,7 +22,7 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="Backdrop" type="Control" parent="WakingLayer"]
+[node name="Backdrop" type="Control" parent="WorldLayer"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -32,7 +32,7 @@ grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("2_backdrop")
 
-[node name="Photo" type="TextureRect" parent="WakingLayer"]
+[node name="Photo" type="TextureRect" parent="WorldLayer"]
 visible = false
 layout_mode = 1
 anchors_preset = 15
@@ -44,60 +44,7 @@ mouse_filter = 2
 expand_mode = 1
 stretch_mode = 6
 
-[node name="Entities" type="Node2D" parent="WakingLayer"]
-
-[node name="DreamLayer" type="Control" parent="."]
-modulate = Color(1, 1, 1, 0)
-visible = false
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-
-[node name="DreamContainer" type="SubViewportContainer" parent="DreamLayer"]
-texture_filter = 1
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-stretch = true
-stretch_shrink = 4
-
-[node name="DreamViewport" type="SubViewport" parent="DreamLayer/DreamContainer"]
-disable_3d = true
-handle_input_locally = false
-gui_disable_input = true
-canvas_item_default_texture_filter = 0
-size = Vector2i(480, 270)
-render_target_update_mode = 4
-
-[node name="Backdrop" type="Control" parent="DreamLayer/DreamContainer/DreamViewport"]
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-script = ExtResource("2_backdrop")
-
-[node name="Photo" type="TextureRect" parent="DreamLayer/DreamContainer/DreamViewport"]
-visible = false
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-expand_mode = 1
-stretch_mode = 6
-
-[node name="Entities" type="Node2D" parent="DreamLayer/DreamContainer/DreamViewport"]
+[node name="Entities" type="Node2D" parent="WorldLayer"]
 
 [node name="Hotspots" type="Control" parent="."]
 layout_mode = 1

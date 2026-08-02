@@ -6,29 +6,30 @@ using Unrendered.Managers;
 namespace Unrendered.World;
 
 /// <summary>
-/// Draws one entity as it appears in one realm. Two of these exist per placed entity — a
-/// Waking one and a Dream one — and each simply asks
-/// <see cref="EntityStateManager.Resolve"/> what it should look like. Neither ever branches
+/// Draws one entity. One of these exists per placed entity, and it simply asks
+/// <see cref="EntityStateManager.Resolve"/> what it should look like. It never branches
 /// on state itself, so adding a fourth condition later means editing the table and nothing
 /// else.
+///
+/// <para>
+/// There were two per entity until 2026-08-02 — a Waking one and a Dream one, kept in step by
+/// hand across two coordinate spaces. The great swap left one.
+/// </para>
 /// </summary>
 public partial class EntityOverlay : Node2D
 {
     private EntityPlacement _placement;
-    private GameRealm _realm;
     private EntityPresentation _presentation;
 
     public EntityPresentation Presentation => _presentation;
     public string InstanceId => _placement?.InstanceId ?? "";
 
-    public void Setup(EntityPlacement placement, GameRealm realm)
+    public void Setup(EntityPlacement placement)
     {
         _placement = placement;
-        _realm = realm;
 
-        Position = realm == GameRealm.Dream ? placement.DreamPosition : placement.WakingPosition;
-        var s = realm == GameRealm.Dream ? placement.DreamScale : placement.WakingScale;
-        Scale = new Vector2(s, s);
+        Position = placement.WakingPosition;
+        Scale = new Vector2(placement.WakingScale, placement.WakingScale);
 
         Refresh();
     }
@@ -59,7 +60,7 @@ public partial class EntityOverlay : Node2D
     {
         if (_placement?.Entity == null) return;
 
-        _presentation = EntityStateManager.Instance?.Resolve(_placement.Entity, _placement.InstanceId, _realm);
+        _presentation = EntityStateManager.Instance?.Resolve(_placement.Entity, _placement.InstanceId);
         Visible = _presentation?.Visible ?? false;
         QueueRedraw();
     }
@@ -95,9 +96,9 @@ public partial class EntityOverlay : Node2D
     }
 
     /// <summary>
-    /// Stand-in figure. Nightmares get a ragged, asymmetric hulk; porcelain nobles get a
-    /// clean vertical column with a head. Crude, but you can tell the three forms apart
-    /// at a glance, which is the whole point of having it.
+    /// Stand-in figure. A nightmare gets a ragged, asymmetric hulk; what it was before gets a
+    /// clean vertical column with a head. Crude, but you can tell the forms apart at a glance,
+    /// which is the whole point of having it.
     /// </summary>
     private void DrawPlaceholderSilhouette()
     {
@@ -150,9 +151,5 @@ public partial class EntityOverlay : Node2D
             DrawColoredPolygon(body, tint);
             DrawCircle(new Vector2(0, -h * 0.83f), h * 0.11f, tint.Lightened(0.25f));
         }
-
-        // Dark royalty, allegedly. Nothing mundane wears one.
-        if (_presentation.PlaceholderCrowned)
-            DrawRect(new Rect2(-w * 0.17f, -h * 1.02f, w * 0.34f, h * 0.06f), tint.Darkened(0.35f));
     }
 }

@@ -4,11 +4,21 @@ using Unrendered.Core;
 namespace Unrendered.Managers;
 
 /// <summary>
-/// Owns which realm the player is perceiving, and the input that flips it.
+/// Owns which realm the player is <i>in</i>.
 ///
-/// The logical flip is instantaneous — gameplay queries never wait on an animation. Views
-/// receive <c>RealmChanged</c> immediately and run their own crossfade to catch up, so a
-/// click landing mid-transition still resolves against the realm you actually chose.
+/// <para>
+/// It owned which realm the player was <i>perceiving</i> until 2026-08-02, and a Tab binding that
+/// flipped it at will. The great swap deleted spectral vision, and with it the only caller that
+/// changed realm as a look rather than as a journey. What is left is a place: the realm changes
+/// when <see cref="DreamRunManager"/> takes you into a pocket and when it throws you out, and
+/// nothing else moves it.
+/// </para>
+///
+/// <para>
+/// The state is kept rather than folded into <c>DreamRunManager.IsRunning</c> because the two will
+/// come apart: unit 6's pockets have a quiet version with no run and no clock, and you are still
+/// in the Dream while you walk one.
+/// </para>
 /// </summary>
 public partial class RealmTransitionManager : Node
 {
@@ -26,21 +36,10 @@ public partial class RealmTransitionManager : Node
         if (Instance == this) Instance = null;
     }
 
-    /// <summary>
-    /// Handled in _Input rather than _UnhandledInput on purpose: Tab is also bound to
-    /// Godot's built-in ui_focus_next, and a focused Control would eat it first.
-    /// </summary>
-    public override void _Input(InputEvent @event)
-    {
-        if (!@event.IsActionPressed("toggle_realm")) return;
-        if (@event.IsEcho()) return;
-
-        Toggle();
-        GetViewport().SetInputAsHandled();
-    }
-
-    public void Toggle() =>
-        SetRealm(CurrentRealm == GameRealm.Waking ? GameRealm.Dream : GameRealm.Waking);
+    // `_Input` and `Toggle` — the Tab handler, written into _Input rather than _UnhandledInput
+    // because Tab is also Godot's built-in ui_focus_next and a focused Control would eat it first.
+    // Both deleted 2026-08-02, along with the `toggle_realm` action in project.godot. Nothing
+    // toggles a realm any more; you travel.
 
     public void SetRealm(GameRealm realm, bool force = false)
     {

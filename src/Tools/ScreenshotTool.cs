@@ -28,12 +28,9 @@ public static class ScreenshotTool
         await Settle(host, 20);
         await Shot(host, "01_waking_corrupted");
 
-        RealmTransitionManager.Instance.SetRealm(GameRealm.Dream);
-        await Settle(host, 45);
-        await Shot(host, "02_spectral_vision");
-
-        RealmTransitionManager.Instance.SetRealm(GameRealm.Waking);
-        await Settle(host, 45);
+        // `02_spectral_vision` was shot here — Tab into the Dream, hold 45 frames for the crossfade,
+        // Tab back. Deleted 2026-08-02 with the mechanism. The numbering below is left alone rather
+        // than closed up, so an old .shots directory and a new one still line up beat for beat.
 
         // Find the relic, then cross.
         Activate("yard_cairn");

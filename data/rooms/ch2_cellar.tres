@@ -1,0 +1,48 @@
+[gd_resource type="Resource" script_class="RoomData" load_steps=7 format=3]
+
+[ext_resource type="Script" uid="uid://b0jetcphiy2cm" path="res://src/Data/HotspotData.cs" id="1_hs"]
+[ext_resource type="Script" uid="uid://v0juosv2w310" path="res://src/Data/RoomData.cs" id="2_room"]
+
+[sub_resource type="Resource" id="hs_0"]
+script = ExtResource("1_hs")
+Id = "ch2_cellar_to_vestry"
+Label = "The Vestry"
+Kind = 0
+Region = Rect2(70, 390, 290, 410)
+TargetRoomId = "ch2_vestry"
+
+[sub_resource type="Resource" id="hs_1"]
+script = ExtResource("1_hs")
+Id = "ch2_cellar_look"
+Label = "The Barricade"
+Kind = 1
+Region = Rect2(700, 550, 520, 250)
+ExamineText = "[unwritten]"
+
+[sub_resource type="Resource" id="hs_2"]
+script = ExtResource("1_hs")
+Id = "ch2_cellar_cured_hide"
+Label = "Cured Hide"
+Kind = 3
+Region = Rect2(120, 870, 220, 160)
+ItemId = "mat_cured_hide"
+ItemAmount = 3
+RefillsAtMilestone = true
+
+[sub_resource type="Resource" id="hs_3"]
+script = ExtResource("1_hs")
+Id = "ch2_cellar_scrap_iron"
+Label = "Scrap Iron"
+Kind = 3
+Region = Rect2(370, 870, 220, 160)
+ItemId = "mat_scrap_iron"
+ItemAmount = 3
+RefillsAtMilestone = true
+
+[resource]
+script = ExtResource("2_room")
+Id = "ch2_cellar"
+DisplayName = "The Cellar"
+ChapterId = "ch2"
+PlaceholderStyle = 1
+Hotspots = Array[ExtResource("1_hs")]([SubResource("hs_0"), SubResource("hs_1"), SubResource("hs_2"), SubResource("hs_3")])

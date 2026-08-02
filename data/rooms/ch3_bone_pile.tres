@@ -1,0 +1,66 @@
+[gd_resource type="Resource" script_class="RoomData" load_steps=9 format=3]
+
+[ext_resource type="Script" uid="uid://b0jetcphiy2cm" path="res://src/Data/HotspotData.cs" id="1_hs"]
+[ext_resource type="Script" uid="uid://v0juosv2w310" path="res://src/Data/RoomData.cs" id="2_room"]
+
+[sub_resource type="Resource" id="hs_0"]
+script = ExtResource("1_hs")
+Id = "ch3_bone_pile_to_drowned_stall"
+Label = "The Drowned Stall"
+Kind = 0
+Region = Rect2(70, 390, 290, 410)
+TargetRoomId = "ch3_drowned_stall"
+
+[sub_resource type="Resource" id="hs_1"]
+script = ExtResource("1_hs")
+Id = "ch3_bone_pile_to_breach"
+Label = "The Breach"
+Kind = 0
+Region = Rect2(1560, 390, 290, 410)
+TargetRoomId = "ch3_breach"
+
+[sub_resource type="Resource" id="hs_2"]
+script = ExtResource("1_hs")
+Id = "ch3_bone_pile_look"
+Label = "The Bone Pile"
+Kind = 1
+Region = Rect2(700, 550, 520, 250)
+ExamineText = "[unwritten]"
+
+[sub_resource type="Resource" id="hs_3"]
+script = ExtResource("1_hs")
+Id = "ch3_bone_pile_tallow"
+Label = "Tallow"
+Kind = 3
+Region = Rect2(120, 870, 220, 160)
+ItemId = "rat_tallow"
+ItemAmount = 3
+RefillsAtMilestone = true
+
+[sub_resource type="Resource" id="hs_4"]
+script = ExtResource("1_hs")
+Id = "ch3_bone_pile_bitterroot"
+Label = "Bitterroot"
+Kind = 3
+Region = Rect2(370, 870, 220, 160)
+ItemId = "herb_bitterroot"
+ItemAmount = 2
+RefillsAtMilestone = true
+
+[sub_resource type="Resource" id="hs_5"]
+script = ExtResource("1_hs")
+Id = "ch3_bone_pile_pitch"
+Label = "Pitch"
+Kind = 3
+Region = Rect2(620, 870, 220, 160)
+ItemId = "mat_pitch"
+ItemAmount = 1
+RefillsAtMilestone = true
+
+[resource]
+script = ExtResource("2_room")
+Id = "ch3_bone_pile"
+DisplayName = "The Bone Pile"
+ChapterId = "ch3"
+PlaceholderStyle = 1
+Hotspots = Array[ExtResource("1_hs")]([SubResource("hs_0"), SubResource("hs_1"), SubResource("hs_2"), SubResource("hs_3"), SubResource("hs_4"), SubResource("hs_5")])

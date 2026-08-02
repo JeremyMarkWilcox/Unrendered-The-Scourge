@@ -1,6 +1,5 @@
 using System.Linq;
 using Godot;
-using Unrendered.Tools;
 
 namespace Unrendered.Core;
 
@@ -23,13 +22,13 @@ public partial class Boot : Node
     {
         var args = OS.GetCmdlineUserArgs();
 
-        // godot --headless --path . -- --seed-content
-        if (args.Contains("--seed-content"))
-        {
-            ContentSeeder.SeedAll();
-            GetTree().Quit();
-            return;
-        }
+        // `--seed-content` and ContentSeeder were deleted 2026-08-01, at the start of the content
+        // pass. It wrote the whole of data/ unconditionally, which was a bootstrap while there were
+        // five rooms and a loaded gun beside ~58 (docs/build-plan.md §6). Its payload was superseded
+        // content anyway — the giant rat, the 2D dream maze, the heist. The one part worth keeping is
+        // the writer idiom (ResourceSaver.Save then TakeOverPath, so a room links its entity instead
+        // of embedding a copy); that returns in the ledger generator, write-if-absent. The original
+        // is in git at bb665ad:src/Tools/ContentSeeder.cs.
 
         // godot --headless --path . -- --verify-slice
         VerifySlice = args.Contains("--verify-slice");

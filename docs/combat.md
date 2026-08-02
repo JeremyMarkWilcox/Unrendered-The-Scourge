@@ -534,11 +534,27 @@ make evasion a decision rather than a dice roll.
 The player's only readout is distance rendered as language — *"footsteps, not far"* — never a
 number and never a minimap. Not knowing which direction it is coming from is doing the work.
 
-### Spectral vision is still a look, not a place
+### ~~Spectral vision is still a look, not a place~~ — deleted 2026-08-02
 
-`Tab` remains the diagnostic: you see Form 2 anchored to the beast, and you see the aura. You
-cannot sever from there. That preserves the GDD's dual-perception idea while making the heist
-the only real way through.
+> `Tab` remains the diagnostic: you see Form 2 anchored to the beast, and you see the aura. You
+> cannot sever from there. That preserves the GDD's dual-perception idea while making the heist
+> the only real way through.
+
+**The look is gone; the refusal it protected is not.** Ratified 2026-08-01 (`build-plan.md` §7,
+decision 8) and executed the next day: `Tab`, `RealmVisibility`, the Dream textures and positions
+and the whole Dream column of the state table. Jeremy: *"not unless we find a purpose for it in the
+game. I don't see one... Tab goes we don't need it."*
+
+What it cost to keep was the thing that killed it: **every one of ~59 generated screens would have
+carried a realm field on every hotspot**, and every authored Waking screen would have implied a
+second authored Dream screen — for a diagnostic whose only real job was proving the two-realm
+architecture worked. It proved it.
+
+**The heist is still the only way through, now by construction** rather than by a refusal check:
+there is no way to perceive the anchor from a Waking screen at all. **Form 2 is not cancelled — it
+moved.** It belongs to the 3D pocket you travel into, and is unit 6's to draw. `GameRealm` and
+`RealmTransitionManager` survive and change meaning: not *which way you are looking* but *where you
+are*.
 
 ## 10. Her supplies
 
@@ -640,7 +656,8 @@ Mostly additive:
 
 - `EntityState` already has the `Severed` middle value the model pivots on
 - `EntityData.CorruptionAura` already exists as an authored field — though **nothing reads it
-  yet**; it is set by `ContentSeeder` and stored in the `.tres`, and that is all
+  yet**; it is stored in the `.tres`, and that is all *(it was seeded there; `ContentSeeder` was
+  deleted 2026-08-01)*
 - `SaveService` persists plain dictionaries, so per-entity combat state grows without a save
   format break
 - `EntityStateManager.Resolve` stays the one place that knows how a state looks
@@ -1260,6 +1277,34 @@ impactful."*
 > **There is one camp per chapter, and you reach it from anywhere with a menu action.** No walking, no
 > remembering where it was, no per-area spacing. Arriving still refills both pools automatically, and
 > everything else in the ratified list above is untouched.
+
+> **Amended 2026-08-01 — you are teleported *to a place*, and you walk out of it.** Jeremy, asked
+> whether a camp is still a screen: *"Yes I think it should be a place you are teleported to. The
+> cabin, Inn, Campsite. It will add more of a cost of having to retravel then a pure overlay
+> inventory."*
+>
+> **The menu is a shortcut *in*, not a bubble you stand inside.** A camp is an ordinary `RoomData`
+> screen with ordinary exits; the menu action puts you in it from anywhere, and leaving is walking out
+> of the door like any other room. **The heading is now slightly wrong and is kept anyway** — what the
+> section actually killed was *the walk to the bench*, and every argument in it survives untouched:
+> there is still nothing to find, nothing to remember, and no per-area spacing.
+>
+> **What the amendment buys is a price on the free heal.** A full refill costs the trip back to where
+> you were, which is the one cost a pure overlay cannot charge. It does **not** restore attrition — §22
+> stands as written, and the honest note above about hazards losing their teeth stays true, because a
+> player who wants the heal always gets it.
+>
+> **Three things checked, all clear.** §23 already assumed this without noticing: *"0 Resolve ejects
+> you to camp, the camp menu refills for free, and you walk back in."* §20's *"you went back for it"*
+> is unaffected and arguably better founded — **the three camps are the fast-travel network**, so an
+> inter-chapter backtrack is still free and only the local leg is walked. And §23's reason for a cut
+> knot paying no shortcut weakens by a hair but does not fall: the slot is filled with knowledge, three
+> guards hold it, and the knot doors sit on critical-path screens near the Snarl, so the walk back in
+> is short by construction.
+>
+> **The code consequence is a shrink, not a rework** — see `build-plan.md` §4, unit 5. *"A room is a
+> camp precisely when it holds a `Workbench` hotspot"* is still true, so the built derivation, the
+> shared cache, the arrival refill and the respawn destination all survive. What is added is one verb.
 
 **The three camps are the emotional spine of the game, which is the real reason to have one per chapter
 rather than several per area.** Each is a painted room you return to, and the sequence says something the
@@ -2587,7 +2632,7 @@ camp is the answer to it: nobody there at all, except the one man you killed.
 
 | | |
 |---|---|
-| `EntityData.SpiritTexture` / `ShatteredTexture` / `EchoTexture` | **dead.** Written when both realms were 2D; the Dream went 3D on 2026-07-30 and a `Texture2D` cannot be handed to a low-poly pursuer. Delete, and fix the class comment that still describes "six in total". |
+| `EntityData.SpiritTexture` / `ShatteredTexture` / `EchoTexture` | **deleted 2026-08-02.** Written when both realms were 2D; the Dream went 3D on 2026-07-30 and a `Texture2D` cannot be handed to a low-poly pursuer. The class comment went with them. `SpiritName` was **kept** — it is authored prose rather than an empty shape, and it is deliberately unread until unit 6 has something to print it on. |
 | `EntityData.HarvestItemId` / `PurifiedTexture` | **unused, and still unused even though the Beast drops materials** — see below. Nothing is harvested via the *entity*. `EntityState.Purified` survives and now means *this person is freed*, which is the flag the rescued NPC spawns on. |
 | **Bosses have two forms, not three** | blank `PurifiedName`, blank `HarvestItemId`. They are destroyed, never purified. |
 
@@ -2689,15 +2734,26 @@ blight charges nothing and damages nobody. So:
 | **Yields** | nothing | **1 Graveflower**, and the screen cleanses |
 | **Repeats** | by default, unless flag-gated | never — one flag, one mend |
 
-**What becomes of `VitalityCost` is a decision for the code pass, not this section.** Waking-world damage
-is no longer part of the design, so the field has no design customer left — but `yard_cairn` is authored
-with `VitalityCost = 10`, that content is verified in play, and it is currently the only way to reach 0
-Vitality outside a fight. Do not delete either the field or the cairn on the strength of this section:
-**decide it deliberately when the code pass reaches §22, and check what the collapse-path gates are
-actually exercising first.** This is exactly the class of thing the `--verify-slice` blind-spot note
-warns about — a green gate over content that the design has quietly stopped wanting.
+~~**What becomes of `VitalityCost` is a decision for the code pass, not this section.**~~ **Decided and
+done, 2026-08-01.** The field, `HazardText`, `IsHazard`, `ApplyHazard`, the debug panel's hazard list and
+`GateHazards` are **deleted**. Jeremy: *"vit cost was when the environment damaged you and since nothing
+does now we don't really need it."*
 
-The one clean rename either way: **`HazardText` → `BlightText`** if the field survives.
+**The check this section asked for was run first, and it is the reason the deletion was safe.** The
+worry was that `yard_cairn` (`VitalityCost = 10`) was the only way to reach 0 Vitality outside a fight,
+so deleting it might quietly remove the only exerciser of the collapse path. It did not: **every
+collapse, `SurvivesDeath` and respawn gate drives `vitality.Damage(...)` directly**, in `GateVitalityPool`
+and `GateCamps`. Thirteen checks went with the feature, all of them about the feature. **315, exit 0.**
+
+Two things were kept rather than deleted with it, both noted where they died: the **sample-then-act
+shape** in `ActivateHotspot` (the realm was read *before* the action, because a CrossToDream relic moves
+you mid-call) is the pattern to restore if anything ever charges the body from a hotspot again; and the
+debug panel's room-scoped readout — *what is authored on this screen, visible without clicking it* — is
+what **blights should have**, in the same place.
+
+~~The one clean rename either way: **`HazardText` → `BlightText`**.~~ **No rename.** A blight shares no
+field with a hazard — it charges nothing, gates the cleanse, presents a jigsaw and pays a Graveflower —
+so carrying a field across would have been the old mechanic wearing the new name.
 
 ### The twelve blights are the restoration sites, and they are the good ending's currency
 

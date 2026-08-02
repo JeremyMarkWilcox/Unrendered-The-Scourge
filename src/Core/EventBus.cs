@@ -24,7 +24,14 @@ public partial class EventBus : Node
 
     // ---- Realm -----------------------------------------------------------
 
-    /// <summary>Spectral vision toggled. Payload is a <see cref="GameRealm"/>.</summary>
+    /// <summary>
+    /// You have crossed into or out of the Dream. Payload is a <see cref="GameRealm"/>.
+    /// <para>
+    /// This was "spectral vision toggled" until 2026-08-02, fired on every <c>Tab</c> press. It now
+    /// only fires when you actually travel, which is rare and load-bearing — so a subscriber can
+    /// afford to do real work in it, where before it had to be cheap.
+    /// </para>
+    /// </summary>
     [Signal] public delegate void RealmChangedEventHandler(int realm);
 
     // ---- World state -----------------------------------------------------

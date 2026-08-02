@@ -1,0 +1,36 @@
+[gd_resource type="Resource" script_class="RoomData" load_steps=6 format=3]
+
+[ext_resource type="Script" uid="uid://b0jetcphiy2cm" path="res://src/Data/HotspotData.cs" id="1_hs"]
+[ext_resource type="Script" uid="uid://v0juosv2w310" path="res://src/Data/RoomData.cs" id="2_room"]
+
+[sub_resource type="Resource" id="hs_0"]
+script = ExtResource("1_hs")
+Id = "ch2_smithy_to_forge_row"
+Label = "Forge Row"
+Kind = 0
+Region = Rect2(70, 390, 290, 410)
+TargetRoomId = "ch2_forge_row"
+
+[sub_resource type="Resource" id="hs_1"]
+script = ExtResource("1_hs")
+Id = "ch2_smithy_to_cart_road"
+Label = "The Cart Road"
+Kind = 0
+Region = Rect2(1560, 390, 290, 410)
+TargetRoomId = "ch2_cart_road"
+
+[sub_resource type="Resource" id="hs_2"]
+script = ExtResource("1_hs")
+Id = "ch2_smithy_look"
+Label = "The Forge"
+Kind = 1
+Region = Rect2(700, 550, 520, 250)
+ExamineText = "[unwritten]"
+
+[resource]
+script = ExtResource("2_room")
+Id = "ch2_smithy"
+DisplayName = "The Smithy"
+ChapterId = "ch2"
+PlaceholderStyle = 1
+Hotspots = Array[ExtResource("1_hs")]([SubResource("hs_0"), SubResource("hs_1"), SubResource("hs_2")])

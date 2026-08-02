@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="EntityData" format=3]
+
+[ext_resource type="Script" path="res://src/Data/EntityData.cs" id="1_ed"]
+
+[resource]
+script = ExtResource("1_ed")
+Id = "creature_messenger"
+CorruptedName = "The Messenger"
+SpiritName = "[unwritten]"
+PurifiedName = "[unwritten]"
+BlocksPath = false
+Durability = 30
+VulnerableTo = 3
+ResistantTo = 1
+Deals = 3
+Damage = 9
