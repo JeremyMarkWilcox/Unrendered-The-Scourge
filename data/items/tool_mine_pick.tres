@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://src/Data/ItemData.cs" id="1_item"]
+
+[resource]
+script = ExtResource("1_item")
+Id = "tool_mine_pick"
+DisplayName = "Mine Pick"
+Description = "Heartwood haft, iron head, a cairnstone bit dressed to a point. It reads rock the way a chisel reads grain."
+Category = 3
+MaxStack = 1
+PlaceholderColor = Color(0.47058824, 0.42352942, 0.3372549, 1)

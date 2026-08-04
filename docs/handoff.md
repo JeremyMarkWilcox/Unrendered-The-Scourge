@@ -1,6 +1,6 @@
 # Handoff — where we left off
 
-Last updated: **2026-08-02.** Read this first, then `docs/combat.md` — which is the source of
+Last updated: **2026-08-03.** Read this first, then `docs/combat.md` — which is the source of
 truth for combat, Resolve, the Dream and camps, and whose §19–22 are the newest material. **§18 is
 the ratified fight design and the authority on how combat works** — it closes the item, trap and
 equipment vocabulary that the rest of that document defers, and it deletes Defence as a number.
@@ -24,15 +24,31 @@ overlay, a Dream-only hotspot, or seeing Form 2 from a Waking screen is history.
 looking* but *where you are*, which is what the 3D pockets need. `EntityData.SpiritName` survives
 too, and is deliberately unread — it is authored prose, not an empty shape, and unit 6 will want it.
 
-**The rest of the swap is deferred, on purpose.** The waystation, the six 2D `dream_way_*` rooms, the
-rat and the heist **stay until their gates are re-anchored**, because 154 checks stand on them and
-would otherwise be deleted rather than moved. (`StartingRoomId` was on that list until later the same
-day — it moved to `ch1_cottage` ahead of the rest, and the paragraph further down on what that cost
-is the most useful thing in this section.) Spectral vision had to
-go first regardless: unit 1.5 touches `BackdropStyle.Dream` and the realm filter, and the prototype
-rooms do not. The six `dream_way_*` rooms were remapped from `PlaceholderStyle = 2` to `1` to stay
-loadable in the meantime. `DreamHeistData` / `DreamRunManager` retire in **unit 6**, with the seam —
-not before, because they are what makes the slice play end to end today.
+~~**The rest of the swap is deferred, on purpose.**~~ **✅ Done 2026-08-03 as unit 3b — the prototype is
+gone. See *Unit 3b* below; this paragraph is kept because two of its numbers were load-bearing and one of
+its predictions was wrong.** It read: the waystation, the six 2D `dream_way_*` rooms, the rat and the heist
+**stay until their gates are re-anchored**, because a large block of checks stands on them and would
+otherwise be deleted rather than moved. **The "154" this sentence used to claim was never measured and is
+wrong** (corrected 2026-08-03): counted per section, the four sections standing *wholly* on the prototype
+total **76** — M1 3, M2 10, M3 38, heist 25. The rest is spread through save/load, camps and the wound
+ledger and has still never been counted, which is why the honest number here is a range and not a figure.
+The real reason not to do the retirement today is unrelated to the count: `DreamHeistData` /
+`DreamRunManager` retire in **unit 6**, so deleting the six `dream_way_*` rooms now would mean
+hand-building synthetic Dream fixtures for those 25 heist checks and nothing else. (`StartingRoomId` was on
+that list until later the same day — it moved to `ch1_cottage` ahead of the rest, and the paragraph further
+down on what that cost is the most useful thing in this section.) Spectral vision had to go first
+regardless: unit 1.5 touches `BackdropStyle.Dream` and the realm filter, and the prototype rooms do not.
+The six `dream_way_*` rooms were remapped from `PlaceholderStyle = 2` to `1` to stay loadable in the
+meantime. `DreamHeistData` / `DreamRunManager` retire in **unit 6**, with the seam — not before, because
+they are what makes the slice play end to end today.
+
+> **The prediction that was wrong, and it is the one to learn from.** *"Hand-building synthetic Dream
+> fixtures for those 25 heist checks"* was the whole cost argument for deferring, and the fixture turned out
+> to be **about twelve lines**: `DreamRunManager.IsDreamRoom` derives from walking the Navigate graph out of
+> `StartRoomId`, so one synthetic Dream room makes a room "inside a heist" and a second gives the stranding
+> check a door to save behind. The estimate was made by counting the *checks* instead of reading the
+> *derivation*, and it bought a whole extra unit of deferral. Cost a fixture by what it has to make true,
+> not by how many gates lean on it.
 
 **Unit 1.5, the placeholder readability layer, is built — 2026-08-02, 338 → 359 checks.** Every screen
 with no `WakingBackground` now names itself in a corner card (id, display name, chapter, exit list) and
@@ -62,8 +78,10 @@ cottage camp is pass-2 work that nonetheless has to land **with or before the re
 `waystation_shed` is currently the only camp `GateAuthoredContent` can find.~~ **Pass 2 landed later the
 same day and took five of those nine — see below.** The bench worry is closed twice over: `ch1_cottage`
 got one with the boot move and `ch2_first_house` and `ch3_dry_store` got theirs in pass 2, so there are
-**three real camps** and `waystation_shed` is no longer load-bearing for anything. Blights, pocket doors,
-major repairs and field stations are still outstanding, each behind a unit rather than a decision.
+**three real camps** and `waystation_shed` is no longer load-bearing for anything. ~~Blights, pocket
+doors, major repairs and field stations are still outstanding, each behind a unit rather than a
+decision.~~ **The 12 blights landed on 2026-08-03 with unit 2 — see below.** Pocket doors (unit 6),
+the 3 major repairs (unit 4, plus a boss drop) and the field stations (unit 4) are what is left.
 
 **Later the same day the boot moved, and the map became reachable in play — 367 → 369.** Three edits:
 `ch1_cottage.tres` gained a `Workbench` (`ch1_cottage_bench`), `GameConfig.StartingRoomId` moved from
@@ -172,6 +190,1065 @@ ways, and the one worth keeping is **BT7 — deleting the freed hotspot's gate**
 > after it. `.tres` edits are exempt — data is loaded at runtime — which is why the seven content
 > break-tests needed no rebuild and the two code ones did.
 
+**Unit 2 built the blight and mend layer — 2026-08-03, 385 → 439 checks.** All **12 blights** are
+authored, the cleansed-screen rule has an owner in code, and **the zone machinery is gone.** New:
+`HotspotKind.Mend`, `MendPuzzleData`, `MendManager`, `MendPanel` (+ `.tscn`),
+`data/items/herb_graveflower.tres`, and a `mending` section in the verifier. Every screen in the game
+was permanently grey before this — `build-plan.md` §4's *"currently has no owner in code"* — and now a
+screen repaints the moment nothing on it is unresolved, which is the visual payoff for the whole Waking
+world.
+
+**Three things about the shape, each one word to overrule.**
+
+- **The kind is `Mend`, not `Blight`.** Every member of that enum is a verb bar `Entity` and
+  `Workbench`, and the same kind has to serve a broken bridge in unit 4 — clicking a bridge labelled
+  `Blight` would be a lie. §22's *"**Blight** the thing, **Mend** the verb"* is about the design's noun,
+  and the noun survives where it matters: the flag is `blight.<id>.mended`.
+- **The puzzle is a click puzzle.** §22 names three forms and all three are "click the right thing(s)",
+  so one data-driven panel serves fifteen instances at the cost of fifteen data blocks and no art. The
+  seam is one method wide (`MendManager.Mend`), so real draggable pieces later replace the panel and
+  touch no `.tres` and no gate.
+- **`MendManager` is a static class, not an autoload.** It holds no state — everything it answers is
+  read from flags and `EntityStateManager` on the spot — so registering it would add an eleventh
+  autoload whose only job is to exist. `MendPuzzleData` is its own file for a duller reason: Godot
+  resolves a script resource **by filename**, so nesting it inside `HotspotData.cs` makes every `.tres`
+  that references it unloadable.
+
+**The one place §22 and the code part company, on purpose.** §22 gives three reasons a screen is
+unfinished — Held, Fouled, Blocked — and the predicate implements the first two only. **A tool gate is
+not screen state**: it resolves for every screen in the world the instant you learn the tool, so a
+screen whose only unfinished thing is a door would flip to cleansed with no act performed *on that
+screen*, and cleansing should be caused by something you did here. Checked against the ledgers it costs
+nothing — every Blocked screen also holds a creature or a blight — with **one visible wart: the Snarl**,
+which has neither and so reads cleansed from the start. Unit 6 owns that screen's door; the note lives
+on the predicate rather than as a special case inside it.
+
+**Where the zone machinery died, and what moved instead of being deleted.** `ZonePhase`,
+`ZonePhaseChanged`, `IsZoneLieutenant`, `WorldStateManager`'s six zone members and `SaveGame.ZonePhases`
+are all out, following `deleting-a-gated-mechanism`: keep the invariant, move the probe.
+`ZoneCorruptionScalar` is **the one honest deletion with no surviving invariant** — nothing read it once
+Resolve drain became boss-only, so its probe went with it rather than moving, and saying that out loud
+is the point. The waystation prototype converted **1:1**: the yard drops `IsZoneLieutenant`,
+`yard_bitterroot`'s gate moves from `zone.waystation.purified` to `screen.waystation_yard.cleansed`, and
+M3's steps 7–8 keep their meaning with their flag renamed. One easy-to-miss consequence:
+`RoomView.OnWorldFlagChanged` had to start refreshing **backdrops** as well as hotspots, or the flip
+would set the flag and not repaint until you left the room.
+
+**`SaveGame` lost a field, which it has never done before.** Cleansing rides in `Flags`, which already
+round-trips, so the format got *simpler*. Old saves survive by two separate mechanisms and both are now
+gated: `System.Text.Json` ignores unknown members, and `NavigationManager.GoToRoom` **re-derives** the
+cleansed flag on arrival, so a save that never knew the flag existed still shows the right colour. That
+second half is why the new legacy-save checks hand-author a save file in the *old* shape rather than
+round-tripping today's writer — every file the existing persistence gate reads was written by today's
+code, so *"an old save still loads, and loads correctly"* was a claim living only in a comment. Two
+copies of that file, one with the rat `Purified` and one `Corrupted`, produce a cleansed screen and an
+uncleansed one from data that mentions neither: a derivation rather than a default.
+
+**The 12 blights, and the two fixtures.** One `Mend` hotspot per screen, id `<room>_blight`, yielding
+exactly 1 Graveflower — **the world's only source of it is a mend**, so those twelve are the entire
+supply against an ending priced at eight. The boards come out **8 spot / 4 ordered**, which is the
+plan's 5 Spot / 4 Order / 3 Tool once you notice a Tool blight is structurally a Spot: the tool gate is
+*geography*, so the board carries nothing extra and **no blight carries a `RequiredFlag`** — that would
+be the same fact stored twice, in the version that can disagree with itself. Generated the pass-2 way,
+by a one-shot script in `/tmp` that refuses any file already holding a Mend hotspot and writes nothing
+until all twelve have been built. Two synthetic rooms went in beside them: `verify_blighted`, and
+`verify_held` for the interesting case no authored screen has (held *and* fouled at once).
+**`verify_held` is deliberately never navigated to** — its placement carries an `InstanceId` and no
+`EntityData`, a shape `GateFights` fails authored content for, and `MendManager.IsHeld` needs only the
+id and the state. The reason is written into the fixture, because the next person to add a gate there
+will otherwise "fix" it.
+
+**Which screen holds which broken thing is a read of the ledger row, and it is the column to overrule.**
+`placement.md` gives counts and gates per chapter and deliberately names no rooms, so this is the
+judgement-by-eye half — every cell below is one `Label` to change, and the gates check none of it:
+
+| Ch | Screen | Form | The broken made-thing |
+|---|---|---|---|
+| 1 | `ch1_fern_gully` | Spot | The Fallen Fence Line — §22's tutorial, *"pure observation"* |
+| 1 | `ch1_stonefield` | **Tool** | The Plough in the Furrow |
+| 2 | `ch2_tannery` | Spot | The Collapsed Drying Rack |
+| 2 | `ch2_chapel` | Order | The Dropped Lintel |
+| 2 | `ch2_barn` | Order | The Broken Cart Wheel |
+| 2 | `ch2_vestry` | **Tool** | The Forced Strongbox |
+| 3 | `ch3_rise` | Spot | The Broken Ladder-Way |
+| 3 | `ch3_powder_store` | Spot | The Burst Keg |
+| 3 | `ch3_settled_chamber` | Order | The Fallen Props |
+| 3 | `ch3_drowned_stall` | Spot | The Smashed Launder |
+| 3 | `ch3_wound` | Order | The Heaviest Board — §22's *"the worst of them"* |
+| 3 | `ch3_sealed_drift` | **Tool** | The Sealed Stull |
+
+**One departure from the plan worth naming: the part labels are numbered.** The plan said prompt and
+part names `[unwritten]`, uniformly. Five buttons all reading `[unwritten]` make the board
+*undrivable* — you cannot tell whether a click landed on the part the solution names — so they are
+`[unwritten 1] … [unwritten 5]` and the prompt alone stays bare. Pass 3 overwrites both.
+
+**Four break-tests, and the measured reds did not match the predicted ones.** The plan predicted 4 / 1 /
+2 / 3 red lines for an out-of-range `Solution` index, a 13th blight, a blight paying two flowers and a
+Graveflower harvest node. Measured: **7 / 2 / 2 / 1.** All four still exit 1, so all four fail loudly,
+but the numbers are recorded as measured — a prediction about how many gates a mistake trips is a guess
+about coupling, and only the run knows. The board checks are **five separate offender lists** rather
+than one `IsSolvable()` call, because the first cause is not an authoring mistake at all: a null
+`MendPuzzle` on a hotspot whose `.tres` sets one means the **sub-resource failed to load**, which is
+§3's malformed-file failure wearing a new hat. And the reachability gate is a **BFS with `learned.tool_*`
+doors shut**, which is what identifies the three tool blights — `[ch1_stonefield, ch2_vestry,
+ch3_sealed_drift]`, one per chapter — rather than a field anyone had to remember to set.
+
+**`--shots` had been shooting seven frames of the wrong room since 2026-08-02, and this unit found it by
+accident.** Two beats were added for the one thing no gate can check — the `#4ade80` Mend cue against
+purified ground (`#6f8f5e`), a green cue on green dirt — and 08/09 gave the first size baseline the
+directory had ever had. Beats **03–07 were byte-identical**, all of them the cottage: `ScreenshotTool`
+opened wherever the boot put it, the boot moved to `ch1_cottage`, and the tool spent a day printing
+`no hotspot 'yard_cairn'` into a warning nobody reads. The whole fix is `GoToRoom("waystation_yard")` at
+the head of the walk — **the same one-line fix, and the same cause, as the M1 breakage above**. It is
+§3's *"a fixture that arrives by default is a dependency nobody wrote down"* arriving a second time, in
+a tool with no gate over it. Stated rather than quietly patched, in a comment in the file.
+
+**The colour verdict, since it is the one judgement a gate cannot make.** `#4ade80` **survives** on
+cleansed ground — outline and label both legible — but it is the marginal cue on that screen, the only
+one sharing a hue family with the backdrop it sits on. It does not vanish, so it stays; **mint is the
+direction to push it** if it reads wrong by eye, not lime, which `Harvest` already owns.
+
+**Unit 2 unblocks 12 ledger cells, not 15**, correcting what was said reporting pass 2. `items.md` §6
+prices a major repair as *a reclaimed memory + key items + a jigsaw* — the key items make it a recipe
+(unit 4) and the memory is a boss drop (unit 3/6), so `ch1_bridge`, `ch2_cart_road` and `ch3_breach`
+inherit this unit's jigsaw when the things that grant them exist. **Fifteen mends is still the total**;
+the other three cost 3 files later, not a system.
+
+---
+
+**Unit 4a built the station and material layer — 2026-08-03, 439 → 472 checks.** §19's shapes table is
+in code, a recipe can now open a door, and **the three access tools exist**. New: `HotspotKind.Station`
++ `HotspotData.StationId`, `ItemCategory.Reagent → Component`, `RecipeData.RequiresStation` /
+`RequiresBothTracks` / `SetsFlag` / `RepairsWorld`, `CraftBlock.NotAtCamp → NotAtStation` and a new
+`AlreadyMade`, `InventoryCraftingManager.CountsAgainstSlots` / `AtVenueFor` / `AlreadyMade` /
+`RoomHasStation`, `GameConfig.SalveSlotsPerFight`, `EventBus.CraftingRequested`, an
+`InteractionService` `Station` case, eight `.tres` items, three tool recipes, two field stations, and a
+`stations` section in the verifier. The unit answers *"I can't make the billhook yet can I?"* — no, and
+the reason was structural: **`RecipeData` had no `SetsFlag`, so no recipe in the project could open
+anything.** Three doors authored in unit 1 against `learned.tool_*` had been waiting for something to
+set them.
+
+**The defect this unit found is the most useful thing in it: 33 harvest nodes paid out items that did
+not exist, and 439 gates were green over it.** `mat_heartwood`, `mat_pitch`, `mat_scrap_iron`,
+`mat_cured_hide` and `mat_cairnstone` were authored into rooms by the skeleton pass and never written as
+files. `AddItem` takes an unknown id and writes a phantom stack, so the grid displayed `mat_heartwood`
+as its own name and `LoseUnprotectedItems` read the missing category as `Component` and **burned it on
+death**. The content sweep asks whether a `Harvest` hotspot's `ItemId` is *non-empty* and never whether
+it resolves. This is §3's fifth blind-spot class in its purest form — *any "for each X, assert P(X)"
+sweep is silently conditional on X having loaded* — with the twist that makes it worth its own
+paragraph: **the room sweep and the item catalogue are two authored collections that had never once
+been crossed**, so every property either one asserted was true of itself. The lesson generalises past
+items: **whenever one authored collection names an id belonging to another, the crossing is the check,
+and it will not appear on its own.**
+
+**Two `SurvivesDeath` reversals, and one probe that moved rather than dying.** §19 makes equipment and
+traps survive death, reversing §18 and §13. The verifier asserted `!SurvivesDeath(Equipment)` — the old
+rule — so per `deleting-a-gated-mechanism` the question was what invariant that line actually held. Not
+"equipment burns": **"a new category inherits the destructive default."** So the claim re-anchored on
+`Component` and `Catalyst`, the reversal itself is asserted positively, and a **live**
+`LoseUnprotectedItems` round trip went in beside the predicate checks — because the predicate and the
+runtime can disagree when an id fails to resolve, which is exactly what the 33 nodes were doing.
+
+**Four rulings, each one word to overrule.**
+
+- **A blank `RequiresStation` means the bench, not the open road.** "Blank means anywhere" reads more
+  naturally and would have silently repealed §17: every recipe authored before stations existed would
+  become craftable in a ditch. Blank means *unspecialised*, and the unspecialised venue is the bench.
+- **The camp bench satisfies every station; a field station satisfies only its own.** It protects
+  invariant 12 — no recipe can become unreachable — and makes fusion the bench's job by *addition*
+  rather than by exception. Because a camp is a menu reachable from anywhere, **`NotAtStation` can never
+  dead-end anyone**: it refuses crafting *where you stand*, and the answer is always "camp, or find the
+  station." A field station is a saved round trip, not a gate.
+- **Camp benches carry no `StationId`, against what the plan said.** `AtVenueFor` returns true at any
+  camp regardless of ids, so authoring one would be a redundant second copy of a fact — the version that
+  can disagree with itself.
+- **Only two field stations, both in chapter 2** — the anvil in `ch2_smithy`, the mortar in
+  `ch2_apothecary`, the village of trades. The trapper's stump waits for 4b, because no recipe names it
+  yet and a station no recipe names is a bench that makes nothing. `salve_clearmind` gained
+  `RequiresStation = "mortar"` so the mortar is named by something; functionally a widening, since the
+  bench satisfies it anyway.
+
+**`rat_tallow` became `mat_tallow`** — 41 occurrences across 27 files, `git mv` plus a snapshot-first
+sed. §1 moved Tallow off the bestiary on 2026-07-31 (*"candles and a rendering pot, not a harvest"*), so
+the id was a lie in 26 files that would never get cheaper to fix. Its description was rewritten too,
+since it still described skinning a rat. **`herb_gravecap` was deliberately left alone**: it is a ninth
+noun against §19's ceiling of eight, it lives on prototype ground, and it retires with the waystation —
+so the roster gate is scoped to `ch*` rooms, the same trick that scopes the `PurifiedName` check. That
+scoping is what lets the gate be true today without deleting a fixture 25 heist checks stand on.
+**✅ It retired on 2026-08-03 with unit 3b**, and the deferral paid off exactly as argued: the item and its
+one source went in the same pass, so the noun count came back to eight without a single re-authored node.
+The `ch*` scoping stayed anyway — see *Unit 3b* on why it was redundant all along.
+
+**What the debug key is doing there, and when to delete it.** `items.md` §8 pays for each craft family
+with a Dream knowledge pocket, and pockets are unit 6 — so the honest state after 4a is *the recipe
+exists, the flag works, and you cannot learn it*. Rather than plant three placeholder `Lore` pages unit 6
+would have to un-author, **F6 learns every craft family**, read off the recipe registry rather than a
+list of names so 4b's ~14 recipes cannot silently outgrow it. **A gate states the dependency**: *"none is
+learnable from anything authored yet — unit 6 turns this red."* It is scaffolding with a scheduled
+demolition, and the gate going red is the notice.
+
+**Two mistakes worth recording, both caught by writing the gate rather than by running it.** The
+reachability gate first named `ch1_stonefield` — the blight behind the Bramble Choke — and that room sits
+behind the Bill Hook **and** `freed.ch1.messenger_01`, so crafting one tool would not reach it and the
+gate would have failed for a reason with nothing to do with crafting. One door, one flag, one claim:
+`ch1_bramble`. The same error at larger scale in the all-twelve gate, fixed by granting every non-tool
+door flag first — otherwise "unreachable" measures narrative progression, not tools. **The
+`beforeTools.Count == 3` line that fell out of that fix is now the more valuable half**: it reproduces
+the mending section's `[ch1_stonefield, ch2_vestry, ch3_sealed_drift]` from a *live* BFS where that one
+uses a static walk, so two independent implementations agree on the same three rooms.
+
+**The files-on-disk check read `6 of 4` on its first run, which is what it is for.** Two recipes are
+registered in code by the gates to exercise the blueprint rules, so the section scopes to authored
+content on the same `verify_` convention the room sweep uses. Worth noting *which* check found it: the
+`DirAccess` count that only `data/rooms/` had before today. §3's *"every directory-into-registry loader
+in the project has the same hole"* — 4b adds twenty files to the recipe loader.
+
+**Four break-tests, measured 2 / 1 / 1 / 5.** A dangling harvest yield trips the crossing check *and*
+the roster check and names the hotspot. Pointing a `ch1` node at the real `herb_gravecap` trips **only**
+the roster check — which is the useful result, because it proves the two are not duplicates: one catches
+an id that does not resolve, the other an id that resolves and was never ratified. Dropping
+`Component => false` from `CountsAgainstSlots` trips one line, because a `switch` with a `_` arm cannot
+be made to throw and totality has to be asserted per member. Deleting one `SetsFlag` trips **five**,
+which is the measure of how load-bearing that one field is.
+
+**What is still not done, and cannot be done from here.** The tally strip §19 asks for is **not built** —
+the predicate went onto the inventory panel's *ordering* instead, so the satchel no longer opens on a
+wall of raw material, and the strip lands beside the crafting panel when that exists. There is no
+crafting panel yet: `EventBus.CraftingRequested` fires and **nothing subscribes**, so a bench or an anvil
+opens no screen — it announces itself and tells you the panel is absent. **`F7` crafts everything
+craftable where you stand and names the block reason for everything else**, added the same day when
+Jeremy gathered materials and found no verb to spend them on; the panel it stands in for is deliberately
+not in this stream (§4 keeps it in the editor pass, and decision 9 makes it *the journal*), so a debug key
+is the only unblock that does not build a screen a ratified decision has already deleted. The scaffold
+notice is **additive to `ExamineText` rather than its `else`** — the original was the else, which meant
+authoring one line of flavour text on `waystation_shed`'s bench silently deleted the diagnostic, and every
+field station said nothing or the literal `[unwritten]`. `SalveSlotsPerFight` is a constant nothing reads
+until unit 3. Every gate is green and the build is clean, and the walk is: harvest Heartwood and see a
+named item rather than `mat_heartwood`, **F6** to learn every family, **F7** at the cottage bench to craft
+the Bill Hook, watch the Bramble Choke open, then mend the plough in `ch1_stonefield`.
+
+**The colour verdict, and the comparison that turned out not to exist.** Beats 10/11 shoot bronze
+`#c98a4b` on `ch2_smithy` either side of a cleanse, and the verdict is that it **survives**: on cleansed
+green the anvil's outline and label are both legible, and it is plainly not one of the cyan `Navigate`
+boxes or the pale `Examine` box. But this beat was written to check two things it cannot check, and both
+were caught by reading the frame against the code rather than by trusting the comment:
+
+- **Bronze is never seen next to `Workbench` gold `#ffd24a`, because no screen carries both.** That gold
+  is the neighbouring hue and the one cue bronze would actually be confused with — same verb, two
+  colours. `ch2_smithy` holds the anvil alone, and since a camp became a **menu** on 2026-08-01 the bench
+  and a field station may never share a frame in the finished game either. So the pair is not unchecked,
+  it is **unshowable**, and that is a fact about the design and not a gap in the diagnostic. The screen
+  that ever breaks it is the screen to shoot.
+- **There is no cleansed sky on an interior screen.** This entry said "against cleansed sky `#7fa8c9`"
+  before the frame was looked at. `ch2_smithy` is `PlaceholderStyle = 1`, `DrawInterior` never calls
+  `DrawSkyGradient` — *"no sky indoors"* — so `PurifiedSky` is **structurally absent** from every interior
+  in the project. Bronze sits on the purified wall (`#6f8f5e`) and straddles the floor line onto
+  `#4a5c3b`. Unit 2's beat 09 is a wilderness screen and does draw the sky, so the two colour beats cover
+  the purified palette between them; neither covers it alone, and **which style a screen is authored as
+  decides which half of the palette a cue can be judged against.**
+
+Two incidental things are visible in both frames and are pre-existing, not unit 4a's: the room card
+renders **twice** (two overlapping "The Smithy" labels), and the notify banner still reads *"The last
+piece seats… Graveflower x1."* — carried across from beat 09's mend three rooms earlier, because
+`ch2_smithy` has no blight of its own to overwrite it.
+
+---
+
+**Unit 4b authored the arsenal — 2026-08-03, 472 → 510 checks.** `items.md` §§2–4's costed tables are
+files: **14 new items and 13 new recipes**, so the project holds **28 items, 17 recipes and 67 rooms**
+*(27 and 59 after unit 3b took `herb_gravecap` and the prototype's eight rooms the same day)*.
+Two weapons, three coats, six traps, a second salve and her two brewed components — and the roster gates
+that hold the shape of all of it, in a new **`roster`** section of the verifier — *"the arsenal, the two
+hands that make it, and whether you can reach any of it"* — which is the fifth. **No new
+field on any resource and no new enum member**, which was 4a's stated test (*"nothing in 4b needs a new
+field if 4a is right"*) and it passed.
+
+**The one code change outside the verifier is the starting kit.** `weapon_splitting_axe` is the only item
+in the game with no recipe — he owns the axe on the first screen — so `GameConfig.StartingItems` plus
+`InventoryCraftingManager.GrantStartingKit()` grants it from `Main.StartGame`. It is **idempotent and
+called before load**: `ImportStacks` clears first, so a save file wins, and granting twice cannot double
+the axe. That ordering is the whole reason it is a method rather than three lines in `_Ready`.
+
+**Ids gained one convention: brewed components are `brew_`, not `mat_`.** `brew_burning_oil` and
+`brew_corrosive_draught` are `ItemCategory.Component` (§19's four-salve table calls them salves and is
+corrected in place), and keeping them off the `mat_` prefix means **`mat_*` still means one of the eight
+found nouns** and the harvest roster stays readable in a directory listing.
+
+**Four things §19 said in prose turned out to be wrong, or vacuous, once they were files.** Each is
+corrected where it was written rather than only here:
+
+- **A fused trap's both-tracks requirement lives in the *ingredient*, not in `RequiresBothTracks`.** §19's
+  fusion text reads as an order to set the flag on the Oil Slick and the Vitriol Flask — but §19 also
+  makes her brews *"an authored cache in your hands from the first hour"*, so a flag demanding you know her
+  recipe would make the oil she left you unusable until you could already replace it, deleting the
+  inversion §19 calls the best thing in the section. The flag stays reserved for the exorcism engine, which
+  needs two **blueprints**; a gate asserts each fused trap is priced in a `brew_` input instead.
+- **"Every trap deals a damage type" was wrong, and it was a green gate.** `items.md` §3 authors the Snare
+  (holds) and the Chime (reveals) with no damage type *on purpose*. `GateCombatShapes` had asserted it of
+  weapons **and traps** since before any trap existed — vacuously green for two units — citing §13's
+  *"traps are consumed win or lose"*, which §19 reversed on 2026-08-01. Narrowed to weapons, and the
+  surviving claim moved to a **census** in `GateRoster`: four armed traps covering four distinct types, and
+  the two inert ones named as `trap_snare` and `trap_chime` from both sides, so an inert seventh fails.
+  Keep the invariant, move the probe — and there is no field for *holds* or *reveals* until unit 3, so a
+  census is the only honest form the claim has.
+- **The pocket bill is eight again.** 4a had `recipe_tool_bill_hook` and `recipe_tool_pry_bar` sharing
+  `lore_craft_edges`, which made the authored bill **7 and 7** against §8's eight pockets and §19's eight
+  max-Resolve upgrades, and nobody noticed because no pocket exists yet to count. The Pry Bar moved to
+  **`lore_craft_prying`** — a hooked blade for green wood and a lever for boarded doors are not one craft —
+  and the seven authored Craft families are gated by name, so a typo can no longer invent a silent ninth
+  family that nothing can ever learn. The eighth is the unauthored engine.
+- **§19's "blank `RequiresStation` keeps the older recipes compatible" was vacuous**, and finding that out
+  collapsed one of the plan's three venue rulings. All four pre-existing recipes name a station, so nothing
+  was ever relying on the blank case — and because **blank means the bench** (4a's first ruling), the plan's
+  *"mechanical traps require nothing, anywhere"* and its *"fused traps require `bench`"* are the **same
+  behaviour written two ways**. So all six trap recipes leave it blank, and a `"bench"` station id would
+  have been an alias plus a hotspot nobody has authored. A camp is a menu, so no trap costs a walk; what it
+  does mean is that a stump in the woods fuses nothing — and neither does it snare.
+
+**Obtainability is now a closure, not a claim, and it names its one hole.** Gate 11 seeds from
+`GameConfig.StartingItems` plus every `Harvest` and `Mend` yield in the world, then runs a fixed point over
+the recipe set: an output becomes obtainable when all its inputs are. Everything closes except
+**`catalyst_ashincense`** — the only Catalyst in the game, with no recipe, though `SliceVerifier.cs`'s own
+comment has called it *"craftable"* for weeks. It is listed by name in `knownHoles` and checked from
+**both** directions, so authoring its recipe turns the gate red too. That is the notice to delete the
+entry, and it is the *no silent caps* rule applied to a gate's own exemptions.
+
+**Three tuning numbers, and one of them is arithmetic rather than taste.** Both weapons carry
+`Potency = 10` against `EntityData.Durability`'s default 30, so **one clean blow is a third of a body** and
+§11's no-tiers rule is a number rather than a promise. Deepmend restores **55**
+for **5** material units against Clearmind's **35** for **3** — and 55 rather than 70 because §2's whole
+argument for keeping the lesser salve alive is that Clearmind heals more *per unit*: 70/5 = 14 beats
+35/3 = 11.67 and would have voided the subsection. A gate does that division.
+
+**Four break-tests, and all four were the ones that fail dangerously**: a coat with no `Slot` (a coat you
+can craft and can never wear), a Fire weapon (which deletes the reason traps exist), an Oil Slick that
+triggers itself (a trap that burns the person who set it), and a trap priced in a material no chapter
+yields. All four fired on their intended gate, all four exit 1. The four mutated files were restored from
+`/tmp` snapshots and confirmed identical with `diff -q` — **not** by reading `git status`, where `??` on
+twenty-seven brand-new untracked files looks exactly like an unrestored mutation.
+
+**`--shots` grew every one of ten frames by 2.5–3.7 KB, and the cause is 4a, not 4b.** The hint row now
+reads `… [F6] learn [F7] craft` where the previous baseline stopped at `[F9] load`. **Nothing in 4b
+changes what is on screen**, which is correct: there is still no crafting panel, and the arsenal is
+twenty-seven files a debug key spends. Diagnosed by reading a before and an after frame rather than by
+trusting the delta.
+
+**What is left, and none of it is a decision.** No equipping (unit 3 — a coat you can craft and cannot
+wear is the same boundary as a trap you can craft and cannot rig), no crafting screen (the journal, in
+the editor pass), the **three major repairs** unauthored because two of their three ingredients — a
+reclaimed memory and a jigsaw — have no field yet, and the **ten `Lore` ids that recipes now name and
+nothing grants** (seven craft families, three of her notes; the engine's eighth pocket makes eleven pages
+in all). `RequiresBothTracks` is still deliberately unread, and gate 10 says so out loud: *"nothing needs
+two blueprints yet — the exorcism engine turns this red."* The walk is **F6**, then **F7** at the cottage
+bench, which should name a dozen things made; then **F7** at `ch2_smithy`, where the anvil family should
+craft and the four mortar recipes **and all six traps** should read `NotAtStation` — that last half is the
+blank-means-the-bench ruling visible in play.
+
+---
+
+**Unit 3a built the fight — 2026-08-03, 510 → 655 checks.** The largest step the suite has taken, by the
+widest margin: **+145 checks, 143 of them in a new `encounters` section** (measured 2026-08-03; the file used
+to say all 145 landed there, and two went into the sections above it), against 38 for the whole arsenal. `combat.md`
+§18 is now code. New: **`src/Managers/EncounterManager.cs`** (the eleventh autoload, registered after
+`CombatManager`), the equip trio on `InventoryCraftingManager`, **`Flags.Killed`**,
+**`src/UI/FightPanel.cs`**, four `SaveGame` fields, and a `verify_arena` fixture with eight placements and a
+door. **A fight can be rigged, started, won, fled, walked out of and died in.**
+
+> ⚠️ **ONE THING IS OUTSTANDING AND THE UNIT IS NOT SIGNED OFF: nobody has played it.** The suite is green
+> at 655, the four break-tests fired and were restored, and `--shots` ran and **found three real defects
+> plus a stale beat** — all four now fixed, one of them gated with seven new checks. But `verify-slice-blind-
+> spots` is a whole memory about why 655-exit-0 is not the finish line, and finding A is the proof: a fight
+> that survived a door click for four beats and two chapters, invisible to every one of the 648 gates that
+> preceded it, because they all stand still in one room. **The walk is at the bottom of this section.**
+
+**Where it goes and why the order matters.** `GateEncounters()` runs **after `GateInventoryPanel`**, not
+after the wound ledger where the plan put it, for two reasons written into the code: it churns the satchel
+harder than anything above it (and `GatePersistence` deliberately inherits the micro-loop's reagents), and
+it is **the only gate that equips anything** — running it before the wound ledger would put a coat behind
+every number that gate reads from the resolver. It ends with the player at a camp, having collapsed on
+purpose, which is why nothing below it reads the room.
+
+**Five things the build settled that the plan did not, and each is a trap for the next person.**
+
+- **`CampManager.RespawnAtCamp` refills both pools *synchronously* inside `VitalityDepleted`.** So the
+  guard after the creature's strike must be `if (!InFight)` and **never** `if (vitality.IsEmpty)` — by the
+  time control returns the bar is full, and the naive check reads "still alive" while the player is
+  standing at a camp three rooms away. The same shape bit `Flee`: a lethal parting strike settles the fight
+  inside the collapse, so `Flee` re-checks `InFight` before settling or `FightEnded` fires **twice**.
+- **`NavigationManager.FindPlacement` is current-room-only.** That forced the whole section into one
+  fixture room, and forced the death gate to run **last** — a collapse walks the player to a camp, after
+  which every placement lookup in the section returns null.
+- **Read `WoundsOn` *before* `Flee`, in every gate that measures a hit.** Settling an anchored
+  (`Corrupted`) body closes its wounds, so a ledger read after the flee measures zero and proves nothing.
+- **`InspectRig`'s check order is load-bearing**: NoSuchItem → NotHeld → NotATrap → AlreadyRigged →
+  SlotsFull. A trap refused for the cap must therefore be one you are **actually carrying**, or the answer
+  is `NotHeld` and the gate is testing the wrong refusal.
+- **`ArenaShown` exists for the panel gate alone** — durability 30 against a potency-10 maul is a 3-turn
+  fight, which fits inside `DebugStrikeUntilDone`'s cap *and* inside §5's 3–6, and it deals Caustic while
+  being weak to Fire so the reading check has two distinct searchable words to find.
+
+**The finding worth the whole unit: `&&` short-circuiting makes a gate unfalsifiable, and only a
+break-test can see it.** Raising the rig cap by one turned exactly **one** check red where it should have
+turned two. The cause is in the gate, not the manager:
+
+```csharp
+Check("...", inv.Has(overflow) && encounters.InspectRig(...) == RigBlock.SlotsFull && !encounters.Rig(...));
+```
+
+The failing middle clause meant **`Rig` never ran**, so the third trap was never placed — and the sibling
+check asserting "it did not land anyway" then passed **for no reason at all.** That is §3's unfalsifiable
+guard arriving in the newest code in the project, written by someone who had just finished cataloguing it.
+Three inspection-plus-act conjunctions were split into separate `Check` lines so the act is always reached
+whether the inspection agreed or not (+6 checks, 642 → 648). Generalised: **wherever an inspection and its
+act are checked together, they must be two checks**, because a conjunction lets a red inspection hide an
+untested act. The rig overflow, `AlreadyWorn` / `NotHeld` on equipping, and `NotHostile` on re-engaging a
+finished body were all in that state.
+
+**Three rulings, each one word to overrule.**
+
+- **Overkilling a possessed villager writes `Flags.Killed`, and the screen still cleanses.** All three win
+  routes set `Purified` — the enum has three members and that is the terminal one — so the moral weight
+  lives in the ending's count of `freed.*` and never in the colour of the ground. `Flags.cs`'s two count
+  promises became three: **`freed.* + killed.* == 24`**, `defeated.* == 6`, measured off `PurifiedName`
+  rather than a list of names. The gate counts **24 people / 6 beasts** over the live roster, and unit 6's
+  three bosses are the one thing that will move it — to 9.
+- **Equipping is a satchel verb, not a loadout screen** — §18's *"anything you did before the fight is
+  free"* read the wider way, and an exact mirror of the use trio rather than a new mechanism.
+- **The panel is a code-built stopgap.** `FightPanel.BuildFallback()` is the thing to **delete — not the
+  class** — the day `scenes/ui/FightPanel.tscn` is authored against the published contract (`%Title`,
+  `%Condition`, `%Reading`, `%RigStrip`, `%VerbContainer` + `%VerbTemplate`, `%Log`, `%CloseButton`). All
+  the logic is in `EncounterManager`, which is the load-bearing half of `ui-panels-as-scenes`.
+  **`%CloseButton` is the corner ✕**, wired to `Flee` and deliberately not labelled "Break off" — see
+  finding C below — and it is the one node in the contract you may simply leave out.
+
+**One assertion is printed rather than checked, on purpose.** The armour census reads
+`armour_limewashed_smock wards Caustic, armour_padded_jack wards Blunt, armour_tanners_coat wards Edge` —
+a **census, not a claim**, because a fire-warding coat is a legitimate future authoring choice and a gate
+that goes red on one teaches people to stop running the suite. Everything else is written as a
+*relationship*: the fourfold ratio derives from `VulnerableMultiplier / ResistantMultiplier`, the ward from
+`WardMultiplier`, both caps from their `GameConfig` dials, and the trap list from `inv.Catalogue` filtered
+by category — so authoring a seventh trap or changing a dial moves the gate instead of breaking it.
+
+### The break-tests: four run, four fired
+
+Each patch went into a copy of the green `EncounterManager.cs`, was built (**read `Build succeeded` before
+running the verifier — a broken patch is not a finding**), verified, then `cp` back, with `diff -q` proving
+restoration and a final green run closing the pass.
+
+| | The patch | Predicted | Measured |
+|---|---|---|---|
+| 1 | `InspectRig`'s cap becomes `RigSlotsPerFight + 1` | ≥2 red | **5** — the re-run that *confirms the conjunction split*: before it, one; after it, five, because *"and nothing was quietly swapped out for it"* now goes red instead of passing for no reason |
+| 2 | `if (_turn > 0) return false;` at the head of `Flee` | gate 6 red | **56** |
+| 3 | `Finish`'s final `else` writes `Flags.Freed` instead of `Flags.Killed` | gate 7's Killed block red | **exactly 1** — *"and is killed by it — the flag that keeps the ending's count honest"* |
+| 4 | `Treat` removes a rigged trap after `_salvesUsed++` | gate 10 red | **exactly 2** — *"the trap sites were never in that trade"* and *"a trap still goes off with the salve allowance spent out"* |
+
+**BT2's 56 is the transferable one, and it is not an over-broad gate.** `Flee` is the section's *teardown
+verb* — nearly every check ends a fight by fleeing it — so breaking it leaves a fight live and every later
+`Engage` is refused, collapsing the printed values to `(0 vs 0)`. Two lessons: **a break-test on a teardown
+path reports a cascade, not a count**, so read the *first* red and ignore the tail; and 3 and 4 landing on
+*exactly* their predicted numbers is what a well-scoped gate looks like by comparison.
+
+### `--shots` earned its keep for a third time — three defects and a stale beat
+
+Nothing in 3a was supposed to change a non-fight screen, so the plan expected a flat delta. It was not
+flat, and **none of the 648 gates could see why**, because every check in the `encounters` section stands
+still in one room.
+
+**A. A fight outlived the screen it started on, and the panel went with it.** Beat 11 — `ch2_smithy`, four
+beats and two chapters after the engage — still had the panel up. Clicking a door mid-fight left the player
+committed for the rest of the run. **Fixed in two halves, because either alone is wrong:**
+
+- **The door is a flee.** `InteractionService`'s `Navigate` case calls `Flee()` when a fight is live, so
+  walking out pays §18's parting blow exactly like pressing the verb — otherwise "Break off" is the
+  strictly worse of two identical choices. It then checks whether the room changed underneath it: a lethal
+  parting blow respawns you at a camp, and walking through the door afterwards would quietly undo that.
+- **A cost-free backstop** on `EventBus.RoomEntered` in `EncounterManager`, calling `EndFight` — **not
+  `Flee`** — so no path can leave a fight behind, including the camp menu and a load. It **must** stay free:
+  `CampManager.RespawnAtCamp` navigates from inside `VitalityDepleted` and fires this handler *before*
+  `OnCollapsed` gets control, so a `Flee` here would bill a death for two blows. `IsEmpty` is not a usable
+  discriminator either — that is the trap already documented in `OnCollapsed`.
+
+Gated as **6b (+7 checks, 648 → 655)** with a `Navigate` hotspot added to `verify_arena`, pointing at
+`verify_wilds` rather than a camp — arriving at a bench refills both pools and would wash away the blow
+the door is meant to charge. Both halves break-tested separately: silencing the door's `Flee` turns
+**exactly 1** check red (the price; the invariant holds because the backstop still cleans up), and
+unsubscribing the backstop turns **15** red — the named check plus BT2's cascade again.
+
+**B. Out of the room, the panel could not name its opponent.** The title degraded from `CURSED GIANT RAT` to
+the raw id `WAYSTATION.RAT_01`, because `NavigationManager.FindPlacement` is current-room-only. Fixed by A:
+there is no longer any way to be looking at a fight from another room.
+
+**C. Two buttons for one act.** The fallback drew "Break off" twice — once as a verb from `RebuildVerbs`,
+once as `%CloseButton`. The *wiring* was deliberate and stays (a dismiss gesture that cost nothing would be
+the free escape sitting next to the paid one), but the label was not: **the strip keeps the words, the
+corner keeps the ✕.** For the `.tscn` author — if the authored scene has no corner ✕, omit the node
+entirely; `Bind` returns null and the strip is still the way out.
+
+**D. Beat 07 was stale by design, which is the real lesson.** §18's seam change replaced the one-click
+"finish the Severed body" the walk depended on, so `07_purified` showed a fight in progress on grey,
+uncleansed ground. **The beat depended on a behaviour instead of stating an intent** — the third time an
+unwritten dependency has bitten this tool. It now strikes until the body is finished (ten bare-handed blows
+against the rat's 30) behind a cap that is *a hang guard, not a rule*, with three printed guards: the body
+outlasting the cap, the room having changed under it, and the state not being `Purified`. All three stayed
+quiet, and **beat 07 is now byte-identical to the pre-3a baseline** (122038), as are 09 and 11.
+
+> **One more thing to carry about `--shots`: the ±1 kB band is encoder noise, not signal.** Beat 04 differed
+> by 220 bytes between two runs of *identical* code on a path neither change touched. Read the tens-of-kB
+> deltas and the exact-match beats; ignore the rest.
+>
+> **Corrected 2026-08-03 by the playtest step below: the band is wider than 1 kB and it is not encoder noise.**
+> Identical code moved beats 01, 03, 04, 05 and 08 by up to **2 kB** across two runs, and those five are
+> exactly the beats with a `TIME`-driven Dream shader on screen. The other six were byte-identical every time.
+> **Read *which* beats moved, not by how much** — a size diff on any of those five means nothing at all.
+
+### What 3a still owes
+
+**The walk — and this is the step the whole unit exists for.** *Nothing in this project has ever been
+played.* F6, F7 at the cottage bench; equip the Axe and a coat and confirm the satchel says which is worn;
+rig two traps on a creature, leave to camp, come back and confirm **the rig is still there**; engage and
+confirm the confirm line names what it is weak to *and* what it deals; fight with the right weapon, reload
+and fight with the wrong one, **counting turns both ways** against §5's 3–6; flee one and check the parting
+strike landed; overkill a villager and read the flag, sever one and read the other.
+
+> **A tuning finding, deliberately not acted on, because the walk is where it gets decided.**
+> `creature_hunter` is `Durability = 30, VulnerableTo = Edge` and the Splitting Axe is `Potency = 10,
+> Deals = Edge` — so **20 a hit and a 2-turn fight**, against 5 a hit and 6 turns with the wrong weapon.
+> §5 asks for 3–6. Both ends are defensible on paper and only one is defensible by eye, and by
+> `division-of-labour` judgement-by-eye is Jeremy's. 3a ships the 30 untouched.
+
+---
+
+## Reading 3a's gates back — 2026-08-03, 670 → 687 checks
+
+Three findings, and none of them came from new work: they came from asking what unit 3a had shipped that
+nothing could see. **Encounters 146 → 154, fights 16 → 24, one more beside the debug-key scaffolding.**
+Every gate green, exit 0, build clean, uncommitted.
+
+### 1. The tutorial fight was closable with a label, not with a tuning decision
+
+The finding that started it: `ch1_low_track`'s Logger is `Durability = 30, VulnerableTo = Edge,
+ResistantTo = Blunt`, the boot gives you an axe that deals Edge, and **the fight screen never said which
+you were swinging.** `EncounterManager.DescribeOpponent` already prints *"It flinches from cut. It barely
+notices weight. It comes at you with cut."* — so the creature's half was on screen from the first frame and
+the *player's* half was the one missing. Three options were on the table and two of them were tuning the
+Logger's numbers. Jeremy took the third: *"this seems the smart option."*
+
+> **When a design problem looks like it needs a number changed, check what the screen is already saying.**
+> Half the lesson was being delivered; the sentence that connects it to the button was not. `Strike — Bell
+> Maul (weight)` against *"it barely notices weight"* is the whole resistance system taught in one glance,
+> and it cost a label.
+
+`EncounterManager.Words` went `private static` → `public static` for it. A private copy in `FightPanel`
+would have closed the loop and then drifted, and there is now no second place where a damage type gets a
+word. `GameConfig.BareHandedType` was extracted for the same reason — it was hardcoded in `Strike`,
+described in two doc comments, and then needed a third time by the panel; the gate reads the constant, so
+it agrees with the game rather than with itself.
+
+### 2. A signal connected from C# cannot be introspected from C#, and it took four tries to believe it
+
+The panel repaints on `Notify`, which is what the log emits — but `Unequip` emits **only**
+`InventoryChanged`, so the strike verb would keep naming a weapon you had taken off. The fix is one
+subscription. The *gate* over it went red against correct code three times:
+
+| attempt | why it fails |
+|---|---|
+| `GetSignalConnectionList(...)[i]["callable"].AsCallable().Target == fight` | `signal += handler` marshals into a **custom** callable; `Target` is null |
+| `...Delegate?.Target` | the delegate does not survive the round trip either |
+| `EventBus.Instance.IsConnected(SignalName.InventoryChanged, Callable.From(OnInventoryChanged))` | a freshly-made `Callable` is not the same callable, so it never matches |
+
+What works is not introspection at all: `SatchelSignalsSeen++` in the handler, read either side of an
+`Unequip`. The handler body runs synchronously — only the repaint is deferred — so the count moves inside a
+verify pass. **Assert that a handler *ran*, never that a signal *is connected*.** All three dead ends are
+written into the code comment so nobody reaches for them again.
+
+The deferral is the other half. `Callable.From(RepaintIfLive).CallDeferred()` never runs during a verify
+pass, because the verifier is fully synchronous and yields no frame — so `DebugRepaintNow()` is a
+synchronous door for the suite alone. **My own first version of the bare-handed check was unfalsifiable and
+a green run hid it:** the fixture weapon is the Bell Maul, which is *also* Blunt, so `Contains("weight")`
+passed against a strip that had never repainted and still read `Bell Maul`. Requiring `bare hands` **and**
+the word is what makes it a check. A shared value between fixture and expectation is the classic way an
+assertion stops asserting.
+
+### 3. `Rig` shipped with no verb, and the stopgap needed a manufactured probe
+
+Unit 3a built rigging, gated it thoroughly, and **left it unreachable**: `InteractionService.ActivateEntity`
+sends a creature click straight to `Engage`, and the only caller of `EncounterManager.Rig` in the whole
+repository was `SliceVerifier`. Jeremy's ruling on the four ways to fix it: *"c is the best solution. We have
+been following this patten. Make debug keys create, test, remove them when the UI replaces it."* So **`F8` =
+`debug_rig_here`**, sitting next to F7 craft-here on purpose — craft the traps, then set them.
+
+The verb cannot live on the fight screen: §18 makes rigging free *before* a fight and a whole turn *inside*
+one, so it belongs to the room. It retires when the satchel grows a **Set** button beside `%UseButton` and
+`%EquipButton` — a different trigger from F6/F7, which retire with the journal. **No target picker is
+needed and that is a fact rather than a shortcut:** all 30 creature-bearing rooms hold exactly one creature,
+so "the room's creature" is unambiguous everywhere in the game.
+
+> **A stopgap's guard needs a manufactured probe.** `InputMap.HasAction("debug_rig_here")` is what the other
+> debug keys settle for, and it is not enough here: **no trap in the game is craftable**, because all six
+> trap recipes want a blueprint and *nothing in `data/` grants any blueprint*. Press F8 in a real
+> playthrough and it says *"no traps in the satchel"* whether it is perfect or broken. So the suite hands it
+> a satchel full of traps and a room with a body, presses it, and counts the sites — and then clears the
+> slate, because everything after it counts sites on a slate it assumes is empty. The probe deliberately
+> does not name which creature it should pick.
+
+### 4. The winnability gap Jeremy assumed was already covered
+
+*"I figured you would have designed it this way."* Nothing asserted that the first fight is beatable with
+what the boot gives you — and the boot room already moved once (unit 3b), with the roster moving again in
+unit 6, so it is precisely the kind of fact that stops being true in silence.
+
+**Eight checks, and not one of them is a number.** §5's 3–6 turn band is *tuning*, and a gate on tuning goes
+red the first time Jeremy wants a fight to feel different, so "winnable" is not `≤ 6 turns` — it is **fells
+it before it fells you**: `ceil(Durability / DamageAgainst(...))` against `ceil(VitalityMax / Damage)`, two
+derived numbers compared with each other and the whole economy free to move underneath. `<=` and not `<`,
+because the player swings first. Unwarded, because the armour slot starts empty on purpose. Three claims:
+
+- the nearest fight falls to the boot kit before it falls you — **2 turns to fell, 13 to fall**
+- the kit is the thing it is weak to, which is the ratified reading of what the first fight teaches
+- and **bare hands lose it** — 15 turns to fell against 13 to fall, which is what makes that worth teaching
+
+That last one is the gap `BareHandedPotency`'s own summary claims (*"deliberately outside §5's band"*) and
+nothing had ever checked. And "the nearest fight" is **walked to**, not named: a fresh save holds no flags,
+so a door wanting one is shut, and a door a creature bars needs a fight won first. Scoped to the *nearest*
+fight rather than every reachable one on purpose — a later creature the walk happens to reach is *allowed*
+to be unwinnable, because flight is guaranteed and "come back with the right tool" is the shape the whole
+equipment ladder is built on. What may not be true is that the **first** one turns a player away, since
+there is nothing yet to come back with.
+
+> **The seventh blind-spot class, caught again by break-test.** With the walk's three stopping rules baked
+> in, commenting out all three took the frontier from **9 fights on 16 screens to 30 on 59** and *every
+> check stayed green* — the nearest fight sits two ungated doors out either way. The rules were
+> unfalsifiable. The fix is two **differentials**: the walk is a function of `wardensBar` / `flagsBar`, and
+> the suite asserts that ignoring each rule opens screens the rule was closing. No census is asserted — "16
+> screens" would go red the day chapter 1 grows a screen; *"a creature standing in a doorway shuts screens
+> off from a fresh game"* survives any amount of content and is red the moment the walk stops honouring it.
+
+One line fell out of it for free: `GateFights` drives `ch1_low_track` live *"because it is the first fight in
+the game,"* which was a sentence in a comment for a day and is now checked against the walk. Re-pointing the
+boot room would have left it probing an ordinary fight while still claiming to probe the first one.
+
+### What this leaves open — one ruling, and it settles four things at once
+
+**May equipment gate content in the chapter before the chapter that makes it?** Jeremy endorsed making a
+single ruling rather than four separate fixes (*"okay"*) but has not yet said which way. The authored roster
+answers *yes* in four places for one shared cause — **a gating material** — the clearest being the Bill Hook:
+it needs a ch2 station, a ch2/ch3 material and a blueprint that arrives in unit 6, and it opens a **ch1
+cul-de-sac** of `ch1_bramble` / `ch1_stonefield` / `ch1_boundary`. The gate is not bypassable, so the content
+as authored implies a return trip. Either that is the intent and the four stay as they are, or it is not and
+four doors get re-gated. Nothing else in this session is blocked on it.
+
+**Also still true and worth repeating: nothing in `data/` grants a blueprint.** Ten blueprint ids gate 16 of
+17 recipes — only `salve_clearmind` is free — and `Main.LearnEveryCraftFamily()` (F6) is the only thing that
+opens any of them. That is what makes six trap items uncraftable, and it is unit 6's to fix.
+
+---
+
+## Unit 3b — the prototype is gone, 2026-08-03, 680 → 670 checks
+
+**What was deleted: 11 files.** `waystation_yard.tres`, `waystation_shed.tres`, the six `dream_way_*.tres`,
+`beast_giant_rat.tres`, `herb_gravecap.tres`, `waystation_heist.tres`. `data/heists/` is left in place and
+**empty**, with a gate saying so, because the directory is unit 6's to remove along with the loader. Rooms
+67 → 59, items 28 → 27, recipes unchanged at 17. Nothing in the game had walked to any of it since the boot
+moved on 2026-08-02, so this was pure subtraction — which is exactly why it needed break-testing rather than
+reading.
+
+**`herb_gravecap` was the only item that still retired.** §7 of `build-plan.md` budgeted "5 items, 1 recipe,
+1 zone"; the zone died in unit 2, and bitterroot, tallow and cairnstone were re-authored into 23, 23 and 6
+chapter rooms by unit 4b. Gravecap had **one source in the game and zero recipes** — delete the shed and it
+becomes an item you cannot get and could not spend.
+
+### The one lesson that generalises: "split the gates by what they cover" needed a third category
+
+`build-plan.md` §7 ratified the strategy as a binary — **migrate** the gates covering code that survives,
+**delete** the ones covering `DreamRunManager` and `DreamHeistData`, because *migrating a gate onto a corpse
+is work you do twice and throw away once*. That is right and it is not exhaust. About **15 of the 25 "heist"
+checks are neither**: they use a live run as a **probe** for four files that outlive unit 6 —
+
+| what it looks like it covers | what it actually covers |
+|---|---|
+| the heist HUD | `Hud`'s invariant 2 — the body is the top bar and aura only drains in a boss fight |
+| a heist bench | `CampManager`'s *"a bench inside a live run is not a camp"* |
+| crafting in a heist | `InventoryCraftingManager.AtVenueFor`'s refusal inside a run |
+| a heist save | `SaveService.HeistOwningRoom`'s *"a mid-Dream save does not strand you"* |
+
+So the third category is **gates that touch a dying mechanism in order to probe a living one**, and they
+neither migrate nor delete — they keep a fixture. Deleting them would have left four surviving guards
+ungated for a whole unit, which is a `verify-slice-blind-spots` class. The tell is that the *assertion*
+never mentions the dying thing: it says *bench*, *craft*, *save*, and only the **setup** says heist.
+
+### The three findings, and the useful two came from break-testing, not from reading
+
+**1. The crafting-venue guard had no probe at all, and the camp checks were hiding it.** Break-test 3 —
+stop registering the synthetic heist, and the camp, crafting and stranding checks must all go red together —
+came back with the camp checks red and **no crafting check moved**. `AtVenueFor` has two arms: `AtCamp`,
+which already refuses inside a run on its own, and `RoomHasStation`, which is the only arm the
+`IsRunning` guard is load-bearing on. Every crafting check stood on the first arm, so **the guard could have
+been deleted and the suite would have stayed green.** New in this unit: `verify_station`, a mortar in a room
+with **no bench under it**, and a pair —
+
+> *"a room can be a venue without being a camp"* · *"and a field station is shut inside a live run"* ·
+> *"and open again the moment the run ends, same room, same satchel"*
+
+— in one room with one satchel, so the only thing that differs between them is the run. They are a pair on
+purpose: assert the refusal alone and it still passes with the venue permanently broken; assert only that it
+works and it says nothing about the Dream. **The recipe is `recipe_salve_clearmind` and that choice is
+load-bearing** — it is the one station recipe with no blueprint, and `Inspect` checks knowledge *before* the
+venue (deliberately: an unlearned recipe refuses on ignorance rather than revealing itself by complaining
+about where you are standing), so a probe on any of the other ten would read `Unknown` in both arms and
+measure nothing.
+>
+> **Generalising it:** *a guard whose only reachable arm is covered by a different guard is unfalsifiable,
+> and it reads as covered.* The way it surfaced is the way to look for the rest — a break-test that names
+> which checks should go red **together**, then reading the ones that did not.
+
+**2. The fight screen's dim never drew, and four checks passed on it.** `--shots` beat 02 was
+byte-identical with the ColorRect's alpha forced to 1. `Control.SetAnchorsPreset(preset)` does **not** mean
+"fill your parent": with a parent whose size is already known it rewrites the offsets to *preserve the
+node's current rect*, which for a ColorRect one line old is 0x0. The dim sat at 0x0 for a whole unit.
+`BuildFallback`'s identical-looking call worked only by accident of order — it runs before the panel enters
+the tree, so there is no parent range to preserve a rect against. Fix is `SetAnchorsAndOffsetsPreset`; all
+14 `SetAnchorsPreset` sites in the repo were audited and this was the only broken one. **`RoomCard.cs:36`
+shares the shape and works today** — worth knowing rather than changing.
+
+> **Why four gates missed it, and this is the sharper half.** `DimsTheRoom` asserted `Visible`, an alpha
+> ≥ 0.4 and **the anchors** — which sounds like the same question as "does it fill the panel" and is not.
+> Anchors of 0..1 with offsets of (0, 0, −1920, −1080) describe a node that is nominally full-rect and
+> actually 0x0, and that is precisely what shipped. The real invariant is `Size`, and it cannot be asked
+> headlessly because it needs a layout pass. So: **when a check settles for the arrangement instead of the
+> invariant, it has to assert *all* of the arrangement.** Anchors without offsets is half a rect. This is
+> the second time in three days that a partial-arrangement check has cost a play session, and it belongs
+> beside `ui-panels-as-scenes`' *"a check that asserts the arrangement rather than the invariant has to be
+> deleted when the arrangement is wrong."*
+
+**3. Every `--shots` beat was captioned with the previous beat's line, and it is a defect in the tool.**
+The caption is a notification with a five-second hold (`Hud.NotifyHoldSeconds`), which is correct in play and
+wrong in a tool whose whole walk takes about a second. Beat 01 shot `ch1_deadfall` captioned *"A bench, and
+room to work. You will come back here."* — the cottage bench, from booting. **A reference frame that
+describes a different room is worse than one with no caption**, because the wrong one gets believed. Fixed
+with a `ClearCaption()` at the top of each beat rather than just before each `Shot`, so a line the beat
+genuinely earns still lands, and as an empty notify rather than a new `Hud` method — the tool has no
+business growing the HUD's API to tidy its own frames.
+
+### What the fixtures are, for whoever touches them next
+
+Three of them, all keyed `verify_` **and** `ChapterId = "verify"`, registered by
+`SliceVerifier.RegisterVerifyRooms()` through `NavigationManager.DebugRegisterRoom`:
+
+- **`verify_loop` / `verify_loop_inner`** replace the yard/shed pair for the migrated M2 and M3 checks: a
+  `BlockedByEntityId` door, a once-firing `Interact`, a flag-gated `Harvest`, a take-once `Harvest`, a
+  `Workbench`, and an `EntityData` built in code. **The harvest items stay `herb_bitterroot` (2) and
+  `mat_tallow` (1) deliberately** — three later sections inherit those exact stacks, and seeding them with
+  `AddItem` would quietly delete the coverage that *harvesting* is what put them there.
+- **Two chained synthetic Dream rooms plus a code-built `DreamHeistData`**, for the third-category checks
+  above.
+- **`verify_station`**, the mortar with no bench.
+
+They are **not** on `verify_arena`, 3a's existing fixture, and that was a decision: the migrated M3 loop
+purifies its creature and cleanses its screen, while `GateEncounters` runs later and needs the arena bodies
+Corrupted. One fixture serving both would make `RunGates`' ordering load-bearing in a new way, and that
+ordering is already the most fragile thing in the file.
+
+**`GateAuthoredContent` excludes all of them by key prefix**, `!kv.Key.StartsWith("verify_")` — which is
+why the five `ch*`-scoped sweeps were **not** widened as planned. They were already redundant for fixtures;
+the deletion removed the *other* half of their reason. Widening five sweeps buys nothing one check does not,
+so one went in asserting the redundancy is real — *"and every authored room is on it, so the `ch*` sweeps
+skip nothing"* — and an off-spine authored room now goes red **by name** instead of being skipped silently
+by five sweeps and covered by none of them. Only the sweep reading `nav.Rooms` unfiltered genuinely needs
+its predicate.
+
+### Break-tests: five run, five fired
+
+`BlockedByEntityId` off → the door check red. Harvest node re-takeable → the take-once check red. Heist
+unregistered → camp and stranding red (and finding 1). A stub `.tres` in `data/heists/` → the emptiness
+check red. That last one came with **nine collateral reds and an `InvalidCastException`**, because
+`LoadHeistRegistry` hard-casts and one stray file breaks the whole registry — not a defect to fix, and it
+argues *for* the emptiness gate, which was the one check that named the actual cause and did it with a file
+count.
+
+### Two things `--shots` showed that were deliberately not changed
+
+- **The room title triple-overlaps the DebugPanel readout in all eight frames.** The debug panel appears to
+  be visible by default and collides with the Hud room label.
+- **The now-working dim washes the HUD too** — pool bars, keybind hints, caption — because `FightPanel` is a
+  later sibling under Hud's `root`. That arguably contradicts unit 3a's *"the body is the top bar inside a
+  fight and is undimmed because it can be hurt."* One `MoveChild` to change, and by `division-of-labour`
+  it is a judgement by eye.
+
+---
+
+## The first three playtests — 2026-08-03, 655 → 680 checks
+
+**The walk happened.** Jeremy played it and came back with eight findings and three screenshots. That is the
+⚠️ block above discharged: the unit is played. Three of the eight were UI, he ruled on all three, and this
+step is those three rulings built and gated. **`combat.md` §18 and §19 carry the reasoning; this is what
+landed.** Five findings sit in the two lists at the end of this section — three still waiting on a ruling,
+two closed with no work needed.
+
+**Both root causes were smaller than the symptom, and both were the same shape: a panel that predates its
+own convention.**
+
+- **`FightPanel` is the only one of the three panels never handed `PanelTheme.tres`.** `Hud._Ready` builds it
+  with `BuildFallback()` and assigns no theme, so its `PanelContainer` fell back to Godot's default and the
+  room showed straight through it. That single omission is the whole of *"I can see the room through the
+  fight screen."*
+- **`InventoryPanel.tscn` already had a `Dim` ColorRect** at `Color(0, 0, 0, 0.55)`. The satchel was already
+  doing what Jeremy was asking the fight screen to do, so the tint was not an invention — it is the same
+  node and the same value, moved to the panel that was built in code before there was a convention to copy.
+
+**What was built.** `FightPanel` gains the theme, a `Dim` at child index 0, and `Backing` re-anchored from
+`CenterRight` to `Center`. `InventoryPanel` gains a name caption on every tile, a tab strip above the grid,
+and a dark stack count. **Three new optional contract nodes** — `Dim` on the fight screen, `SlotName` on
+`SlotTemplate`, `%CategoryTabs` on the satchel — all three built in code only when absent and all three
+marked *delete this when the scene has one*, on `BuildEquipButtonBeside`'s precedent. The strip builder walks
+up from `%SlotContainer` to the nearest `VBoxContainer` ancestor rather than naming `Body`, so it does not
+break the day Jeremy renames a node the contract never promised.
+
+**+19 checks, into the existing `inventory panel` and `encounters` sections** rather than a new one. Three on
+the fight screen (opaque; tinted; **tint behind the verbs, not over them** — a scrim in front of the strip
+greys out the very buttons the tint was meant to make legible, and passes every other check) and sixteen on
+the satchel.
+
+**The centring is deliberately not gated.** It is a layout number on `Backing`, a node the contract never
+named, and Jeremy sets it in the editor. Gating it would put it in the class `verify-slice-blind-spots` calls
+*gates that go red when Jeremy authors something.*
+
+**Three things the break-tests settled, and two of them corrected the plan.**
+
+- **A bad default tab is harmless, and the plan said it was dangerous.** The plan claimed "All is the default,
+  and that is load-bearing for the seven existing `SlotCount` gates." Initialising the filter to `Salve`
+  instead left the suite **fully green at 674** — `RefreshTabs` finds no salve in an empty satchel and
+  normalises the filter back to All before any gate reads a slot. Those seven gates are safe for a duller
+  reason as well: **none of them touches a tab, and until this step nothing could.** The claim is corrected in
+  the code comment where it was made.
+- **The mutation that *is* dangerous is the strand-fallback**, and only one gate catches it. Making a stranded
+  filter fall back to the first carried kind instead of All turned **exactly one** check red — mine. The seven
+  older ones never moved. That is the failure worth having a gate for, and it now has one.
+- **A stopgap's guard needs its own gate, or it is invisible.** `MakeCountLegible` only writes a colour when
+  the label has none, so that the day Jeremy sets one in the editor the code stops fighting him. **On screen
+  the guarded and unguarded versions are indistinguishable** — no authored slot has an override yet — so the
+  gate drives `MakeCountLegible` against a **probe label** that already has a colour and asserts it comes back
+  untouched. Dropping the guard turns it red. Without that check the guard would have rotted the first time
+  anyone tidied the method.
+
+> **The `--shots` noise floor is wider than the ±1 kB this file claimed, and byte-size diffing is not a valid
+> regression check on five of the eleven beats.** Two runs of **byte-identical code** moved beats 01, 03, 04,
+> 05 and 08 by up to **2 kB** (08: 95907 → 93880 → 94913). The five that move are exactly the beats with a
+> `TIME`-driven Dream shader on screen (`DreamLook.gdshader`, `DreamCreature.gdshader`); 06, 07, 09, 10 and 11
+> stayed byte-identical across all three runs. So the useful reading is **"which beats moved," not "by how
+> much"** — and on those five, nothing. Not investigated further: it is a property of the shaders, not of this
+> change.
+
+### The second playtest, the same day — 674 → 677, and both bugs were in the fix for the first
+
+He played the new satchel and came back with four things. **Two were mine, one was F7 doing what it says, and
+one was not a bug at all.**
+
+- **The captions were truncated to about eight characters** — *"Cairnsto"*, *"Corrosiv"*, *"Rendere"*. The
+  first version of `EnsureSlotNameOnTemplate` stopped 48px short of the tile's right edge specifically so that
+  `SlotCount`'s authored box was untouched, which is the guardrail in `ui-panels-as-scenes` — *never let the
+  stopgap move layout that is authored* — followed to the letter and straight into a caption nobody could
+  read. **The guardrail was the right rule and the wrong reading of it.** `SlotCount`'s offsets are only
+  moved from *inside* the builder, and the builder does not run once the scene has a caption of its own — so
+  authoring one restores Jeremy's offsets in the same stroke that removes the reason they moved. The band now
+  takes the whole tile and wraps to two lines at font 12.
+- **The stack count sat 3px past the swatch, not on it** — *"needs to move left a tiny bit to be on the icon
+  where it should be."* Cause: the authored box is anchored to the **tile**, and `SlotSwatch` is inset 11px
+  inside it, so bottom-right-of-tile is not bottom-right-of-icon. `NudgeCountOntoTheSwatch` reads the swatch's
+  own inset rather than hardcoding 11, so shrinking it in the editor carries the number along. **It moved up
+  as well as left**, because the caption owned the bottom strip and the two could not share a corner — and
+  **which** corner was then settled by eye across one more screenshot: top-right first, then *"top left is
+  probably better for the number but it needs to move left a little bit."* **The three geometry gates did not
+  move for that change, which is the right behaviour**: they assert the number is *on* the swatch and clear of
+  the caption, not which corner it picked. Taste chose the corner; the gates only refuse the two arrangements
+  that were broken. **See the third look below — the corner moved once more, and that time the arrangement
+  moved with it, so the count is back at bottom-right where it started.**
+- **+3 checks, and this is the interesting part: the geometry is gated where the fight screen's centring is
+  not.** Both are layout numbers, and the difference is *whose*. `Backing`'s position is authored, so gating
+  it would go red the day Jeremy moves it; the caption's is **computed in code from the template's**, so it
+  can only fail on code. `CaptionLayoutOnATile()` runs the builder over a **synthetic 112×112 tile** and
+  returns three boxes, computed from anchors and offsets by hand because nothing is in a tree to be laid out.
+  The checks: the band is at least as wide as the swatch, the count lands inside the swatch, and the two do
+  not overlap. Reverting the width turns **exactly one** red; dropping the nudge turns the other two red,
+  which is also what proves the third is not a tautology.
+- **Two coats at once is correct.** `recipe_armour_limewashed_smock` and `recipe_armour_padded_jack` share
+  station `anvil` **and blueprint `lore_craft_leatherwork`**, and differ only in the second material
+  (`mat_cairnstone` vs `mat_tallow`). So F7 — *craft everything possible here* — makes both in one press. They
+  ward **different** types (Caustic and Blunt), so the pair is a swap, not a tier, and one armour slot makes
+  the choice live rather than empty.
+- **Splitting the blueprint would not spread the coats, and this is worth knowing before the next time it
+  comes up.** Jeremy's instinct — *"spreading is usually better than not"* — is right about the goal and wrong
+  about the knob. Three facts: `lore_craft_leatherwork` teaches **three** coats, not two (`armour_tanners_coat`
+  is on it as well), and `lore_craft_mechanisms` teaches four traps, so **one blueprint per family is the
+  convention across the whole roster**; **nothing in the game grants a blueprint yet** — `Main`'s F6 is the
+  only source, and the real ones are the Dream pockets in unit 6 — so a new flag would have no home to be
+  found in; and **all three coats gate on `mat_cured_hide`, which is authored in five rooms and every one is
+  chapter 2**. That last one is the whole answer: the coats arrive together because their *material* arrives
+  together, and they would still arrive together behind three separate blueprints. **The lever that spreads
+  them is the ingredient list, not the blueprint field.**
+- **And that produced a ruling bigger than the question: equipment becomes craftable just before the enemy it
+  counters.** Jeremy: *"I just don't like equipment all dropping at once. I figured we were going to balance
+  and drop before the enemy it defeats or a little bit after if there are 2-3 of them."* He approved changing
+  the coats' costs to achieve it. **Measured against the rule, the authored roster is wrong in three places at
+  once**, because all three coats gate on `mat_cured_hide` and all five of its sources are chapter 2:
+
+  | Coat | Wards | Who deals it | Craftable | Verdict |
+  |---|---|---|---|---|
+  | Tanner's Coat | Edge | Logger (ch1), Apothecary (ch2), Soldier (ch3) | ch2 | **a chapter late** |
+  | Padded Jack | Blunt | Hunter (ch1), Stable Master (ch2), Miner (ch3) | ch2 | **a chapter late** |
+  | Limewashed Smock | Caustic | the three Beasts — **ch3 only** | ch2 | **a chapter early** |
+
+  **Nothing wards Fire**, which the Messenger (ch1) and the Innkeeper (ch2) both deal — three coats for four
+  types. **And the access tools have the identical defect from the identical cause:** all three need
+  `mat_scrap_iron`, chapter-2-only, so the Bill Hook, Pry Bar and Mine Pick all unlock together. So *"all
+  dropping at once"* is not an armour problem — **it is what happens whenever a family shares a gating
+  material**, and it will recur in any family authored the same way. **Not built:** re-costing the coats is a
+  content pass that belongs with the chapter resource arc, and it needs the Fire gap answered first.
+- **Two things I was wrong about, checked and closed.** The two brews declare no `Category` and so file under
+  Materials — which is **right**: `brew_burning_oil` and `brew_corrosive_draught` are mortar output consumed
+  by `trap_oil_slick` and `trap_vitriol_flask`, pure intermediates, materials in every sense. And the
+  screenshots looked like the room title drawn twice, which **is my earlier retraction of that claim standing,
+  not being superseded** — `DisplayName` is read in exactly one place (`Hud.cs:334`) and exactly one file
+  outside the four panels constructs a `Label` at all. The second copy is `DebugPanel`'s `room ch1_cottage`
+  line, an **id** that reads like the name because it is a slug of it. F3 hides it.
+
+### Four more looks at one tile, the same day — 677 → 680, and the last two are the ones to read
+
+Two lines back from him: *"Yeah it is still bright, and I think bottom right. And it should be moved into the
+slot a few pixels."* Both are corrections to corrections of mine, and both had the same shape — **a fix that
+avoided the real change, and so had to keep being adjusted.**
+
+- **"Still bright" was the outline, not the colour.** `MakeCountLegible` had been setting `font_color` to
+  near-black since the first playtest, and it was doing so correctly — but with `outline_size = 5` around a
+  digit two or three pixels thick, the pale halo meets itself across the stroke and there is no dark left to
+  see. So a change to the fill read on screen as no change at all. It is now **2**, which separates the number
+  from the swatch without painting over it. The general form is worth keeping: **an outline wider than the
+  stroke it surrounds is a fill.** No new gate — `SlotCountsAreLegible` already asserts the colour, and the
+  width is exactly the kind of number that is taste until it is a bug.
+- **Bottom-right is where the count started, and the only reason it ever left is that the caption band crosses
+  the swatch's own bottom-right corner.** Two rounds went into moving the number out of the way. The third
+  moved the caption instead: `SlotSwatch` gave up a 40px band (`OffsetBottom` −11 → **−40**), the caption took
+  the strip it already had (y 72..108, unchanged — the band he had already looked at and liked), and the count
+  went back to the swatch's new lower-right **inset 5px**, which is *"moved into the slot a few pixels."* That
+  is the arrangement every version of the comment had called "the nicer one" and declined to build, and the
+  licence for it was the rule established a round earlier: **a stopgap may move authored layout when the
+  condition that retires the stopgap restores it.** It cost the swatch its square — 90×61 — which I flagged as
+  his to accept or refuse.
+- **He questioned it — *"I don't understand why it can't be square and have the number where it is?"* — and I
+  answered "it can." That answer was wrong, and the fourth round is the mistake in this section.** The count's
+  box had been derived from the swatch's **bottom edge**; I re-derived it from `CaptionBand` instead, which put
+  the number on the **identical pixels** while leaving `SlotSwatch` the 90×90 square. No authored number
+  touched, all five gates green, the same coordinates on screen. He played it and sent back: ***"Everything is
+  right besides it being in the middle."***
+- **He was right, and the reason is the most useful line in this whole section: holding the pixels still is not
+  holding the position.** Relative to a swatch that now reached 40px further down, a box at y 41..67 is no
+  longer a corner — it is the middle of the icon. **A position on a tile is a relationship to the artwork, not
+  a coordinate**, and every check I had written measured coordinates. So the fifth round is the third round
+  restored: swatch shortened to the band (`OffsetBottom` −11 → **−40**, 90×61), caption in the strip below it,
+  count derived from the swatch's own bottom edge and 5px in from its corner.
+- **A *90×90* square and the corner genuinely cannot both be had at 112px, and this is the arithmetic so nobody
+  re-litigates it.** The caption needs the bottom **40px** for two lines at font 12 — that is what un-truncates
+  "Corrosive Draught". A full-height 90×90 swatch spans y 11..101, so its bottom-right corner is at y 96,
+  **inside the caption band, on the words.** Only 11px exists below a full swatch, nowhere near enough for a
+  name. I offered him three prices — shorten the swatch, shrink both fonts, or grow the tile (the worst of the
+  three: `SlotContainer` is 5 columns with no `ScrollContainer` and 28 items already need six rows, 672px, in
+  about 480px of frame, so **taller tiles worsen an overflow that exists today**).
+- **He took none of them, because there was a fourth I had not seen: *"the placement is correct but it isn't
+  square."*** The height is the constrained dimension — the caption fixes the bottom at y 72 and the scene fixes
+  the top at y 11 — so a square swatch is not 90×90, it is **61×61**. Squaring it means **narrowing it to its
+  height**, not restoring its height to its width, and the extra 29px of width comes back as margin either side
+  (`x 26..87`, centred, whole pixels). The corner is untouched: the count still sits 5px in from the swatch's
+  right and bottom, now at `x 46..82, y 41..67`. **The constraint I had called mutually exclusive was only
+  exclusive in the direction I was reading it** — I had fixed the width at 90 without noticing it was an
+  assumption, and then enumerated three ways to pay for a conflict that dissolves once it moves. The top offset
+  is read rather than assumed, so shrinking the inset in the editor grows the icon: at top 6 the square is 66,
+  at top 0 it is 72.
+- **Three lessons, and the last one is the one to carry.** *(a)* The shortening was *legal* under the sharper
+  rule — a stopgap may move authored layout when the condition that retires it restores it — and having that
+  permission is what made a workaround feel like a decision in round three, so **reach for the rule only after
+  checking the derivation twice.** *(b)* Round four followed that advice and produced a *worse* tile:
+  **checking the derivation is not the same as checking the picture.** *(c)* And round six is the reason both
+  of those are second-order — **when a constraint reads as "A and B are mutually exclusive," find the number
+  you fixed without deciding to.** Here it was the swatch's width. Three rounds of geometry, an offer of three
+  prices, and a paragraph in three documents calling it impossible, all resting on an assumption nobody had
+  stated. The tell is available in advance: *if I am enumerating what to sacrifice, I have stopped looking for
+  the free move.*
+- **+3 checks, and two were born and buried the same afternoon** — each asserting the arrangement its round had
+  just built. Round three's *the caption sits under the swatch* went red on round four and came out; its
+  replacement *the swatch is still square* asserted round four's arrangement and came out the same way. What
+  survives measures neither arrangement: **the count sits *above* the caption rather than merely beside it**
+  (`count.End.Y <= caption.Position.Y`, stronger than `!Intersects`, which two boxes pass by sitting side by
+  side), and **the count is the same few pixels in from *both* of the swatch's near edges** — a *gap*, not a
+  coordinate, so it holds at any swatch size. Break-tested against round four's exact code: the gap check goes
+  red **alone**, while the other four stay green. That is both the proof it was needed and the measure of how
+  thin the earlier five were.
+- **And "the swatch is square" is back — as a requirement this time, not a description.** The distinction is the
+  whole reason it was deletable before and is not now: in round four it recorded what I happened to have built;
+  in round six it records something Jeremy asked for twice, so code that stops satisfying it is wrong rather
+  than merely different. Break-tested by shortening the swatch without narrowing it — 90×61 — which turns that
+  gate red and **only** that gate, since every other claim on the tile still holds on a rectangle.
+- **`--shots` cannot see any of this, and that is why it took six rounds.** There is no satchel beat among the
+  ten — they are rooms, the Dream crossfade and the blight/station pairs — so every screenshot of this tile has
+  been Jeremy's own, and every correction had to wait for him to play. The arithmetic is now gated six ways and
+  the look is still his eyes only. **Adding a satchel beat is the cheapest available improvement to the loop**
+  and the next UI round should open with it — round four is the case for it, since it passed every gate and one
+  glance killed it. Six rounds on one label is also the strongest evidence in the project for
+  `division-of-labour`: **judgement-by-eye is his, and it is not a rubber stamp on work already finished** —
+  two of the six rounds were him seeing something the code could not.
+
+**Still waiting on a ruling — three findings, none of them touched by this step:**
+
+1. **~~`creature_logger` resists Blunt~~ — withdrawn 2026-08-03. The Logger fight is correctly designed and
+   the complaint was the discoverability bug wearing a combat costume.** The arithmetic in the original
+   finding was right and its conclusion was wrong. Bare-handed is indeed unwinnable —
+   `RoundToInt(3 × 0.5)` is **2 a hit, so 15 turns** against 30 durability, while the Logger deals 8, which
+   is 120 damage into a 100 bar and death around turn 13. But **bare hands are not "the only attack a new
+   player has."** `GameConfig.StartingItems` is `{ "weapon_splitting_axe" }` — the axe is in the satchel from
+   frame one — it `Deals = 1` (Edge) at `Potency = 10`, and the Logger is `VulnerableTo = 1`. **So it is 20 a
+   hit and the Logger dies in two**, taking 8 off you on the way. The fight is a teaching fight for *equip
+   your weapon*, and the reason it killed him every time is finding 1 of the same playtest: he did not know he
+   had the axe. **The caption and the Equipment tab are the fix, and they shipped.** What remains is a real
+   but much smaller question — nothing anywhere tells you to equip, and the starting weapon is not
+   auto-equipped, because equipping *names* a stack rather than moving one. **Ruled the same day: it stays
+   unequipped.** I recommended auto-equipping it and Jeremy held it back — *"I was going to say we should auto
+   equip but I think I want to hold off on doing that to add equipping it for a tutorial on equipping items
+   later on."* The unequipped axe **is** the teaching moment, so spending it on convenience would cost the
+   tutorial its subject. `GameConfig.StartingItems` keeps its one entry and gains no equip call. **Nothing to
+   build; this is the note that stops someone helpfully adding it.**
+2. **`mat_scrap_iron` has no chapter-1 source — confirmed, and it is not a softlock.** All eight are chapter 2
+   or 3, and the door the Bill Hook opens is `ch1_crossroads → ch1_bramble`, so the tool cannot be forged in
+   the chapter its door is in. The station is *not* the problem: `ch1_cottage` is a camp and a camp is every
+   station. But **`ch1_bramble` has a second, ungated entrance from `ch1_stonefield`**, and the route to
+   chapter 2 is `ch1_trap_yard → ch1_bridge`, nowhere near it. So the Bill Hook door is a **shortcut you come
+   back for**, not a gate on progress — the original finding's *"cannot be forged before the chapter that
+   needs it"* overstated it, because chapter 1 does not need it. The live question is whether that door is
+   *meant* to be come-back-later. Still true: **one harvest hotspot would fix it**, and would also unblock
+   `trap_chime` and `trap_spiked_pit` before chapter 2. **Jeremy's answer, 2026-08-03, was a question I could
+   not fully answer and it is the right question:** *"if you skip and can't use it until after you use the
+   others it isn't really the teacher… I suppose I just want to know its worth."* Two findings. **The
+   ordering half is real and general** — all three tools need scrap iron, so all three unlock together, which
+   is the same shared-gating-material defect as the coats above; the Bill Hook cannot be the tool that teaches
+   tool-doors if it arrives beside the other two. **The worth half cannot be answered yet**: `ch1_bramble`'s
+   description is `[unwritten]` and its one entity slot is unfilled, so there is nothing behind the door to
+   weigh. **So this decision is blocked on authoring that room, not on a harvest node** — which is why no
+   hotspot was added.
+3. **There is no rig verb anywhere in the UI.** A built, four-times-gated mechanic with no reachable button.
+   It cannot live in the satchel — rigging needs a creature to rig *against* — so the entity click, beside
+   Engage, is the only place it can go.
+
+**Closed with no work:** the vulnerability *was* on screen all along and his own screenshot quotes it back
+(*"It flinches from edges… It comes at you with edges"*), so finding 4 was presentation, now fixed by the
+tint. Camp fast travel does not exist yet and is §17's amended camp menu, still ahead. Overlapping entity
+labels are `PlaceholderCues.DrawLabel` drawing at baselines from authored `Region` rects — placeholder art
+behaving as specified. Mending and salves were confirmed working.
+
+**Still owed from the walk:** everything in *What 3a still owes* above that this pass did not reach —
+turn-counting both ways against §5's 3–6, the rig-survives-a-camp check, and the two flags. And the
+**opponent health bar is a standing open question**, deferred in his words: *"in a way it looks cleaner
+without a bar, but it would give people an idea of their decisions — so add later if playtesters want it."*
+See `combat.md` §18 for where it would go if it lands, and why it must not become a second readout.
+
+---
+
 **If what you need is "in what order does the remaining work happen," read
 [`build-plan.md`](build-plan.md)** — written 2026-08-01 off the back of the placement bill. Two parallel
 streams (Claude closing six systems, Jeremy drawing the map and laying out screen skeletons), the content
@@ -180,20 +1257,61 @@ counted as files, a proposed `--verify-content` that turns the bill's seventeen 
 finding worth reading even if you skip the schedule: **three of the six remaining systems are not on the
 "systems still unbuilt" list in §1**, because the decisions that created them were taken after it was
 written — the **blight/mend layer** (§22), the **camp menu rework** (§17 amended), and the **chapter
-spine** (§23 plus the material milestones).
+spine** (§23 plus the material milestones). **The first of those three is now built** — unit 2, below;
+the other two are still ahead of you.
 
-**The suite is 385, exit 0** as of 2026-08-02. It has moved twice by deletion and five times by
+**The suite is 670, exit 0** as of 2026-08-03. It has moved three times by deletion and eleven times by
 building: 328 → 315 on 2026-08-01 when `ContentSeeder` / `--seed-content` and the Waking-world hazard
 (`VitalityCost` and everything that read it) were cut; 315 → 347 when unit 1 landed; 347 → 338 with
 spectral vision; 338 → 359 with unit 1.5; 359 → 367 with the pass-1 rooms and the `graph` section that
 guards them; 367 → 369 with the boot move; 369 → 385 with the pass-2 bodies and the `fights` section that
-guards them. Every deletion is recorded where the feature used to be documented. **A falling gate
-count is the expected shape of the content pass** — the prototype scaffolding comes out as the real
-thing goes in.
+guards them; 385 → 439 with unit 2's mend layer, the `mending` section and the legacy-save pair;
+439 → 472 with unit 4a's station layer and the `stations` section that guards it; 472 → 510 with unit 4b's
+arsenal and the roster gates over it, which is the only step so far that added **no system at all** — every
+one of the 38 is a claim about content, and one of them replaced a check that had been vacuously green
+since 4a; and **510 → 655 with unit 3a's fight loop and the `encounters` section**, the largest single step
+by a factor of three, six of whose checks exist only because a conjunction was found hiding an untested
+act and **seven more only because `--shots` found a fight that outlived its room**; **655 → 674 with the
+first playtest's three UI rulings**, the only step until then driven by somebody's eyes rather than by a doc;
+**674 → 677 with the second playtest**, three checks over the geometry of the caption the first one asked
+for — the shortest step in the list, and the only one whose entire subject is a defect in the step before it;
+and **677 → 680 across four more looks at the same tile**, which between them are the only step in the list to
+**retire two checks it had added the same day** — the third look gated the arrangement it had just built; the
+fourth thought that arrangement unnecessary and gated *its* replacement; the fifth put the third back, because
+the fourth read as a number floating mid-tile; and the sixth got the square the fourth was reaching for, by
+narrowing the swatch to its height instead of restoring its height to its width. What survives asserts no
+arrangement: the count sits above the caption, it is the same few pixels in from **both** of the swatch's near
+edges — a gap rather than a coordinate — and the swatch is square, which is now a *requirement* rather than a
+description of whatever the last round happened to build.
+And **680 → 670 with unit 3b's retirement of the waystation prototype**, the third step to move the count
+by deletion and the only one whose *whole subject* was deletion: 76 checks stood on prototype content, of
+which about 15 were using it as a probe for code that survives, and those kept a synthetic fixture while
+the rest went. **It added three checks it did not plan to** — a deletion gate that would notice a `.tres`
+surviving in a working tree, and a pair proving the crafting-venue guard, which turned out to have had no
+probe at all (below).
+The unit 2 step
+**also deleted a system** and does not show it: the zone machinery came out inside it and cost
+the count nothing, because every invariant it held moved onto the flag that replaced it and only
+`ZoneCorruptionScalar`'s probe was retired. Every deletion is recorded where the feature used to be
+documented. **A falling gate count is the expected shape of the content pass** — the prototype
+scaffolding comes out as the real thing goes in.
 
-**Nothing is currently known to be broken.** The whole slice plays end to end. Commands live in
+**Nothing is currently known to be broken, and unit 3a has now been played** — the ⚠️ block in that section
+is discharged, and the walk it demanded produced eight findings in one sitting against 655 green gates.
+Three are built (see *The first playtest*), **three are still waiting on a ruling**, and the rest of 3a's
+walk list — turn-counting both ways, the rig-survives-a-camp check, the two flags — is still owed. The whole slice plays end to end. Commands live in
 `README.md`; Claude runs `--verify-slice` before and after code changes, so there is no start-of-
 session ritual to perform.
+
+**Three things that *were* broken, all found by `--shots` and none of them by a gate**, which is the reason
+this paragraph exists: it had been capturing the wrong room since the boot moved; the fight screen's dim had
+never drawn a pixel, sitting at 0x0 behind four green checks; and every beat was captioned with the previous
+beat's line. All three fixed 2026-08-03, the last two in unit 3b. **The screenshot tool is the one tool in
+the repo with no suite over it**, so its output has to be looked at rather than trusted — and the corollary
+found the same day is that it is also **the only thing that can falsify a layout check**, because the
+invariant those checks want is `Size` and `Size` needs a layout pass. Two live findings from it are in the
+unit 3b section, both deliberately unactioned: the room title overlaps the DebugPanel readout in all eight
+frames, and the dim washes the HUD as well as the room.
 
 **Newest change, 2026-07-31: the whole item and crafting economy was redesigned, and it is docs-only
 so far.** `combat.md` **§19** is the new authority on crafting, materials, salves, stations and the
@@ -446,9 +1564,12 @@ content exists):
   without two `EntityData` files. The rule: **you can only harvest what was never human.**
 - **A freed human is an NPC, not an entity state.** Same hotspot-and-flag machinery as above.
 - **Bosses have two forms, not three:** blank `PurifiedName`. They are destroyed, never purified.
-- `data/entities/beast_giant_rat.tres` is the old model (an animal, with both a Dream pocket and a
-  purified harvest — now a boss-only combination). Jeremy: *"the rat was just a test, no real loss
-  here."*
+- ~~`data/entities/beast_giant_rat.tres` is the old model~~ **— deleted 2026-08-03 with unit 3b.** It was
+  an animal with both a Dream pocket and a purified harvest, which is now a boss-only combination.
+  Jeremy: *"the rat was just a test, no real loss here."* Its *shape* survives as an `EntityData` built in
+  code on `verify_loop`, because the state×presentation table and the `EntityStateChanged` signal are
+  surviving code with no other probe — so the last thing in the game holding that contradiction is a
+  fixture, where it cannot be mistaken for a model.
 
 **Creature *data* is unblocked and creature *art* is not.** The types, counts and placements in
 `items.md` §10 are settled enough to author `.tres` files against; what is still waiting is the
@@ -1524,10 +2645,21 @@ Plus navigation, flag-gated hotspots, harvest-once nodes, zero-respawn persisten
 a debug panel (`F3`) and procedural placeholder art for everything. (Spectral vision was on this list
 until 2026-08-02.)
 
-**Content is 2 Waking rooms, 6 Dream rooms, 1 entity, 1 heist, 5 items, 1 recipe, 1 zone, and no
-camp** — all `.tres` under `data/`, all editable in the Godot inspector. New rooms are authored there
+~~**Content is 2 Waking rooms, 6 Dream rooms, 1 entity, 1 heist, 5 items, 1 recipe, 1 zone, and no
+camp**~~ — all `.tres` under `data/`, all editable in the Godot inspector. New rooms are authored there
 from now on. *(The warning that used to end this line — do not run `--seed-content` — is obsolete: the
 flag and `ContentSeeder` were deleted 2026-08-01.)*
+
+> **✅ The counts as of 2026-08-03, and this line is now the one to trust: 59 rooms, 11 entities, 12
+> blights, 30 fights, 3 camps, 2 field stations, 27 items and 17 recipes** — and **1 zone became 3
+> chapters**, since `ZoneData` was deleted with the zone machinery in unit 2. The gate count is **670**,
+> not the 328 above. What is still unauthored is listed by the unit that unblocks it in the unit 4b entry
+> at the top of this file.
+>
+> *(Read **67 rooms, 12 entities, 4 camps, 28 items** here until 2026-08-03: the difference is unit 3b
+> deleting the prototype's 8 rooms, the rat, `waystation_shed` and `herb_gravecap`. Every count in this
+> line is now authored content with nothing synthetic in it — the `verify_` fixtures are registered in
+> code and excluded from these sweeps by key prefix.)*
 
 The missing camp is the one gap between "gated" and "playable": add a hotspot with
 `Kind = HotspotKind.Workbench` to whichever room should be the first camp, and crafting, the cache and
@@ -1571,6 +2703,9 @@ gated to a bench, and the collapse that loses what you can remake.
   which is content rather than code. **Promoted 2026-07-31 from a nice-to-have to a load-bearing beat:**
   §19 makes her two fused salves **found first and learned last**, so this cache is the thing the player
   rations for most of the game. It is also where the tutorial's free burning oil salve comes from.
+  **Unblocked as of unit 4b:** the two things it holds are authored items now — `brew_burning_oil` and
+  `brew_corrosive_draught`, `Component` rather than `Salve` — so the cache is a room and some counts, with
+  nothing left to decide.
 - ~~**The eight material names**, and especially the scarce pair.~~ **Done 2026-07-31 —
   [`items.md`](items.md) is the whole roster**, and it was the one genuinely blocking item in M4.
   Materials, salves, traps, weapons, armour, tools, the two repair scales, per-chapter availability and
@@ -1580,8 +2715,15 @@ gated to a bench, and the collapse that loses what you can remake.
 
   Three things in it that a code reader needs to know, because they are not obvious from the tables:
   **Fire and Caustic are trap-only** (no weapon deals them, and no armour wards Fire), **her two combat
-  salves are `Component` rather than `Salve`** despite their names, and **the roster prices the Dream at
-  10 pockets** — 7 knowledge, 3 boss — which Jeremy accepted as the authoring bill.
+  salves are `Component` rather than `Salve`** despite their names, and ~~**the roster prices the Dream at
+  10 pockets** — 7 knowledge, 3 boss~~ — which Jeremy accepted as the authoring bill.
+
+  > **✅ All three are gates now, and the third number was wrong. Unit 4b, 2026-08-03.** The whole roster
+  > is `.tres`: **28 items and 17 recipes**. The first two claims stopped being prose — no weapon deals
+  > Fire or Caustic, no armour wards Fire, and the two brews are `Component` with `brew_` ids, each held
+  > by a check that fails in both directions. The pocket count is **11, not 10** — 8 knowledge + 3 boss —
+  > and the 7 here was the same undercount the code carried: two access tools were sharing one blueprint.
+  > The Pry Bar now has its own, and the eight is gated as a named census.
 - ~~**The item / trap / equipment vocabulary**, before any more recipes are authored.~~ **Settled
   2026-07-30 — `combat.md` §18.** What is left of it is code: two enums and a handful of `[Export]`s,
   which must land before items or creatures are authored.
@@ -1809,11 +2951,11 @@ Things that *work* but are not the real implementation, or that will mislead you
 | Where | What |
 |---|---|
 | `SliceVerifier.Run(view, hud)` | Sets `ResolveManager.Active = false` so drain cannot race the assertions. **Nothing timing- or drain-related is tested.** Both arguments are null-tolerant so the gates stay runnable from anywhere — but `GateHarness` asserts they arrived, so a wiring mistake in `Main` fails the run instead of silently skipping the five view checks. |
-| `verify_`-prefixed rooms | `RegisterVerifyRooms` injects `verify_camp`, `verify_camp_two` and `verify_wilds` into `NavigationManager` at the top of a run, so camp behaviour is tested against ground the verifier owns rather than against whatever Jeremy authored. They are **not** in `data/` and `GateAuthoredContent` skips them. **Any new gate whose meaning depends on a room's contents belongs on a `verify_` room**, and anything asserting "the game has content" must keep excluding them, or a synthetic room will satisfy a check about authored work. |
+| `verify_`-prefixed rooms | `RegisterVerifyRooms` injects them into `NavigationManager` at the top of a run, so behaviour is tested against ground the verifier owns rather than against whatever Jeremy authored. They are **not** in `data/`, they carry `ChapterId = "verify"`, and `GateAuthoredContent` skips them **by key prefix** — which is why the `ch*` predicates on five sweeps are belt-and-braces rather than the thing doing the work. **Any new gate whose meaning depends on a room's contents belongs on a `verify_` room**, and anything asserting "the game has content" must keep excluding them, or a synthetic room will satisfy a check about authored work. As of unit 3b there are nine: `verify_camp`, `verify_camp_two`, `verify_wilds`, `verify_arena` (3a's eight placements, and its bodies must stay Corrupted for `GateEncounters`), `verify_loop` / `verify_loop_inner` (the retired waystation loop's shape), two chained synthetic Dream rooms plus a code-built `DreamHeistData`, and `verify_station` — a mortar with **no bench under it**, which is the only probe that the crafting venue guard exists. |
 | `GateHeistMechanics` | Calls `run.ForceClear()` before `GatePersistence`, so save/load is only tested from a Waking room with no run. This is exactly where the save/load soft lock hid. |
 | headless runs | `_Process` never ticks meaningfully, so the pursuer only moves when a test calls `DebugSetPursuerRoom`. **Pursuit timing is untested.** |
 | the view, in gates | `RoomView` and `Hud` *are* live in a headless run and now have gates asserting the room they display — but only the room. Backdrops, overlays, tweens and hotspot rects are still unasserted, and `--shots` is the only thing that looks at a pixel. |
-| `yard_cairn`, in `data/rooms/waystation_yard.tres` | The entry puzzle is a plain `Interact` hotspot ("search the cairn"). The minigame does not exist. *(Cited `ContentSeeder.cs:219` until that file was deleted 2026-08-01; the authored `.tres` is the only copy now.)* |
+| ~~`yard_cairn`, in `data/rooms/waystation_yard.tres`~~ | **Gone 2026-08-03 with unit 3b.** The prototype's entry puzzle was a plain `Interact` hotspot ("search the cairn") and the minigame never existed. Its *shape* survives as a once-firing `Interact` on `verify_loop`, because that is what the migrated M3 checks probe; what a pocket entrance actually is belongs to unit 6. *(Cited `ContentSeeder.cs:219` until that file was deleted 2026-08-01, then the authored `.tres`, and now neither.)* |
 | `InteractionService.cs:136` | Finishing a `Severed` body is **one click**. This is where the turn-based item fight goes. |
 | ~~**No camp is authored**~~ | **Closed 2026-07-30.** `shed_bench` in `waystation_shed.tres` went from `Kind = 4` (Interact) to `Kind = 7` (Workbench) — a one-value edit to a hotspot that was already authored, labelled and positioned. Crafting, the cache and the respawn destination are live. Two gates now hold it: a camp exists, and it is walkable to from `StartingRoomId`. |
 | `ItemData.VitalityRestore` | Read at last, by `UseItem`. Only salves use it. |
@@ -1923,6 +3065,32 @@ that should have been red; this one is about a run that is neither, and the hone
 output is to assume the machine is slow. **Always run the verifier under a `timeout` and read the file
 afterwards** (`> /tmp/vs.txt 2>&1`) — piping to `grep` has hung the terminal too. A short check count
 in the summary now means "a gate threw", and is worth more attention than a long list of failures.
+
+**A seventh, and it is the third class's shy cousin: a guard whose only reachable arm is covered by a
+different guard, so deleting it changes nothing a green run can see.** Class three is a check that *cannot*
+fail; this one is a check that fails for a reason other than the thing it is aimed at. It has shipped twice
+and both were found by break-test rather than by reading:
+
+- `InventoryCraftingManager.AtVenueFor` has two arms — `AtCamp`, which refuses inside a live run on its own,
+  and `RoomHasStation`, which is the only arm the `IsRunning` guard is load-bearing on. **Every crafting
+  check stood on the first arm**, so the guard could have been deleted and the suite stayed green. Found by
+  a break-test that *predicted which checks would go red together* and then read the one that did not move.
+  Fixed by `verify_station` — a mortar in a room with no bench under it.
+- The fresh-game walk added on 2026-08-03 has three stopping rules (a barred door, a flag-gated door, a
+  flag-array door). Commenting out **all three** took the frontier from 9 fights on 16 screens to 30 on 59
+  and **every check stayed green**, because the nearest fight sits two ungated doors out either way. Fixed
+  by two *differentials*: the walk is parameterised, and the suite asserts that ignoring each rule opens
+  screens the rule was closing.
+
+The rule that catches it: **write down which checks you expect to go red together, then read the ones that
+did not move.** A break-test that only asks "did something go red" cannot see this class at all — something
+always does. And where a guard has arms, the fixture has to reach *each* arm; a fixture that satisfies the
+easy arm makes the hard one decorative.
+
+**And an eighth, half a day later, which is smaller and purely mechanical: `SetAnchorsPreset` preserves the
+node's current rect instead of filling the parent, so anchors without offsets is half a rect.** A fight-screen
+dim sat behind four green checks having never drawn a pixel. Use `SetAnchorsAndOffsetsPreset`, and when a
+check settles for *part* of an arrangement, assert all of it.
 
 ---
 

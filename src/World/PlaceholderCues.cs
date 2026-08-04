@@ -73,6 +73,32 @@ public static class PlaceholderCues
 
             // The objective. Provisional, same reason.
             [HotspotKind.TakeAnchor] = new("#ffffff"),
+
+            // The blight, and the one place it is worth spending a green. The paragraph above warns
+            // that mid-value green vanishes on purified ground (#6f8f5e) — this is pushed brighter and
+            // bluer than the ground to clear it, and it is the right hue to spend here because green is
+            // literally what this hotspot pays out. If it still reads badly on a cleansed screen, move
+            // it toward mint rather than toward lime: Harvest owns lime, and the pair that matters
+            // under deuteranopia is crimson/lime.
+            //
+            // A mend is also the one cue you should still see after solving it — the screen is cleansed
+            // and the flag is set, so it draws as a spent node would if it were a Harvest. It is not:
+            // `Mend` is refused by InteractionService once mended rather than removed by IsAvailable,
+            // deliberately, because the maker's mark (§22) belongs where the work was done.
+            [HotspotKind.Mend] = new("#4ade80"),
+
+            // A station: where work gets done. Bronze — the forge, and the last hue family absent from
+            // both backdrop palettes now that violet is spent. What ruled out the obvious choices: a
+            // steel blue-grey is the one family the paragraph above warns about (mid-value blue vanishes
+            // on the purified sky, #7fa8c9), teal collides with Navigate's cyan, and magenta is reserved
+            // as the unmapped-kind tell in ColorFor below. Gold and green are taken by the two hotspots
+            // a station is most easily confused with — the camp bench and the mend.
+            //
+            // Its nearest neighbour is Interact's amber, which is semantically fine (a station *is* a
+            // kind of interaction) and separated by both saturation and value. Under deuteranopia this
+            // joins crimson/lime/amber in one hue bucket, and the four stay apart the way that palette
+            // was designed to: by value — crimson ~0.47, bronze ~0.58, amber ~0.71, lime ~0.79.
+            [HotspotKind.Station] = new("#c98a4b"),
         };
 
     /// <summary>

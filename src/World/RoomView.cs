@@ -113,7 +113,6 @@ public partial class RoomView : Control
         bus.RoomEntered += OnRoomEntered;
         bus.EntityStateChanged += OnEntityStateChanged;
         bus.WorldFlagChanged += OnWorldFlagChanged;
-        bus.ZonePhaseChanged += OnZonePhaseChanged;
 
         // `RealmChanged` was subscribed here too. Nothing this view draws depends on the realm any
         // more — not the backdrop, not the overlays, not which hotspots exist — so the handler had
@@ -128,7 +127,6 @@ public partial class RoomView : Control
         bus.RoomEntered -= OnRoomEntered;
         bus.EntityStateChanged -= OnEntityStateChanged;
         bus.WorldFlagChanged -= OnWorldFlagChanged;
-        bus.ZonePhaseChanged -= OnZonePhaseChanged;
     }
 
     // ---- Signal handlers -------------------------------------------------
@@ -161,9 +159,18 @@ public partial class RoomView : Control
         RebuildHotspots();
     }
 
-    private void OnWorldFlagChanged(string flag, bool value) => RebuildHotspots();
-
-    private void OnZonePhaseChanged(string zoneId, int phase)
+    /// <summary>
+    /// A flag moved, so both the hit-boxes and the backdrop may be stale.
+    /// </summary>
+    /// <remarks>
+    /// This refreshed only the hotspots until 2026-08-03, because the backdrop was driven by
+    /// <c>ZonePhaseChanged</c> — a separate signal, now deleted. Cleansing is a world flag
+    /// (<c>screen.&lt;id&gt;.cleansed</c>), so leaving this line as it was would have set the flag and
+    /// not repainted until you left the room and came back, which is the exact failure the deleted
+    /// signal was hiding. Unconditional rather than filtered on the flag name: a repaint is cheap, and a
+    /// filter here would be a second place that has to know how cleansed flags are spelled.
+    /// </remarks>
+    private void OnWorldFlagChanged(string flag, bool value)
     {
         RefreshBackdrops();
         RebuildHotspots();
@@ -175,7 +182,11 @@ public partial class RoomView : Control
     {
         if (_room == null) return;
 
-        var cleansed = WorldStateManager.Instance?.IsZoneCleansed(_room.ChapterId) ?? false;
+        // Per screen since 2026-08-03, not per chapter. Read from the flag rather than by asking
+        // `MendManager.IsCleansed(_room)` directly: the flag is what content gates on, so painting from
+        // it means a screen whose colour has come back and a door that opens "once this screen is
+        // cleansed" can never disagree about whether it has.
+        var cleansed = WorldStateManager.Instance?.GetFlag(Flags.Cleansed(_room.Id)) ?? false;
 
         var photo = cleansed && _room.WakingBackgroundPurified != null
             ? _room.WakingBackgroundPurified

@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://src/Data/ItemData.cs" id="1_item"]
+
+[resource]
+script = ExtResource("1_item")
+Id = "armour_padded_jack"
+DisplayName = "Padded Jack"
+Description = "Hide quilted over tallow-soaked wadding, which sounds like nothing and takes a hammer like a mattress. Cheap, and the cheapness is the point."
+Category = 6
+PlaceholderColor = Color(0.6117647, 0.5568628, 0.42745098, 1)
+Slot = 2
+WardsAgainst = 2

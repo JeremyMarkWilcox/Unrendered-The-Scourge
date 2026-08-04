@@ -6,16 +6,21 @@ using Unrendered.Core;
 namespace Unrendered.Managers;
 
 /// <summary>
-/// The authoritative record of what has happened. Boolean world flags plus a phase per
-/// zone. Everything else in the game derives from this, and the save file is essentially
-/// a serialisation of it.
+/// The authoritative record of what has happened: boolean world flags, and nothing else since
+/// 2026-08-03. Everything in the game derives from this, and the save file is essentially a
+/// serialisation of it.
 /// </summary>
+/// <remarks>
+/// It used to hold a second dictionary of zone phases beside the flags. Collapsing that into flag names
+/// (<see cref="Flags.Cleansed"/>) is what made the persistence half of this class disappear — one
+/// vocabulary means one export, one import and one rebroadcast, and the <c>domain.subject.state</c>
+/// shape keeps a class of thing countable by prefix, which a per-zone enum never was.
+/// </remarks>
 public partial class WorldStateManager : Node
 {
     public static WorldStateManager Instance { get; private set; }
 
     private readonly Dictionary<string, bool> _flags = new();
-    private readonly Dictionary<string, ZonePhase> _zonePhases = new();
 
     public override void _EnterTree() => Instance = this;
 
@@ -118,61 +123,42 @@ public partial class WorldStateManager : Node
     }
 
     // ---- Zones -----------------------------------------------------------
-
-    public ZonePhase GetZonePhase(string zoneId)
-    {
-        if (string.IsNullOrEmpty(zoneId)) return ZonePhase.Corrupted;
-        return _zonePhases.TryGetValue(zoneId, out var p) ? p : ZonePhase.Corrupted;
-    }
-
-    public void SetZonePhase(string zoneId, ZonePhase phase)
-    {
-        if (string.IsNullOrEmpty(zoneId)) return;
-        if (GetZonePhase(zoneId) == phase) return;
-
-        _zonePhases[zoneId] = phase;
-        EventBus.Instance?.EmitZonePhaseChanged(zoneId, phase);
-    }
-
-    public bool IsZoneCleansed(string zoneId) => GetZonePhase(zoneId) == ZonePhase.Purified;
-
-    /// <summary>
-    /// Corruption multiplier a room in this zone should feel. Purified zones are inert;
-    /// an active front is somewhat calmer than untouched ground.
-    /// </summary>
-    public float ZoneCorruptionScalar(string zoneId) => GetZonePhase(zoneId) switch
-    {
-        ZonePhase.Purified => 0f,
-        ZonePhase.ActiveFront => 0.65f,
-        _ => 1f,
-    };
+    //
+    // `_zonePhases`, `GetZonePhase`, `SetZonePhase`, `IsZoneCleansed`, `ZoneCorruptionScalar` and
+    // `ExportZonePhases` all stood here until 2026-08-03 (unit 2). The state they held is now one flag
+    // per screen — `Flags.Cleansed(roomId)`, written by `MendManager.Reevaluate` — which is why this
+    // class got *shorter* rather than gaining a per-screen dictionary beside the flags it already has.
+    //
+    // Two of the six had a live invariant, and following `deleting-a-gated-mechanism` the probes moved
+    // rather than being deleted with them: "the zone is cleansed" and "zone phase restored" became the
+    // same assertions about a `screen.<id>.cleansed` flag in `--verify-slice`. Those probes then had to
+    // move a *second* time — they landed on `screen.waystation_yard.cleansed`, and unit 3b deleted the
+    // waystation, so they read a synthetic `verify_loop` screen now. Worth stating: a probe re-anchored
+    // onto content is a probe that moves again whenever the content does.
+    //
+    // **`ZoneCorruptionScalar` is the one honest deletion with no surviving invariant.** Nothing read
+    // it — Resolve drain has been boss-only aura since `aura-scoped-to-bosses` — so its probe ("the
+    // zone reads as inert") went with it instead of moving. A check that still passes while measuring
+    // nothing is worse than one check fewer.
 
     // ---- Persistence -----------------------------------------------------
 
     public Dictionary<string, bool> ExportFlags() => new(_flags);
 
-    public Dictionary<string, int> ExportZonePhases() =>
-        _zonePhases.ToDictionary(kv => kv.Key, kv => (int)kv.Value);
-
-    public void ImportState(Dictionary<string, bool> flags, Dictionary<string, int> zonePhases)
+    /// <summary>
+    /// Replace the whole world with a saved one. Takes flags alone now: a cleansed screen is a flag, so
+    /// the save format lost a field and nothing had to be added to carry it.
+    /// </summary>
+    public void ImportState(Dictionary<string, bool> flags)
     {
         _flags.Clear();
-        _zonePhases.Clear();
 
         if (flags != null)
             foreach (var kv in flags) _flags[kv.Key] = kv.Value;
 
-        if (zonePhases != null)
-            foreach (var kv in zonePhases) _zonePhases[kv.Key] = (ZonePhase)kv.Value;
-
         // Rebroadcast so every live view resyncs without a reload.
         foreach (var kv in _flags) EventBus.Instance?.EmitWorldFlagChanged(kv.Key, kv.Value);
-        foreach (var kv in _zonePhases) EventBus.Instance?.EmitZonePhaseChanged(kv.Key, kv.Value);
     }
 
-    public void ResetAll()
-    {
-        _flags.Clear();
-        _zonePhases.Clear();
-    }
+    public void ResetAll() => _flags.Clear();
 }

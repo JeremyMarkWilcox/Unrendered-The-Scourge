@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://src/Data/ItemData.cs" id="1_item"]
+
+[resource]
+script = ExtResource("1_item")
+Id = "salve_deepmend"
+DisplayName = "Deepmend Salve"
+Description = "Her second recipe, and the one she wrote out twice to be sure of it. Thicker than the clearmind, and it takes the shake out of your hands as well as the hole out of your arm."
+Category = 1
+VitalityRestore = 55.0
+PlaceholderColor = Color(0.42352942, 0.6156863, 0.5254902, 1)
+Track = 1

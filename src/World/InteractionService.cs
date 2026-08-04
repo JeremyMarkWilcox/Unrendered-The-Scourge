@@ -77,9 +77,27 @@ public static class InteractionService
     {
         switch (data.Kind)
         {
+            // A door, clicked mid-fight, IS breaking off — so it is priced like one. §18 makes flight
+            // guaranteed and charges it a parting blow; walking out is the same act with a different
+            // button, and letting it be free would make "flee" the strictly worse of two identical
+            // choices. The backstop in `EncounterManager.OnRoomEntered` charges nothing and cannot,
+            // because a collapse navigates too — see the note there.
             case HotspotKind.Navigate:
+                var nav = NavigationManager.Instance;
+                var fight = EncounterManager.Instance;
+                if (fight?.InFight == true)
+                {
+                    var stoodIn = nav?.CurrentRoomId;
+                    fight.Flee();
+
+                    // The parting blow can be lethal, and a collapse carries you to a camp. If you were
+                    // moved, the door you clicked is not next to you any more and walking through it
+                    // would quietly undo the respawn — so the flight is the whole outcome, and it
+                    // succeeded.
+                    if (nav?.CurrentRoomId != stoodIn) return true;
+                }
                 SetFlagIfAny(data.SetsFlag);
-                return NavigationManager.Instance?.GoToRoom(data.TargetRoomId) ?? false;
+                return nav?.GoToRoom(data.TargetRoomId) ?? false;
 
             case HotspotKind.Harvest:
                 return Harvest(data.ItemId, data.ItemAmount, data.ResolvedHarvestedFlag);
@@ -103,15 +121,45 @@ public static class InteractionService
                 DreamRunManager.Instance.TakeAnchor();
                 return true;
 
-            // The bench. Its real job is passive — merely being in the room with it is what makes
-            // this a camp, refills both pools and sets where you wake, all handled by CampManager on
-            // arrival with nothing to click. Clicking it will open the crafting panel; until that
-            // panel exists, say so rather than pretending the click did nothing.
+            // A field station: the mortar, the anvil, the trapper's stump (§19). Same rule as `Mend` —
+            // it emits and returns, never touching UI, so a station click is drivable with no scene
+            // tree. What it does *not* do is check the venue: `InventoryCraftingManager.Inspect` is the
+            // one authority on whether a given recipe can be made here, and re-asking that question at
+            // the door would put a second copy of the camp-satisfies-every-station ruling somewhere it
+            // could disagree. Clicking a station always opens the panel; the panel greys the rows.
+            case HotspotKind.Station:
+                SetFlagIfAny(data.SetsFlag);
+                EventBus.Instance?.EmitCraftingRequested(data.StationId);
+                AnnounceCraftingVenue(data);
+                return true;
+
+            // The bench. Its real job is passive — merely being in the room with it is what makes this
+            // a camp, refills both pools and sets where you wake, all handled by CampManager on arrival
+            // with nothing to click. Clicking it asks for the crafting panel, which is the same verb as
+            // the case above and deliberately shares its signal rather than having one of its own: the
+            // bench is the station that is every station, and a panel that had to tell the two apart
+            // would be the place the ruling went to rot.
             case HotspotKind.Workbench:
                 SetFlagIfAny(data.SetsFlag);
-                EventBus.Instance?.EmitNotify(string.IsNullOrEmpty(data.ExamineText)
-                    ? "Your tools are laid out here. [the crafting panel is not built yet]"
-                    : data.ExamineText);
+                EventBus.Instance?.EmitCraftingRequested(data.StationId);
+                AnnounceCraftingVenue(data);
+                return true;
+
+            // A blight. The click asks for the board and does nothing else — no flag, no yield, no
+            // cost. Solving the board is what pays out, through MendManager.Mend, which is the one
+            // seam the panel and the gates share (§22). `SetsFlag` is deliberately not set here: it
+            // fires on the mend, not on looking at it, so MendManager owns it.
+            //
+            // The refusal has to live here as well as in MendManager: a mended blight stays on screen
+            // as its maker's mark, so clicking it again must say so rather than open an empty board.
+            case HotspotKind.Mend:
+                if (!MendManager.CanMend(data))
+                {
+                    EventBus.Instance?.EmitNotify(MendManager.AlreadyMended);
+                    return false;
+                }
+
+                EventBus.Instance?.EmitMendRequested(data);
                 return true;
 
             default:
@@ -149,16 +197,28 @@ public static class InteractionService
         if (state == EntityState.Purified && !string.IsNullOrEmpty(placement.Entity.HarvestItemId))
             return Harvest(placement.Entity.HarvestItemId, 1, $"harvested.{instanceId}");
 
-        // TODO(combat): a Severed body is where the turn-based item fight belongs. Until it
-        // exists, finishing one is a single click — the anchor is already gone, so this is
-        // the cheap ending the design promises, just without the fight around it.
-        if (state == EntityState.Severed)
+        // A `TODO(combat)` stood on the Severed branch until 2026-08-03 (unit 3a): finishing a severed
+        // body was a single click, standing in for a fight that did not exist. `combat.md` §18 named its
+        // replacement exactly — *"the baseline attack is what the existing one-click 'finish the Severed
+        // body' becomes"* — so both hostile states now go the same way, into `Engage`.
+        //
+        // **The cheap ending survives as an outcome rather than as a shortcut.** A severed body does not
+        // regenerate and its damage persists between visits (§3), so `Strike` with nothing equipped still
+        // gets there — several clicks instead of one, which is the design's own description of finishing
+        // a husk. What went is the special case, not the promise. `EngageBlock.Spent` routes a husk
+        // straight to its ending, so a fight you fled does not need a fight to close.
+        if (state is EntityState.Severed or EntityState.Corrupted)
         {
-            entities.Purify(instanceId);
-            OnPurified(placement);
-            EventBus.Instance?.EmitNotify(
-                "Without the thing behind it holding on, the body comes apart almost politely.");
-            return true;
+            var encounters = EncounterManager.Instance;
+            if (encounters == null) return false;
+
+            // `Spent` is handed to `Engage` rather than filtered out by `CanEngage`, which is the one
+            // place those two disagree: a husk cannot be *fought*, so `CanEngage` is honestly false, but
+            // clicking it should still finish it. `Engage` owns that routing so the husk ending has one
+            // implementation instead of a copy here.
+            var block = encounters.InspectEngage(instanceId);
+            if (block is EngageBlock.None or EngageBlock.Spent) return encounters.Engage(instanceId);
+            if (block == EngageBlock.AlreadyFighting) return false;  // Engage already said so.
         }
 
         var presentation = entities.Resolve(placement.Entity, instanceId);
@@ -168,37 +228,21 @@ public static class InteractionService
         return false;
     }
 
-    /// <summary>
-    /// Cutting the head off a region breaks its distortion field. Everything still standing
-    /// in the zone drops to Form 3 — the survivors were never the enemy.
-    /// </summary>
-    private static void OnPurified(EntityPlacement placement)
-    {
-        if (!placement.IsZoneLieutenant) return;
-
-        var room = NavigationManager.Instance?.CurrentRoom;
-        if (room == null || string.IsNullOrEmpty(room.ChapterId)) return;
-
-        var world = WorldStateManager.Instance;
-        if (world == null || world.IsZoneCleansed(room.ChapterId)) return;
-
-        world.SetZonePhase(room.ChapterId, ZonePhase.Purified);
-
-        // Content gates on a plain flag rather than having to query zone phase.
-        world.SetFlag($"zone.{room.ChapterId}.purified");
-
-        var entities = EntityStateManager.Instance;
-        if (entities != null)
-        {
-            foreach (var other in room.Entities)
-            {
-                if (other == null || other.InstanceId == placement.InstanceId) continue;
-                entities.Purify(other.InstanceId);
-            }
-        }
-
-        EventBus.Instance?.EmitNotify("The distortion breaks. Air moves. Somewhere, birds.");
-    }
+    // `OnPurified` stood here until 2026-08-03 (unit 2). It was the zone system's payoff: purifying a
+    // placement marked `IsZoneLieutenant` set the whole chapter to `ZonePhase.Purified`, set
+    // `zone.<chapter>.purified`, and dropped every other creature in the room to Form 3 for free.
+    //
+    // Three things replaced it, and only the first is a rename:
+    //  * the flip is now per screen — `MendManager.Reevaluate` sets `screen.<id>.cleansed` when nothing
+    //    on that screen is Held or Fouled, which is what `combat.md` §22 asks for. A chapter is no
+    //    longer a unit that can be cleansed; 59 screens are.
+    //  * the Form-3 cascade is deleted outright rather than moved. It contradicts `tethered dies,
+    //    untethered survives`: every creature is a person with their own tether, so nobody is freed as
+    //    a side effect of somebody else's fight. Thirty fights are thirty fights.
+    //  * `zone.*.purified` is gone as a gating vocabulary. The only content that used it was
+    //    `waystation_yard`'s bitterroot, re-pointed at `screen.<id>.cleansed` and then deleted outright
+    //    with the prototype in unit 3b — so no authored hotspot gates on cleansing at all today, and
+    //    the shape survives only as the verifier's `verify_loop` harvest node.
 
     // ---- Shared ----------------------------------------------------------
 
@@ -229,5 +273,34 @@ public static class InteractionService
     private static void SetFlagIfAny(string flag)
     {
         if (!string.IsNullOrEmpty(flag)) WorldStateManager.Instance?.SetFlag(flag);
+    }
+
+    /// <summary>
+    /// What a bench or a station says when you click it. Both kinds share it, because the ruling they
+    /// share is that a bench <i>is</i> a station and the player should not be able to tell the click
+    /// apart (§19).
+    ///
+    /// <b>The scaffold half of this is why it exists.</b> The note used to live in the `Workbench`
+    /// arm as the <i>else</i> of its flavour text and was missing from the `Station` arm entirely, so
+    /// what you were told depended on which of four benches you clicked: three had no `ExamineText`
+    /// and explained themselves, the since-deleted `waystation_shed` had flavour text and so swallowed
+    /// the note, and every field station said either nothing at all or the literal string
+    /// <c>[unwritten]</c>.
+    /// Found 2026-08-03 by Jeremy gathering materials and finding no way to spend them. Flavour text
+    /// and a scaffold notice are not alternatives — one is content and one is an apology for absent
+    /// content, and an <c>else</c> between them makes authoring a line of prose silently delete a
+    /// diagnostic. **Anything that stands in for an unbuilt screen has to be additive.**
+    ///
+    /// Delete the second emit when the crafting panel lands; that is the whole demolition.
+    /// </summary>
+    private static void AnnounceCraftingVenue(HotspotData data)
+    {
+        var bus = EventBus.Instance;
+        if (bus == null) return;
+
+        if (!string.IsNullOrEmpty(data.ExamineText) && data.ExamineText != "[unwritten]")
+            bus.EmitNotify(data.ExamineText);
+
+        bus.EmitNotify("Your tools are laid out here. [the crafting panel is not built yet — F7 crafts]");
     }
 }

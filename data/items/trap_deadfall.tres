@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://src/Data/ItemData.cs" id="1_item"]
+
+[resource]
+script = ExtResource("1_item")
+Id = "trap_deadfall"
+DisplayName = "Deadfall"
+Description = "A cairnstone slung in a timber cradle, propped on a stick that is doing more work than it looks like. It falls once. Something that is afraid of weight does not get up."
+Category = 5
+MaxStack = 1
+PlaceholderColor = Color(0.44705883, 0.4627451, 0.4862745, 1)
+Deals = 2
+Potency = 20

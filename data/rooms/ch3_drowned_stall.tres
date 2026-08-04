@@ -1,9 +1,10 @@
-[gd_resource type="Resource" script_class="RoomData" load_steps=11 format=3]
+[gd_resource type="Resource" script_class="RoomData" load_steps=14 format=3]
 
 [ext_resource type="Script" uid="uid://b0jetcphiy2cm" path="res://src/Data/HotspotData.cs" id="1_hs"]
 [ext_resource type="Script" uid="uid://v0juosv2w310" path="res://src/Data/RoomData.cs" id="2_room"]
 [ext_resource type="Script" uid="uid://c4nlnfkcu2a6u" path="res://src/Data/EntityPlacement.cs" id="3_ep"]
 [ext_resource type="Resource" path="res://data/entities/beast_settled.tres" id="4_ent"]
+[ext_resource type="Script" path="res://src/Data/MendPuzzleData.cs" id="9_mpz"]
 
 [sub_resource type="Resource" id="hs_0"]
 script = ExtResource("1_hs")
@@ -45,7 +46,7 @@ Id = "ch3_drowned_stall_carcass"
 Label = "Carcass"
 Kind = 3
 Region = Rect2(370, 715, 320, 140)
-ItemId = "rat_tallow"
+ItemId = "mat_tallow"
 ItemAmount = 1
 RequiredFlag = "defeated.ch3.beast_settled_02"
 
@@ -55,11 +56,27 @@ InstanceId = "ch3.beast_settled_02"
 Entity = ExtResource("4_ent")
 WakingPosition = Vector2(530, 855)
 
+[sub_resource type="Resource" id="mp_mend"]
+script = ExtResource("9_mpz")
+Prompt = "[unwritten]"
+Parts = PackedStringArray("[unwritten 1]", "[unwritten 2]", "[unwritten 3]", "[unwritten 4]", "[unwritten 5]")
+Solution = PackedInt32Array(3)
+
+[sub_resource type="Resource" id="hs_mend"]
+script = ExtResource("1_hs")
+Id = "ch3_drowned_stall_blight"
+Label = "The Smashed Launder"
+Kind = 8
+Region = Rect2(1300, 860, 380, 170)
+ItemId = "herb_graveflower"
+ItemAmount = 1
+MendPuzzle = SubResource("mp_mend")
+
 [resource]
 script = ExtResource("2_room")
 Id = "ch3_drowned_stall"
 DisplayName = "The Drowned Stall"
 ChapterId = "ch3"
 PlaceholderStyle = 1
-Hotspots = Array[ExtResource("1_hs")]([SubResource("hs_0"), SubResource("hs_1"), SubResource("hs_2"), SubResource("hs_3"), SubResource("hs_4")])
+Hotspots = Array[ExtResource("1_hs")]([SubResource("hs_0"), SubResource("hs_1"), SubResource("hs_2"), SubResource("hs_3"), SubResource("hs_4"), SubResource("hs_mend")])
 Entities = Array[ExtResource("3_ep")]([SubResource("ep_0")])

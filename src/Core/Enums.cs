@@ -61,6 +61,48 @@ public enum HotspotKind
     /// derives camp-ness by looking for this kind, and the old `IsSanctuary` flag is gone.
     /// </summary>
     Workbench = 7,
+
+    /// <summary>
+    /// A broken made-thing. Clicking it presents a jigsaw; solving it pays the authored yield and
+    /// can cleanse the screen (`combat.md` §22, unit 2).
+    ///
+    /// <para>
+    /// <b>Named for the verb, not the noun, and deliberately.</b> §22 is emphatic that the thing is a
+    /// <i>blight</i> and the act is <i>mending</i> — and the noun does survive, in the flag
+    /// (<c>blight.&lt;id&gt;.mended</c>, see <see cref="Flags.Mended"/>). But a kind is what you *do*
+    /// to a region: every member above is a verb except <see cref="Entity"/> and
+    /// <see cref="Workbench"/>. The deciding case is the one that has not been authored yet — the
+    /// three major repairs share this interaction (§22: *"the three major repairs get one too"*), and a
+    /// broken bridge clicked as `Blight` would be a lie about what is on the screen.
+    /// </para>
+    ///
+    /// <para>
+    /// <b>This is not the deleted hazard wearing a new name.</b> A hazard was a `VitalityCost` on any
+    /// existing kind; a mend charges nothing, gates the cleanse and pays out. It shares no field with
+    /// it, which is why that one was deleted rather than renamed.
+    /// </para>
+    /// </summary>
+    Mend = 8,
+
+    /// <summary>
+    /// A place work gets done — the mortar, the anvil, the trapper's stump (`combat.md` §19). Clicking
+    /// one opens the crafting panel narrowed to the recipes made there, named by
+    /// <see cref="Data.HotspotData.StationId"/>.
+    ///
+    /// <para>
+    /// <b>A station is not a camp, and that separation is the whole point.</b>
+    /// <see cref="Workbench"/> remains the only thing <see cref="Managers.CampManager"/> derives
+    /// camp-ness from; if a station refilled both pools, every herb bank would be a rest stop and the
+    /// body economy would be gone in one move. What a camp keeps exclusively is fusion.
+    /// </para>
+    ///
+    /// <para>
+    /// <b>The world itself can be one.</b> A collapsed bridge is a station whose recipe outputs a flag
+    /// instead of an item (<see cref="Data.RecipeData.SetsFlag"/>) — same kind, same venue check, and
+    /// the three major repairs of `items.md` §6 are authored against it.
+    /// </para>
+    /// </summary>
+    Station = 9,
 }
 
 /// <summary>
@@ -207,14 +249,46 @@ public enum CraftBlock
     MissingMaterials = 3,
 
     /// <summary>
-    /// You know how and you have the materials, but there is no bench here. Crafting happens at
-    /// camps and nowhere else (`combat.md` §17) — that is what makes "what do I carry from camp to
-    /// the site" a decision instead of a formality.
+    /// You know how and you have the materials, but this is not the place. ~~Crafting happens at camps
+    /// and nowhere else (`combat.md` §17).~~ **Renamed from `NotAtCamp` 2026-08-03 (§19), same value** —
+    /// camps are no longer the only venue, because a mortar in a chapel and an anvil in a forge are
+    /// stations too (<see cref="Data.RecipeData.RequiresStation"/>).
+    ///
+    /// <para>
+    /// <b>The rename is not a widening of what refuses; it is a narrowing of what the refusal means.</b>
+    /// The old name promised a destination — *go to a camp* — and §19 made that promise false in two
+    /// directions at once: a field station is somewhere else you may craft, and the camp bench still
+    /// satisfies every station, so "not at camp" was about to describe neither the cause nor the cure.
+    /// </para>
+    ///
+    /// <para>
+    /// <b>It cannot dead-end anyone</b>, and that is worth stating because a venue block is exactly the
+    /// shape that usually can. A camp is a menu reachable from anywhere (§17, 2026-08-01) and satisfies
+    /// every station, so the answer to this block is always available: camp, or walk to the station and
+    /// save the trip. Invariant 12 holds by construction rather than by vigilance.
+    /// </para>
     ///
     /// Ordered after <see cref="Unknown"/> on purpose: an unlearned recipe must not admit it exists
     /// by complaining about the venue.
     /// </summary>
-    NotAtCamp = 4,
+    NotAtStation = 4,
+
+    /// <summary>
+    /// You already have the one that exists. A trap you own, or a repair already made — the two things
+    /// §19 made permanent (2026-08-03).
+    /// </summary>
+    /// <remarks>
+    /// <b>This is the only <c>CraftBlock</c> that is good news</b>, and the panel should word it that
+    /// way: *"the snare is already built"*, not *"cannot craft"*. Every other member names something
+    /// missing, so a row greyed by this one must not read like a failure.
+    /// <para>
+    /// It exists as its own member rather than reusing <see cref="MissingMaterials"/> — which would have
+    /// been the smaller change and a lie — because the whole purpose of this enum is that the panel says
+    /// *which kind of no* it is, and "you have it" is not a shortage. Ordered last: a state you reach by
+    /// succeeding cannot be the reason a recipe is refused before you have learned it.
+    /// </para>
+    /// </remarks>
+    AlreadyMade = 5,
 }
 
 /// <summary>
@@ -255,7 +329,7 @@ public enum UseBlock
     NotHeld = 2,
 
     /// <summary>
-    /// Held, but not a thing you click. Reagents, lore and catalysts all land here — a catalyst is
+    /// Held, but not a thing you click. Components, lore and catalysts all land here — a catalyst is
     /// a Dream loadout spent by crossing, not something you use in a satchel.
     ///
     /// <b>Traps and equipment land here too, and for the same reason: they are spent somewhere else.</b>
@@ -271,15 +345,106 @@ public enum UseBlock
     NothingToTreat = 4,
 }
 
-/// <summary>Progress of a region through the cleansing arc.</summary>
-public enum ZonePhase
+/// <summary>
+/// Why <c>InventoryCraftingManager.Equip</c> would refuse. The fourth member of the inspect/act family
+/// (<see cref="CraftBlock"/>, <see cref="UseBlock"/>, <see cref="StashBlock"/>), and it exists for the
+/// same reason they do: the button and the act must ask one question.
+/// </summary>
+public enum EquipBlock
 {
-    /// <summary>Distortion field intact. Full corruption, full Resolve drain.</summary>
-    Corrupted = 0,
+    /// <summary>Nothing in the way; equipping it would change what you are wearing.</summary>
+    None = 0,
 
-    /// <summary>Player is clearing it. Zero respawns while the front is active.</summary>
-    ActiveFront = 1,
+    /// <summary>No such item id. A content error rather than a player state.</summary>
+    NoSuchItem = 1,
 
-    /// <summary>Lieutenant slain. Weather clears, drain stops, Form 3 creatures are farmable.</summary>
-    Purified = 2,
+    /// <summary>Not in the satchel.</summary>
+    NotHeld = 2,
+
+    /// <summary>
+    /// Held, but it is not <see cref="ItemCategory.Equipment"/> — or it is and its
+    /// <see cref="EquipSlot"/> was left at <c>None</c>, which is an authoring error the roster gates
+    /// already catch. One refusal covers both because the player-facing answer is identical: this is
+    /// not a thing you wear.
+    /// </summary>
+    NotEquipment = 3,
+
+    /// <summary>
+    /// Already worn in its own slot. A refusal rather than a no-op, so the panel can grey the button
+    /// instead of offering an action that does nothing.
+    /// </summary>
+    AlreadyWorn = 4,
 }
+
+/// <summary>
+/// Why <c>EncounterManager.Rig</c> would refuse. Rigging is free and has no timer (<c>combat.md</c>
+/// §18), so every member here is a state you can fix by walking somewhere — none of them is a loss.
+/// </summary>
+public enum RigBlock
+{
+    /// <summary>Nothing in the way; the trap would go on the site.</summary>
+    None = 0,
+
+    /// <summary>No such item id, or no such creature to rig against. A content error.</summary>
+    NoSuchItem = 1,
+
+    /// <summary>Not in the satchel.</summary>
+    NotHeld = 2,
+
+    /// <summary>Held, but not <see cref="ItemCategory.Trap"/>.</summary>
+    NotATrap = 3,
+
+    /// <summary>
+    /// Both sites are taken. <c>GameConfig.RigSlotsPerFight</c> is the number, and it is read rather
+    /// than duplicated here — the cap is a dial to turn, not a rule to restate.
+    /// </summary>
+    SlotsFull = 4,
+
+    /// <summary>
+    /// That exact trap is already on one of this creature's sites. Traps are permanent and owned rather
+    /// than stacked (§19), so a second copy of one is not a thing you can have.
+    /// </summary>
+    AlreadyRigged = 5,
+}
+
+/// <summary>
+/// Why <c>EncounterManager.Engage</c> would refuse. Fights are opt-in (<c>combat.md</c> §18), so this
+/// is what the confirm step consults before it offers the choice.
+/// </summary>
+public enum EngageBlock
+{
+    /// <summary>Nothing in the way; clicking through would start the fight.</summary>
+    None = 0,
+
+    /// <summary>No placement by that instance id in the current room. A content error.</summary>
+    NoSuchCreature = 1,
+
+    /// <summary>A fight is already running. There is exactly one at a time — battles are 1v1.</summary>
+    AlreadyFighting = 2,
+
+    /// <summary>
+    /// Already <see cref="EntityState.Purified"/> — the body is finished and there is nothing left to
+    /// fight. Distinct from <see cref="Spent"/>: this one is about the *state*, which persists, and it
+    /// is the cell where a freed person stands as an NPC.
+    /// </summary>
+    NotHostile = 3,
+
+    /// <summary>
+    /// Hostile, but its durability is already gone — a husk left standing by a fight you fled. Its own
+    /// refusal rather than <see cref="NotHostile"/>'s, because the answer is *hit it once more*, not
+    /// *leave it alone*.
+    /// </summary>
+    Spent = 4,
+}
+
+// `ZonePhase` — Corrupted / ActiveFront / Purified, the progress of a whole region through the
+// cleansing arc. Deleted 2026-08-03 (unit 2), and it is the last of the superseded zone design to go:
+// `RoomData.ZoneId` became `ChapterId` in unit 1, and this is the machinery that rename was making
+// room for.
+//
+// It described a shape `combat.md` §22 replaced. A zone was cleansed by killing one lieutenant, which
+// is a boss-per-region structure the game does not have; the arc's middle value existed to suppress
+// respawns, and there are no respawns; and `ZoneCorruptionScalar` fed an ambient Resolve drain that
+// became boss-only aura. **A chapter is no longer a thing that can be cleansed. 59 screens are** —
+// see `Flags.Cleansed` and `MendManager.Reevaluate`, where the state now lives as one flag per screen
+// and therefore round-trips through the save with no field of its own.

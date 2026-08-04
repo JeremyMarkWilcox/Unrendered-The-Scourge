@@ -35,7 +35,7 @@ Id = "ch3_winze_tallow"
 Label = "Tallow"
 Kind = 3
 Region = Rect2(120, 870, 220, 160)
-ItemId = "rat_tallow"
+ItemId = "mat_tallow"
 ItemAmount = 2
 RefillsAtMilestone = true
 

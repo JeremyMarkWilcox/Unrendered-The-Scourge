@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://src/Data/ItemData.cs" id="1_item"]
+
+[resource]
+script = ExtResource("1_item")
+Id = "armour_limewashed_smock"
+DisplayName = "Limewashed Smock"
+Description = "Hide scrubbed through with burnt cairnstone until it went chalk-pale and stiff. Nothing in this village bites hard enough to need it, which is not a comfort — it means you made it for something further down."
+Category = 6
+PlaceholderColor = Color(0.8666667, 0.8627451, 0.8117647, 1)
+Slot = 2
+WardsAgainst = 4

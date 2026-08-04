@@ -9,10 +9,21 @@ balanced against it.
 **Read `combat.md` §19, §21 and §22 first.** This file is the roster; §19 is the item grammar, §21 is the
 creature grammar and §22 is the screen grammar, and where they disagree the grammar wins.
 
-> **This is a document, not content.** Nothing here is a `.tres` yet, deliberately: the shapes it needs
+> ~~**This is a document, not content.** Nothing here is a `.tres` yet, deliberately: the shapes it needs
 > (`HotspotKind.Station`, `ItemCategory.Component`, `RecipeData.RequiresStation` /
 > `RequiresBothTracks`) are unbuilt, so authoring files now would mean reopening every one of them at
-> the editor pass. Roster now, files then.
+> the editor pass. Roster now, files then.~~
+>
+> **✅ It is content as of 2026-08-03 — 28 items and 17 recipes, `--verify-slice` at 510 checks.** The
+> waiting was the right call and it paid exactly what it was supposed to: the shapes went in first as unit
+> 4a, whose stated test was *"nothing in 4b needs a new field if 4a is right"*, and transcribing §§1–4 into
+> files needed **no new field on `ItemData`, `RecipeData`, `HotspotData`, or any enum.** One field named in
+> the struck paragraph above stays deliberately unread — `RequiresBothTracks`, reserved for the exorcism
+> engine; see the note under §3's fusion table for why the fused traps do *not* set it.
+>
+> **What is still a document:** the three major repairs (§6), the eleven `Lore` pages that eight pockets and
+> three notes will be (§8), the twelve creatures (§10), and equipping — a coat you can craft and cannot wear
+> is unit 3's problem, the same way a trap you can craft and cannot rig already is.
 
 > **What is locked and what is sketch, because they are not the same.**
 >
@@ -111,7 +122,10 @@ where you **spend**, which is why §7 requires every common to be abundant there
 ### Where the two scarce materials come from, and why it matters
 
 **Cairnstone comes from breaking old cairns.** Finite by construction — a cairn is a one-time authored
-spot — and `yard_cairn` already exists in `waystation_yard`, so the noun has a home in the world today.
+spot. ~~and `yard_cairn` already exists in `waystation_yard`, so the noun has a home in the world today.~~
+**Corrected 2026-08-03:** that room was deleted with the prototype in unit 3b, and by then the noun had a
+better home anyway — unit 4b authored cairnstone into **6 chapter screens**, so it is placed content rather
+than a prototype hotspot standing in for one.
 
 **Graveflower comes from *restoring* the world, not from destroying anything.** Jeremy, 2026-07-31:
 *"I want to fix every screen individually so you will be able to hoard this resource until you can use
@@ -270,6 +284,16 @@ Clearmind is what you carry into ordinary fights and Deepmend is what you make w
 That is a weaker guard than the old one and it should be watched in play. If Deepmend turns out to be
 strictly correct, widen the gap in units rather than reintroducing a scarce ingredient.
 
+> **✅ The numbers, chosen 2026-08-03 when the files landed, and the guard is now a gate.** Clearmind
+> restores **35**, Deepmend **55** — and the second figure was chosen *against* the first rather than picked
+> for feel. **70 would have voided this whole subsection:** 70 over 5 units is 14 per unit against
+> Clearmind's 35 over 3 at 11.67, so Deepmend would have been both the bigger salve *and* the cheaper one
+> per unit of herb, and Clearmind would have been dead content the hour you found her notes. At 55 the
+> ratio inverts — **Clearmind wins per unit of material, Deepmend wins per slot carried** — which is the
+> only shape in which a two-salve cap makes both worth brewing. A gate asserts all three legs: Deepmend
+> heals more, Deepmend costs more, and Clearmind heals more *per unit*. The paragraph above says to watch
+> this in play; the check is so that widening the gap cannot accidentally close it.
+
 ### Burning Oil and Corrosive Draught are *ingredients*, not consumables
 
 They restore no Vitality, are never carried into a fight, and are consumed at the bench making traps.
@@ -293,9 +317,23 @@ salve slots are two healing items, trap slots are two traps, and nothing arbitra
 | **Oil Slick** | **Fire**, over several turns | **your turn** | Burning Oil + Pitch | **Fused** |
 | **Vitriol Flask** | **Caustic** | **your turn** | Corrosive Draught + Cured Hide | **Fused** |
 
-**Two families, not six — so two knowledge pockets.** The Mechanical variants are Waking-world
-refinements gated on holding the base, per §15's family rule, and that is the largest workload saving
+**Two families, not six — so two knowledge pockets.** ~~The Mechanical variants are Waking-world
+refinements gated on holding the base, per §15's family rule~~, and that is the largest workload saving
 in this document.
+
+> **The struck clause was superseded by the 2026-08-01 note lower in this same section, and the files
+> follow the later one — 2026-08-03.** `combat.md` §15's family rule makes a variant *"a `Lore` pickup whose
+> requirement is the base recipe"*, which would be four blueprints and three extra pages to author and
+> place. The note below says something different and simpler: **the chapter 1 pocket teaches all four.**
+> That is what shipped — **one `RequiredBlueprintId` per family, `lore_craft_mechanisms`, on all four trap
+> recipes** — and it is the better reading for the reason the note gives: what actually staggers the family
+> across two chapters is **Scrap Iron being a village material**, so materials do the pacing that three
+> `Lore` pages would otherwise have to do, and §19's *"knowledge is the gate, materials are the pacing"* is
+> already the rule for that.
+>
+> Unit 4a had made the same call by accident and nobody had noticed: the Bill Hook and the Pry Bar shared
+> `lore_craft_edges`. That accident is the precedent this ruling rests on — and separately, it was the bug
+> that had quietly reduced §8's eight pockets to seven. Both are settled now; see §8.
 
 > **The Snare cost Cured Hide until 2026-08-02, and that made chapter 1's one trap unbuildable.** Caught
 > laying out the chapter 1 ledger. Three statements in this document were each correct and jointly
@@ -718,6 +756,36 @@ Since a Craft family costs one knowledge pocket (§15):
 | **Knot pockets** — added 2026-08-01, ch3 only | **3** |
 | **Total 3D pockets** | **14** |
 
+> **✅ The eight are gated as of 2026-08-03, and this table was right where the code was wrong.** Unit 4a
+> authored the three access tools as **two** families — Bill Hook and Pry Bar shared `lore_craft_edges` —
+> so the real bill was seven and seven, and nobody could notice because no pocket exists yet to count.
+> **The Pry Bar moved onto its own `lore_craft_prying`**: a hooked blade for green wood and a lever for
+> boarded doors are not one craft, and the merge was an unforced convenience rather than a ruling.
+>
+> **The seven authored family ids, so unit 6 does not have to guess them.** Each is the
+> `RequiredBlueprintId` on its family's recipes, and each is what one pocket must grant:
+>
+> | Pocket | Blueprint id | Recipes it unlocks |
+> |---|---|---|
+> | Bill Hook | `lore_craft_edges` | the Bill Hook |
+> | Pry Bar | `lore_craft_prying` | the Pry Bar |
+> | Mine Pick | `lore_craft_stoneworking` | the Mine Pick |
+> | Mechanical traps | `lore_craft_mechanisms` | Snare, Spiked Pit, Deadfall, Chime |
+> | Fused traps | `lore_craft_fusion` | Oil Slick, Vitriol Flask |
+> | Weapons | `lore_craft_forging` | the Bell Maul |
+> | Armour | `lore_craft_leatherwork` | Tanner's Coat, Padded Jack, Limewashed Smock |
+> | **the engine** | *unauthored* | the exorcism engine |
+>
+> **One blueprint per family, shared by every member** — which is what makes the four Mechanical trap
+> variants free, exactly as the reconciliation note in §3 describes. A gate now holds this census in both
+> directions, so a typo cannot invent a silent ninth family that no pocket will ever grant, and the
+> arithmetic *seven authored + one unauthored = eight* is checked rather than remembered.
+>
+> **Hers cost no pocket and there are three of them** — `lore_physick_deepmend`,
+> `lore_physick_burning_oil`, `lore_physick_corrosive_draught` — which is the *"three lore notes"* of §9
+> arriving as ids. Clearmind needs no page at all: its recipe has a blank blueprint, which is how this
+> project spells *known from the first frame*.
+
 > **Every knowledge pocket pays twice — added 2026-08-01.** Jeremy: *"should the pockets give upgrades to
 > Vit and Resolve in addition to the craftsman recipe? I think that would feel more rewarding."* Half of
 > that is taken:
@@ -1081,9 +1149,12 @@ last thing you forge before the chapter that needs it most. Leave the Miner on B
 "the last thing you forge." Everything else here holds, and one detail improves — the coat can sit unused
 in your kit for a whole chapter before the first Beast makes sense of it.*
 
-### The slice that exists today is the old model
+### ~~The slice that exists today is the old model~~ — deleted 2026-08-03
 
-`data/entities/beast_giant_rat.tres` is an animal with both a Dream pocket and a purified harvest yield —
+`data/entities/beast_giant_rat.tres` was an animal with both a Dream pocket and a purified harvest yield —
 a combination that is now boss-only, since the nine are untethered and nothing is harvested from a body.
-Jeremy, 2026-07-31: *"the rat was just a test, no real loss here."* Retarget the waystation pocket to the
-Lost Trapper when the chapter 1 content pass happens.
+Jeremy, 2026-07-31: *"the rat was just a test, no real loss here."* ~~Retarget the waystation pocket to the
+Lost Trapper when the chapter 1 content pass happens.~~ **Unit 3b deleted the rat and the pocket instead**,
+so there is nothing to retarget: chapter 1's pockets are authored fresh against unit 6's format. What
+survives is an `EntityData` built in code on a `verify_` room, holding the old contradiction where it can
+only be read as a fixture.

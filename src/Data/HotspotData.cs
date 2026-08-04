@@ -43,7 +43,18 @@ public partial class HotspotData : Resource
     [ExportGroup("Dream heist")]
     [Export] public string HeistId { get; set; } = "";
 
-    [ExportGroup("Harvest")]
+    /// <summary>
+    /// What a <see cref="HotspotKind.Harvest"/> node yields — and what a
+    /// <see cref="HotspotKind.Mend"/> pays out for solving its jigsaw.
+    /// </summary>
+    /// <remarks>
+    /// <b>Shared rather than given a `MendYield` of its own, and that is the gateable choice.</b> Every
+    /// blight pays 1 Graveflower (<c>combat.md</c> §22) and it would have been a line shorter to
+    /// hard-code that in <c>MendManager</c> — but then the check "all twelve pay exactly one" would be
+    /// asserting a constant against itself, which is the unfalsifiable-guard trap recorded in
+    /// <c>handoff.md</c>. Authored, it is twelve facts a sweep can actually read.
+    /// </remarks>
+    [ExportGroup("Harvest / Mend yield")]
     [Export] public string ItemId { get; set; } = "";
     [Export] public int ItemAmount { get; set; } = 1;
 
@@ -75,6 +86,35 @@ public partial class HotspotData : Resource
     // What replaces it is not a cheaper hazard, it is a different verb: a **Blight** costs a jigsaw
     // and pays a Graveflower (§22). It shares no field with this one, which is why this is a
     // deletion rather than a rename.
+
+    /// <summary>
+    /// The jigsaw behind a <see cref="HotspotKind.Mend"/>. Ignored by every other kind.
+    /// </summary>
+    /// <remarks>
+    /// A blight needs no gating field of its own: the flag it sets is derived
+    /// (<see cref="ResolvedMendedFlag"/>), and the three tool-form puzzles are kept out of reach by
+    /// <i>geography</i> — all three sit on screens you can only walk to through a tool-gated door, so a
+    /// <see cref="RequiredFlag"/> on top would be the same fact stored twice, in the version that can
+    /// disagree with itself. <c>--verify-slice</c> asserts the graph property rather than the field.
+    /// </remarks>
+    [ExportGroup("Mend")]
+    [Export] public MendPuzzleData MendPuzzle { get; set; }
+
+    /// <summary>
+    /// Which station this is — <c>mortar</c>, <c>anvil</c>, <c>stump</c>. A
+    /// <see cref="HotspotKind.Station"/> hotspot narrows the crafting panel to recipes whose
+    /// <see cref="RecipeData.RequiresStation"/> matches, and a <see cref="HotspotKind.Workbench"/>
+    /// carrying one is the camp's own bench declaring which station it *also* counts as.
+    /// </summary>
+    /// <remarks>
+    /// A free string rather than an enum, on the same reasoning as <see cref="RoomData.ChapterId"/>: the
+    /// vocabulary is content Jeremy authors and a station is added by placing a hotspot, not by editing
+    /// code. What keeps that honest is the pair of gates over it — every station id a recipe names must
+    /// exist somewhere in the world, and every station in the world must be named by some recipe, so a
+    /// typo is a red check rather than a bench that silently makes nothing.
+    /// </remarks>
+    [ExportGroup("Station")]
+    [Export] public string StationId { get; set; } = "";
 
     [ExportGroup("Text")]
     [Export(PropertyHint.MultilineText)] public string ExamineText { get; set; } = "";
@@ -112,4 +152,17 @@ public partial class HotspotData : Resource
     /// <summary>Fallback flag name used to remember a consumed harvest node.</summary>
     public string ResolvedHarvestedFlag =>
         string.IsNullOrEmpty(HarvestedFlag) ? $"harvested.{Id}" : HarvestedFlag;
+
+    /// <summary>
+    /// The flag remembering that this blight has been mended, on the same shape as
+    /// <see cref="ResolvedHarvestedFlag"/> — but with no authorable override beside it.
+    /// </summary>
+    /// <remarks>
+    /// Derived from <see cref="Id"/> and nothing else, on purpose. <c>Flags</c> promises that a class of
+    /// thing can be counted by prefix, and <c>blight.*.mended</c> has to count exactly twelve; an
+    /// override field is a way for one of the twelve to hide under another name. <c>HarvestedFlag</c>
+    /// earns its override because a node can legitimately share state with something else — a mend
+    /// never can, because it is the screen's own act.
+    /// </remarks>
+    public string ResolvedMendedFlag => Flags.Mended(Id);
 }

@@ -31,6 +31,13 @@ rewrites every `.tres` in one command is a bootstrap beside five rooms and a haz
 (`docs/build-plan.md` §6). Anything that generates content from here on **writes only files that do
 not exist**.
 
+Pass 2 and unit 2 both needed the weaker form of that — appending to files that already existed — so the
+rule has a second half. A generator that touches an authored file **lives in `/tmp`, never in the tree**,
+names the files it will touch instead of globbing, **refuses any file that already holds the thing it is
+adding**, and builds every file in memory before writing any of them, so a failure on the twelfth leaves
+the first eleven untouched. The same discipline applies to break-tests, which snapshot first and restore
+byte-exactly.
+
 ## Controls
 
 | Key | |
@@ -38,10 +45,17 @@ not exist**.
 | Left click | Interact with a hotspot, or select a slot in the satchel |
 | `I` | Satchel — held stacks, what a thing is, and using it |
 | `Esc` | Close the open panel |
-| `F3` | Debug panel (pools, entities, inventory, flags) + hotspot outlines |
+| `F3` | Debug panel (pools, entities, inventory, flags, what this screen still has unfinished) + hotspot outlines |
 | `F1` | Cycle every entity in the room through its states |
 | `F2` | Take a debug wound (15 Vitality) |
 | `F5` / `F9` | Save / load |
+| `F6` | Learn every craft family — nothing in `data/` grants a blueprint yet, so this is how any of the 16 gated recipes open |
+| `F7` | Craft everything craftable where you stand, and name the block reason for everything else |
+| `F8` | Set every trap you are carrying against the creature on this screen |
+
+`F6`–`F8` are **scaffolding for UI that is not built**, listed because a debug key nobody knows about is
+not an unblock. They come off separately: F6 and F7 retire with the journal (which *is* the crafting
+screen), F8 the day the satchel grows a **Set** button beside Use and Equip.
 
 The **Dream probe** is a separate scene with its own keys: `WASD` walks, click captures the mouse and
 `Esc` releases it; `[ ]` greys, `; '` white clamp, `- =` dither, `, .` light radius; `5 6` creature
@@ -59,16 +73,16 @@ scene, no new code.
 ```
 src/
   Core/       Enums, EventBus, GameConfig, EntityPresentation, Boot, Main
-  Managers/   10 autoloads (see below)
+  Managers/   10 autoloads (see below) + MendManager, which is static and deliberately not one
   Data/       [GlobalClass] resources authored as .tres
   World/      RoomView, Hotspot, EntityOverlay, PlaceholderBackdrop, InteractionService
-  UI/         Hud, ResolveMeter, VitalityMeter, DebugPanel, InventoryPanel
+  UI/         Hud, ResolveMeter, VitalityMeter, DebugPanel, InventoryPanel, MendPanel
   Dream/      the 3D probe's walker and look tuner   <- wired into nothing; see the handoff
   Save/       JSON round-trip of the manager state
   Tools/      SliceVerifier, ScreenshotTool
-data/         rooms/ entities/ items/ recipes/ zones/ heists/   <- the game's content
+data/         rooms/ entities/ items/ recipes/ heists/   <- the game's content
 scenes/       Boot, Main, RoomView
-scenes/ui/    InventoryPanel + the shared PanelTheme.tres
+scenes/ui/    InventoryPanel, MendPanel + the shared PanelTheme.tres
 scenes/dream/ DreamProbe.tscn + the look shader and its material
 ```
 
@@ -141,28 +155,163 @@ in real art one `.tres` field at a time.
 > One thing to know before you open the editor: the Dream's design changed substantially —
 > `docs/combat.md` gained sections **15–17** and one deliberate revision to section 6.
 
-M0–M3 complete, plus the Dream heist, M4's crafting layer with its inventory panel, camps, and
-combat's wound ledger — 385 automated checks, `-- --verify-slice`.
+M0–M3 complete, plus the Dream heist, M4's crafting layer with its inventory panel, camps, the blight
+and mend layer, the station and material layer, the arsenal, and combat's wound ledger — 687 automated
+checks, `-- --verify-slice`.
+
+**The prototype is gone as of 2026-08-03.** The waystation, its shed, the six 2D Dream rooms, the rat and
+`herb_gravecap` are deleted; every check that stood on them now names a synthetic `verify_` room registered
+in code, or was deleted along with the mechanism it covered. So all 59 rooms, 11 entities and 27 items in
+`data/` are content the game actually uses.
 
 **The whole map is walkable, and the game boots into it.** All 59 screens of the three chapter ledgers
 exist as skeletons — ids, the navigation graph, an examine stub and the harvest nodes — and a new game
 now starts in `ch1_cottage`, so you can walk from the cottage to the Wound and read every screen on the
 way. Exits read spatially: left, right, centre-up is away from you, centre-down is back toward you.
 
-**The bodies are on it too.** All 30 regular fights are placed, with the 24 people they free and the 6
-Beast carcasses they leave, plus the three tool-gated doors, the Snarl's three-flag gate, the three doors
-a Warden bars, and the three camps. What a screen is for is still missing in four places, each waiting on
-a system rather than a decision: **blights** and the **major repairs** (unit 2), **pocket doors** and the
-**boss fights** (unit 6), and the **field stations** (unit 4).
+**The bodies are on it too, and so is the damage.** All 30 regular fights are placed, with the 24 people
+they free and the 6 Beast carcasses they leave, plus the three tool-gated doors, the Snarl's three-flag
+gate, the three doors a Warden bars, and the three camps. **All 12 blights** are on it as well, each a
+broken made-thing you put back together for a Graveflower. What a screen is for is still missing in three
+places, each waiting on a system rather than a decision: **pocket doors** and the **boss fights**
+(unit 6), and the **3 major repairs** — the bridge, the mine cart and the exorcism engine — which need a
+reclaimed memory and a jigsaw before they can be recipes, so they wait on a boss drop. **Field stations
+are done at two**, the anvil and the mortar: every other recipe belongs at the bench, and a camp is a menu
+reachable from anywhere, so a third station would save a walk rather than open anything.
 
-Two verifier sections hold the shape. `graph`: every door names a room that exists, every door can be
+**The three tool doors now open.** A recipe can set a world flag, so the Bill Hook, Pry Bar and Mine Pick
+are craftable things that unlock geography rather than names in a ledger — and the three blights behind
+them (`ch1_stonefield`, `ch2_vestry`, `ch3_sealed_drift`) are reachable for the first time. You cannot
+*learn* them from anything authored yet: each needs a Dream knowledge pocket, which is unit 6, so **F6
+learns every craft family** in the meantime. There is no crafting panel yet either — clicking the anvil in
+`ch2_smithy` fires its signal and nothing is listening — so **F7 crafts everything craftable where you
+stand** and names the block reason for the rest. Both keys are scaffolding with a scheduled demolition:
+they come out when the journal lands, which is the crafting screen (decision 9).
+
+**And there is an arsenal to spend materials on — 27 items and 17 recipes.** Two weapons (Edge and Blunt),
+three coats (warding Edge, Blunt and Caustic), six traps, two salves and the two brews of hers that the
+Fire and Caustic traps are fused from. He starts holding the **Splitting Axe**, the one item in the game
+with no recipe.
+
+**And there is now a fight to spend it in.** Rig up to two traps on a creature — free, and you can walk
+away and come back to find them still there — then click to opt in. Turns alternate, every act costs one,
+and fleeing always works but the thing gets a parting blow on the way out. The right weapon does double and
+the wrong one half; a coat halves one incoming damage type and nothing else. Winning against a possessed
+villager frees them if you cut the tether first and **kills them** if you simply overkill the body, and the
+screen cleanses either way — the difference is counted in the ending, not painted on the ground. Dying is
+survivable: you wake at the camp still wearing your kit, still holding your traps, having lost only raw
+material. Equipping is a satchel verb, so a coat can be swapped anywhere.
+
+Six verifier sections hold the shape. `graph`: every door names a room that exists, every door can be
 walked back through, the three chapters are one connected world, and no two harvest nodes share the flag
 that marks them taken. `fights`: no two creatures share an instance id, no creature stands on two
 adjoining screens, every creature that bars the path bars a door, and — driven live on `ch1_low_track` —
 the first creature in the game is actually on screen with the person it frees drawn and shut behind them.
+`mending`: exactly 12 blights split 2 / 4 / 6 by chapter, each paying exactly one Graveflower and no
+other hotspot in the game paying any, every board solvable with in-range distinct steps, exactly three of
+them unreachable until a tool is learned — and, driven live on `ch1_fern_gully`, the panel opens off the
+cue, solves, pays, and leaves the screen uncleansed because a creature is still standing on it.
+`stations`: **every item a hotspot or a recipe names actually exists** — the check that found 33 harvest
+nodes paying out items that had never been written — every item and recipe file on disk registered one,
+only the eight ratified materials are yielded anywhere, a recipe is refused where its station is not and
+allowed at the camp bench, and, driven live, crafting the Bill Hook sets its flag and opens the Bramble
+Choke that was shut a moment earlier. `roster`: **no weapon deals Fire or Caustic and no armour wards
+Fire** — the deliberate hole the traps exist to fill — every coat wards exactly one type and every weapon
+deals exactly one, the four armed traps cover four distinct types while the Snare and the Chime deal
+nothing on purpose, a trap refuses a second craft where a spare coat is allowed, Clearmind still heals more
+per material unit than Deepmend, and — the one that earns its keep — **everything in the catalogue can be
+obtained**, checked by seeding from the harvest nodes and the starting axe and closing over the recipe set
+until nothing new can be made. That last one found one hole and names it: `catalyst_ashincense` has no
+recipe, and the gate fails in **both** directions, so writing one is also the notice to delete the
+exemption. `encounters`, the newest and by far the largest at 154 checks: the third rigged trap is refused
+and nothing is quietly swapped out for it, rigging is free outside a fight and costs a turn inside, a
+self-triggering trap fires on engage and the others wait for a turn spent on them, a 2× hit and a 0.5× hit
+differ **fourfold** driven through `Strike` rather than measured beside it, a coat halves the type it wards
+and does nothing at all against the others, flight always works and always costs one parting blow, **a door
+is a way of breaking off and is priced like one while no other way of changing rooms costs anything**, the
+three win routes write the three flags off `PurifiedName`, the placed roster counts **24 people and 6
+beasts**, wounds persist across a severed engagement and close across an anchored one, two salves is two
+salves and the trap sites were never in that trade, and — driven live through the panel — engaging names
+both halves of what you are facing, a named verb advances the turn, and striking finishes the body in three.
+It ends by killing the player on purpose: you wake at a camp, still equipped, still holding every trap, and
+the loose reagents are gone. Three more came out of the **first playtest** (2026-08-03): the fight screen
+draws on something opaque, the room behind it is tinted out, and **the tint is behind the verbs rather than
+over them** — a scrim in front of the strip greys out the very buttons the tint was meant to make legible,
+and passes every other check. `inventory panel` gained sixteen alongside them: every tile carries its item's
+display name rather than its id, the stack count is dark enough to read against a pale swatch, a category tab
+narrows the grid and says which kind in the player's word, a tab arrives with the first of its kind and
+leaves with the last, the filter it was holding falls back to All rather than stranding you on an empty grid,
+**Lore gets no tab because nothing authored is Lore yet** — that one is *meant* to go red the day a Dream
+page lands — and the code's colour override steps aside for a colour the scene sets, which is checked against
+a probe label because on screen the guarded and unguarded versions look identical. **The second playtest, the
+same day, added three more, and all three are about the caption the first one asked for**: it was truncating
+every name past about eight characters, so the band is now checked to be at least as wide as the swatch it
+labels, the stack count to land *on* that swatch instead of three pixels past its corner, and the two to be
+clear of one another. **Four more looks at the same tile added three checks and buried two others, all inside one
+day** — the only checks in the suite so far to be born and buried the same afternoon, and each one asserted the
+arrangement whoever wrote it had just built rather than a property that has to hold. The subject never changed:
+the stack count wants the swatch's bottom-right corner, and the caption band crosses that corner. Asked *"why
+can't it be square and have the number where it is?"* I held the count on identical pixels and made the swatch
+90×90 — every check green, nothing authored touched, and against a swatch now reaching 40px lower those pixels
+read as the middle of the icon, because **holding the pixels is not holding the position**. Told the placement
+was right but the swatch still wasn't square, I found that the impossibility I had documented three times rested
+on **a width I had fixed at 90 without deciding to**: the caption fixes the bottom and the scene fixes the top,
+so the square is 61×61, and squaring the swatch means *narrowing it to its height*. **When a constraint reads as
+mutually exclusive, look for the number you never chose.** What survives in the suite measures the *gap* from the
+count to the swatch's two near edges — the only one of six that tells the accepted tile from the rejected one —
+and the squareness, which is a check for something asked for twice rather than for something built once. All six
+run against a synthetic tile rather than a drawn one, which is what keeps them green the day Jeremy authors a
+real caption node: the numbers they check are computed in code from the template's, so they can only ever fail
+on code.
 
-The waystation, the shed, the six 2D Dream rooms and the rat still load; nothing walks to them. They
-come out once the 154 checks standing on them are re-anchored, which is deliberately a separate job.
+**Retiring the prototype rearranged the sections more than it shrank them (2026-08-03, 680 → 670).** The
+`M1` section is gone — it asserted that two rooms register and a door connects them, which `graph` already
+sweeps across all 59 authored rooms at real scale, so a synthetic two-room copy was a weaker version of a
+gate that exists; its one unique claim, *"a new game starts in the Waking world,"* moved to `harness`.
+`M2` and the surviving half of `M3` now stand on `verify_loop`, and the heist section kept only the checks
+that were using a live run as a **probe** for code that outlives it. Three checks went in that were not
+planned. `content` gained a **deletion gate** — nothing registers with `ChapterId = "waystation"`, no item
+id starts `herb_gravecap`, and `data/heists/` holds zero files — which is what would notice a `.tres`
+surviving in somebody's working tree. `graph` gained *"and every authored room is on it, so the `ch*` sweeps
+skip nothing,"* so an off-spine room now goes red **by name** instead of being skipped silently by five
+sweeps and covered by none. And `camps` gained a pair on `verify_station`, a mortar in a room with no bench
+under it: **a room can be a venue without being a camp**, that station is shut inside a live run, and it
+opens again the moment the run ends — same room, same satchel. That last pair exists because break-testing
+found the crafting venue guard had **no probe at all**: every crafting check stood on the camp arm, which
+refuses inside a run on its own, so the guard could have been deleted and the suite would have stayed green.
+
+**Then three findings from reading unit 3a's own gates back (2026-08-03, 670 → 687).** The strike verb now
+names the damage type in your hand — *"Strike — Bell Maul (weight)"*, *"Strike — bare hands (weight)"* —
+because the confirm line already told you what the creature *barely notices* and the verb never said what you
+were about to hit it with; the tutorial fight was closable with a label rather than with a tuning decision.
+`encounters` gained five for it, including the one that matters: **the strip repaints on `InventoryChanged`,
+not only on the log**, counted by how many times the handler ran rather than by asking the signal who is
+listening — `signal += handler` marshals into a *custom* callable in C#, so `GetSignalConnectionList` hands
+back a null `Target` and `IsConnected` with a freshly-made `Callable` does not match either. Three ways of
+introspecting it all went red against correct code before the fourth stopped introspecting. `fights` gained
+**eight, and none of them is a number**: the nearest fight to the boot room is walked to rather than named,
+and asserted to fall to the starting axe *before it falls you*, to be the pairing that axe answers, and to be
+unwinnable bare-handed — three claims that compare two derived turn counts, so §5's 3–6 band stays tuning and
+no gate goes red the day Jeremy wants a fight to feel different. `F8` reaches `EncounterManager.Rig`, which
+shipped in 3a with **no verb anywhere**, and it is *pressed* by the suite rather than merely bound: it answers
+*"no traps in the satchel"* on a real playthrough until a blueprint has a source, so correct and broken look
+identical on screen.
+
+**A screen is unfinished for two reasons, and both are things you did on it.** A creature that is not
+purified **holds** it; an unmended blight **fouls** it; clear both and `screen.<id>.cleansed` goes up and
+the colour comes back. A tool-gated door is deliberately *not* a third reason — it would resolve for
+every screen in the world the instant you learned the tool, and cleansing should be caused by something
+you did here. There is no zone state any more: `ZonePhase` and everything that read it came out on
+2026-08-03, and `SaveGame` lost a field for the first time in its life.
+
+~~The waystation, the shed, the six 2D Dream rooms and the rat still load; nothing walks to them.~~
+**They came out on 2026-08-03, and the re-anchoring was the job.** (This line used to say **154** checks
+stood on them; nobody had measured it. Counted per section, the four standing *wholly* on the prototype
+totalled **76**.) About 15 of those were using a live heist as a **probe** for four files that survive
+unit 6 — the HUD's pool order, a bench inside a run not being a camp, the crafting venue guard and
+*"a mid-Dream save does not strand you"* — so those kept a synthetic fixture and the rest went with the
+mechanism. `DreamRunManager` and `DreamHeistData` are still here, now held up only by a fixture built in
+code; they retire in unit 6, with the pocket format.
 
 The Waking world is a point-and-click adventure; the Pixel Realm is a stealth heist. Combat is
 **designed and half-built**: `docs/combat.md` §18 is the ratified fight design, `CombatManager`
@@ -207,12 +356,18 @@ holding shut. **The condition is the art, not a setting**: paint a screen and it
 none of this can ship by accident. `ShowHotspotOutlines` is still the manual override for painted
 screens, because a painting can hide a clickable region as well as a grey box can.
 
-**Next: retiring the prototype** — re-anchoring the gates that stand on the waystation, the six 2D Dream
-rooms and the rat onto synthetic `verify_` rooms, then deleting all of it — followed by the encounter
-state machine, the crafting panel and the journal.
+**Next: the return-to-camp verb** — one verb, reachable from any Waking screen with no run live and refused
+inside a fight or a pocket, which is the vertical slice's last missing beat. Then the Dream pocket format
+(unit 6), the crafting panel and the journal. *Retiring the prototype was the previous entry here and landed
+2026-08-03.*
 `docs/build-plan.md` has the unit order; `docs/handoff.md` has the current state and the invariants.
 
 **Expect the check count to fall during the content pass.** It is not regression — the suite grew up
-around a five-room prototype, and every gate that stands on the waystation, the rat or the heist is a
-gate whose fixture is being deleted out from under it. The swap took 347 → 338 on its own; unit 1.5 put
-it back to 359, the skeleton rooms brought their own gates to 367, and moving the boot made it 369.
+around a five-room prototype, and every gate that stood on the waystation, the rat or the heist was a
+gate whose fixture was being deleted out from under it. The swap took 347 → 338 on its own; unit 1.5 put
+it back to 359, the skeleton rooms brought their own gates to 367, moving the boot made it 369, the
+pass-2 bodies took it to 385, and unit 2's mend layer to 439. **The retirement itself was 680 → 670**,
+smaller than the 76 standing on the prototype because most of those moved rather than died — and it *added*
+three, one of which caught a guard that had never had a probe at all. Unit 2 is the other counter-example
+worth remembering: **it deleted a whole system and the count did not move for it**, because every invariant
+`ZonePhase` held moved onto the flag that replaced it.

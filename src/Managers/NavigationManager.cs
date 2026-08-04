@@ -118,12 +118,14 @@ public partial class NavigationManager : Node
         foreach (var placement in room.Entities)
             EntityStateManager.Instance?.Register(placement);
 
-        // First footfall in a zone opens the front: respawns stop, drain eases slightly.
-        if (!string.IsNullOrEmpty(room.ChapterId) &&
-            WorldStateManager.Instance?.GetZonePhase(room.ChapterId) == ZonePhase.Corrupted)
-        {
-            WorldStateManager.Instance.SetZonePhase(room.ChapterId, ZonePhase.ActiveFront);
-        }
+        // The zone system's "first footfall opens the front" flip stood here until 2026-08-03. Its slot
+        // is now the per-screen verdict being re-derived, which is a closer fit than it looks: both are
+        // "arriving somewhere updates what that place is".
+        //
+        // It must run *after* the registration above (the verdict reads entity states) and *before* the
+        // signal below (RoomView paints the backdrop off this flag). Silent — arriving is not an
+        // achievement; see MendManager.Reevaluate.
+        MendManager.Reevaluate(room);
 
         EventBus.Instance?.EmitRoomEntered(room.Id);
         return true;

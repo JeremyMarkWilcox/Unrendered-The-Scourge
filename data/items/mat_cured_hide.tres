@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://src/Data/ItemData.cs" id="1_item"]
+
+[resource]
+script = ExtResource("1_item")
+Id = "mat_cured_hide"
+DisplayName = "Cured Hide"
+Description = "Off the tannery racks, stiff and smelling of bark liquor. Cuts into straps that will outlast the thing they are tied to."
+MaxStack = 20
+PlaceholderColor = Color(0.5411765, 0.40392157, 0.28235295, 1)

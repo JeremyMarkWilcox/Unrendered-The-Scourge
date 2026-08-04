@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://src/Data/ItemData.cs" id="1_item"]
+
+[resource]
+script = ExtResource("1_item")
+Id = "trap_vitriol_flask"
+DisplayName = "Vitriol Flask"
+Description = "Her draught behind a hide stopper, rigged to a site rather than thrown. It does not go off on its own — nothing she made ever did — so the moment is yours to pick."
+Category = 5
+MaxStack = 1
+PlaceholderColor = Color(0.5411765, 0.7019608, 0.23529412, 1)
+Deals = 4
+Potency = 12
+TriggersItself = false

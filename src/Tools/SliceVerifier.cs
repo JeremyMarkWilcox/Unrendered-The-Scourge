@@ -22,7 +22,12 @@ namespace Unrendered.Tools;
 /// </summary>
 public static class SliceVerifier
 {
-    private const string Rat = "waystation.rat_01";
+    /// <summary>
+    /// The body the state table and the micro-loop act on. It was <c>waystation.rat_01</c> until unit 3b
+    /// retired the prototype; it is a placement in <see cref="LoopRoom"/> now, which is why the const is
+    /// named for its job rather than for an animal.
+    /// </summary>
+    private const string LoopBeast = "verify.loop_beast";
 
     private static readonly List<string> Failures = new();
     private static int _checks;
@@ -79,7 +84,10 @@ public static class SliceVerifier
     private static void RunGates()
     {
         GateHarness();
-        GateM1_TwoScreenNavigation();
+
+        // `GateM1_TwoScreenNavigation` was called here until unit 3b. It asserted that two named rooms
+        // register and a door joins them, which `GateWorldGraph` sweeps across all 59 authored rooms —
+        // so it was deleted rather than re-pointed, and its one homeless claim moved into `GateHarness`.
         GateM2_StatePresentationTable();
         GateM3_MicroLoop();
         GateVitalityPool();
@@ -101,6 +109,14 @@ public static class SliceVerifier
         // gate caught it.
         GateCraftingAndUse();
         GateInventoryPanel();
+
+        // Later still, and for the same two reasons plus one of its own: it churns the satchel harder
+        // than anything above it, and it is the only gate that *equips* anything — so running it before
+        // the wound ledger would put a coat behind every number that gate reads from the resolver. It
+        // leaves the player at a camp, having collapsed on purpose, which is why nothing below reads the
+        // room.
+        GateEncounters();
+
         GateMultiFlagGating();
         GateChapterSpine();
         GateAuthoredContent();
@@ -140,35 +156,15 @@ public static class SliceVerifier
         // early wakes somewhere they cannot make anything, with no way to bind a return point.
         Check("and the room it begins in is a camp",
             CampManager.IsCamp(NavigationManager.Instance.CurrentRoom));
-    }
 
-    // ---- M1: two screens and a doorway -----------------------------------
-
-    private static void GateM1_TwoScreenNavigation()
-    {
-        Section("M1  two-screen prototype");
-
-        // The boot moved to `ch1_cottage` on 2026-08-02 and every prototype gate below rode the old
-        // one — M1, M2 and M3 all acted on "wherever the game put me" and silently meant the yard.
-        // Walking there explicitly is the first half of the re-anchoring the retirement needs anyway:
-        // a gate that names its fixture can have the fixture swapped under it, and a gate that
-        // inherits it cannot. **Nothing below this line should read `GameConfig.StartingRoomId`.**
-        NavigationManager.Instance.GoToRoom("waystation_yard");
-
-        Check("the prototype yard is still walkable",
-            NavigationManager.Instance.CurrentRoomId == "waystation_yard");
-        Check("starts in the Waking world",
+        // Inherited from the deleted M1 section, which is the only one of its three claims that had
+        // nowhere else to live. The other two — that two named rooms register, and that a door joins
+        // them — are a two-room copy of what `GateWorldGraph` already sweeps across all 59 authored
+        // rooms, so they went with the prototype rather than being re-pointed at a fixture. A weaker
+        // synthetic version of a gate that already exists at real scale is the tautology
+        // `deleting-a-gated-mechanism` warns about.
+        Check("and a new game starts in the Waking world",
             RealmTransitionManager.Instance.CurrentRealm == GameRealm.Waking);
-        Check("both Waking rooms are registered",
-            NavigationManager.Instance.GetRoom("waystation_yard") != null &&
-            NavigationManager.Instance.GetRoom("waystation_shed") != null);
-
-        // Five checks stood here until 2026-08-02: Tab reaching the Pixel Realm and back, and three
-        // on realm-scoped hotspots — the phantom door that existed only in the Dream, the carved
-        // marker that existed only in the Waking world. All three of those authored hotspots and the
-        // field they were scoped by are gone with the great swap, so the checks went with them
-        // rather than being reworded. `yard_dream_door` was deleted from waystation_yard.tres too:
-        // it was a hotspot with no reason to exist except to demonstrate the mechanism.
     }
 
     // ---- M2: state presentation, and the signals that carry it -----------
@@ -178,15 +174,22 @@ public static class SliceVerifier
         Section("M2  state presentation table");
 
         var entities = EntityStateManager.Instance;
-        var rat = Placement(Rat)?.Entity;
 
-        Check("the rat was registered on first sight", entities.IsKnown(Rat));
-        Check("the rat starts Corrupted", entities.GetState(Rat) == EntityState.Corrupted);
+        // Named rather than inherited. The boot moved to `ch1_cottage` on 2026-08-02 and this section
+        // and M3 both rode the old one — they acted on "wherever the game put me" and silently meant
+        // the waystation yard, which is what made the retirement look like unrelated breakage.
+        // **Nothing below this line should read `GameConfig.StartingRoomId`.**
+        NavigationManager.Instance.GoToRoom(LoopRoomId);
+
+        var beast = Placement(LoopBeast)?.Entity;
+
+        Check("the body was registered on first sight", entities.IsKnown(LoopBeast));
+        Check("the body starts Corrupted", entities.GetState(LoopBeast) == EntityState.Corrupted);
 
         // Form 1: a nightmare squatting in the road.
-        var corrupt = entities.Resolve(rat, Rat);
+        var corrupt = entities.Resolve(beast, LoopBeast);
         Check("Form 1 blocks the path", corrupt.BlocksPath);
-        Check("Form 1 is named as the cursed beast", corrupt.Label == "Cursed Giant Rat");
+        Check("Form 1 is named as the cursed thing", corrupt.Label == LoopCorruptedName);
 
         // Five Form 2 checks sat here — the porcelain Baron, its "Sever" verb, and the unattackable
         // Dream echo. Deleted 2026-08-02: `ResolveDream` is gone, so there is no second face to
@@ -198,126 +201,145 @@ public static class SliceVerifier
         var heard = new List<string>();
         void Listener(string id, int state) => heard.Add($"{id}:{(EntityState)state}");
         EventBus.Instance.EntityStateChanged += Listener;
-        entities.SetState(Rat, EntityState.Severed);
+        entities.SetState(LoopBeast, EntityState.Severed);
         EventBus.Instance.EntityStateChanged -= Listener;
 
         Check("EntityStateChanged fires on transition",
-            heard.Contains($"{Rat}:{EntityState.Severed}"));
+            heard.Contains($"{LoopBeast}:{EntityState.Severed}"));
 
-        var severed = entities.Resolve(rat, Rat);
+        var severed = entities.Resolve(beast, LoopBeast);
         Check("Severed clears the road", !severed.BlocksPath);
         // The name is deliberately the same — it is still the cursed thing, just hollowed out — so
         // the only thing that distinguishes Form 1 from Form 1-deformed on screen is the wash.
         Check("and a severed body reads as drained", severed.Modulate != corrupt.Modulate);
 
-        entities.SetState(Rat, EntityState.Purified);
-        var purified = entities.Resolve(rat, Rat);
-        Check("Form 3 is a plain animal in reality", purified.Label == "Field Rat");
+        entities.SetState(LoopBeast, EntityState.Purified);
+        var purified = entities.Resolve(beast, LoopBeast);
+        Check("Form 3 is a plain animal in reality", purified.Label == LoopPurifiedName);
         Check("Form 3 does not block", !purified.BlocksPath);
 
         // Put it back — M3 walks the loop properly from the top.
-        entities.SetState(Rat, EntityState.Corrupted);
+        entities.SetState(LoopBeast, EntityState.Corrupted);
         Check("state is restorable for the next gate",
-            entities.GetState(Rat) == EntityState.Corrupted);
+            entities.GetState(LoopBeast) == EntityState.Corrupted);
     }
 
     // ---- M3: the whole loop, in order ------------------------------------
 
     private static void GateM3_MicroLoop()
     {
-        Section("M3  Waystation loop  (puzzle -> heist -> finish)");
+        Section("M3  the micro-loop  (barred road -> severing -> finish -> payoff)");
 
         var entities = EntityStateManager.Instance;
         var world = WorldStateManager.Instance;
         var inv = InventoryCraftingManager.Instance;
+        var encounters = EncounterManager.Instance;
 
-        // 1. The road is barred and the way in is not obvious.
+        // 1. The road is barred and the way on is not obvious.
         SetRealm(GameRealm.Waking);
-        Check("the shed is unreachable while the rat is Corrupted",
-            !InteractionService.ActivateHotspot(Hotspot("yard_to_shed")));
+        Check("the way further in is refused while the body is Corrupted",
+            !InteractionService.ActivateHotspot(Hotspot(LoopDoor)));
         Check("and the player did not move",
-            NavigationManager.Instance.CurrentRoomId == "waystation_yard");
-        Check("the bitterroot is not there yet", !IsAvailable("yard_bitterroot"));
-        Check("the relic is hidden until the cairn is searched",
-            !IsAvailable("yard_relic"));
+            NavigationManager.Instance.CurrentRoomId == LoopRoomId);
+        Check("the payoff is not there yet", !IsAvailable(LoopHarvest));
+        Check("what the cairn hides is hidden until it is searched",
+            !IsAvailable(LoopRelic));
 
         // 2. The problem is visible and cannot be solved from out here. This used to be phrased as
         // "you cannot sever by looking through spectral vision", flipping the realm first; the
         // refusal survives the deletion of the peek, because it was never the peek that refused —
         // it is that the anchor is not in this world. Kept, reworded, still falsifiable.
-        Check("you cannot sever the anchor from the Waking world",
-            !InteractionService.ActivateEntity(Rat));
-        Check("the rat is still Corrupted", entities.GetState(Rat) == EntityState.Corrupted);
+        //
+        // Reworded a second time by unit 3a, for the same reason and following the same rule
+        // (`deleting-a-gated-mechanism`: keep the invariant, move the probe). The click now *starts a
+        // fight* instead of refusing, so the old assertion — a false return — is gone. The claim it was
+        // making is not: **a fight in the Waking world cannot sever an anchor that is not in this
+        // world.** That was always a statement about the body's state rather than about a return value,
+        // so the probe moves to where the claim actually lived.
+        Check("clicking the body starts a fight rather than a severing",
+            InteractionService.ActivateEntity(LoopBeast) && encounters.InFight);
+        Check("and breaking off is always allowed", encounters.Flee());
+        Check("the body is still Corrupted", entities.GetState(LoopBeast) == EntityState.Corrupted);
 
-        // 3. The puzzle stands in for the entry minigame.
-        Check("searching the cairn succeeds", InteractionService.ActivateHotspot(Hotspot("yard_cairn")));
-        Check("the relic is now exposed", IsAvailable("yard_relic"));
+        // 3. Two hotspots where one thing reveals another, which is the shape most of the authored
+        // game is made of. The second check is new with unit 3b and covers a field nothing else does:
+        // the cairn is gated on its own flag being *false*, so it closes behind itself.
+        Check("searching the cairn succeeds", InteractionService.ActivateHotspot(Hotspot(LoopCairn)));
+        Check("what it hid is now exposed", IsAvailable(LoopRelic));
+        Check("and the cairn cannot be searched twice", !IsAvailable(LoopCairn));
 
-        // 4. Cross over and rob the place.
-        Check("touching the relic begins the heist",
-            InteractionService.ActivateHotspot(Hotspot("yard_relic")));
-        Check("you are in the Pixel Realm",
-            NavigationManager.Instance.CurrentRoomId == "dream_way_threshold");
-        Check("realm is locked for the duration", RealmTransitionManager.Instance.TransitionsLocked);
-
-        // The pursuer starts camped on the anchor, and nothing moves it in a headless run.
-        // Drawing it off is the player's job; here we just park it so this gate tests the
-        // route rather than the hunt. GateHeistMechanics covers being caught.
-        DreamRunManager.Instance.DebugSetPursuerRoom("dream_way_cistern");
-
-        Walk("dream_way_gallery");
-        Walk("dream_way_stair");
-        Walk("dream_way_solar");
-        Check("reached the Baron's solar",
-            NavigationManager.Instance.CurrentRoomId == "dream_way_solar");
-
-        Check("taking the anchor succeeds",
-            InteractionService.ActivateHotspot(Hotspot("dream_way_anchor")));
-        Check("the rat is Severed by the theft", entities.GetState(Rat) == EntityState.Severed);
-        Check("you were ejected to the yard",
-            NavigationManager.Instance.CurrentRoomId == "waystation_yard");
-        Check("back in the Waking world",
-            RealmTransitionManager.Instance.CurrentRealm == GameRealm.Waking);
-        Check("realm is unlocked again", !RealmTransitionManager.Instance.TransitionsLocked);
-        Check("the heist is over", !DreamRunManager.Instance.IsRunning);
-        Check("and the screen came back with you",
-            _view == null || _view.DisplayedRoomId == "waystation_yard");
+        // 4. The tether comes off.
+        //
+        // **Thirteen checks stood here and they were the heist.** Crossing over, parking the pursuer,
+        // walking four Dream rooms, taking the anchor, and every claim about the ejection that followed.
+        // All of it covered `DreamRunManager` and the six `dream_way_*` screens, which unit 3b deleted
+        // and unit 6 replaces with a 3D pocket that shares none of its mechanics — so per §7 decision 7
+        // they are deleted rather than re-pointed at a fixture, because migrating a gate onto a corpse
+        // is work you do twice and throw away once. The invariant that outlives all of it is the one
+        // line below: **severing is what clears the road, and the road does not care how it happened.**
+        // Unit 6 owes this file a probe for *how*.
+        entities.SetState(LoopBeast, EntityState.Severed);
+        Check("the tether can be cut", entities.GetState(LoopBeast) == EntityState.Severed);
 
         // 5. Reality gave way.
-        Check("the road is now passable", InteractionService.ActivateHotspot(Hotspot("yard_to_shed")));
-        Check("and the player is in the shed",
-            NavigationManager.Instance.CurrentRoomId == "waystation_shed");
+        Check("the road is now passable", InteractionService.ActivateHotspot(Hotspot(LoopDoor)));
+        Check("and the player is through it",
+            NavigationManager.Instance.CurrentRoomId == LoopInnerRoomId);
 
-        Check("gravecap harvests", InteractionService.ActivateHotspot(Hotspot("shed_gravecap")));
-        Check("gravecap is in the satchel", inv.GetCount("herb_gravecap") == 1);
+        Check("the node behind it harvests",
+            InteractionService.ActivateHotspot(Hotspot(LoopInnerHarvest)));
+        Check("and what it gave is in the satchel", inv.GetCount("herb_bitterroot") == 1);
         Check("a stripped node refuses a second take",
-            !InteractionService.ActivateHotspot(Hotspot("shed_gravecap")));
+            !InteractionService.ActivateHotspot(Hotspot(LoopInnerHarvest)));
         Check("the consumed node is gone from the screen",
-            !IsAvailable("shed_gravecap"));
-        Check("the bench sets its flag", InteractionService.ActivateHotspot(Hotspot("shed_bench")));
-        Check("waystation.bench_found is recorded", world.GetFlag("waystation.bench_found"));
+            !IsAvailable(LoopInnerHarvest));
+        Check("the bench sets its flag", InteractionService.ActivateHotspot(Hotspot(LoopInnerBench)));
+        Check("and that flag is recorded", world.GetFlag(LoopBenchFlag));
 
         // 6. Zero respawn: the world remembers.
-        InteractionService.ActivateHotspot(Hotspot("shed_to_yard"));
-        Check("back in the yard", NavigationManager.Instance.CurrentRoomId == "waystation_yard");
-        Check("the rat is still Severed, not reset", entities.GetState(Rat) == EntityState.Severed);
+        InteractionService.ActivateHotspot(Hotspot(LoopInnerDoor));
+        Check("back out in the road", NavigationManager.Instance.CurrentRoomId == LoopRoomId);
+        Check("the body is still Severed, not reset",
+            entities.GetState(LoopBeast) == EntityState.Severed);
 
-        // 7. Finish the anchorless body. Stands in for the turn-based fight.
-        Check("finishing the severed body succeeds", InteractionService.ActivateEntity(Rat));
-        Check("the rat is Purified", entities.GetState(Rat) == EntityState.Purified);
-        Check("the zone is cleansed", world.IsZoneCleansed("waystation"));
-        Check("the zone reads as inert",
-            Mathf.IsZeroApprox(world.ZoneCorruptionScalar("waystation")));
+        // 7. Finish the anchorless body. **This stopped standing in for the turn-based fight on
+        // 2026-08-03 and became one** — which is unit 3a's whole point, and the one place in this suite
+        // where a comment saying "stands in for" got to be deleted rather than reworded.
+        //
+        // Driven with nothing equipped and nothing rigged on purpose: this is what §18 means by *the cheap
+        // ending survives as an outcome rather than as a shortcut*. The husk still comes apart with bare
+        // hands; it just takes the turns that costs. The cap is a hang guard, not a rule — a strike loop
+        // that cannot dent its target is `verify-slice-blind-spots`'s worst failure shape.
+        Check("engaging the anchorless body starts a fight",
+            InteractionService.ActivateEntity(LoopBeast) && encounters.InFight);
 
-        // 8. And the payoff is reachable.
-        Check("the bitterroot has appeared", IsAvailable("yard_bitterroot"));
-        Check("it harvests", InteractionService.ActivateHotspot(Hotspot("yard_bitterroot")));
+        var huskTurns = 0;
+        while (encounters.InFight && huskTurns < 40)
+        {
+            encounters.Strike();
+            huskTurns++;
+        }
+
+        Check("finishing the severed body succeeds", !encounters.InFight && huskTurns < 40);
+        Check("the body is Purified", entities.GetState(LoopBeast) == EntityState.Purified);
+        // The zone system's two probes lived here. Following `deleting-a-gated-mechanism`, the one with
+        // a surviving invariant moved and the one without went:
+        //  * "the zone is cleansed" is the same assertion at the new scope — one screen, not a chapter.
+        //  * "the zone reads as inert" measured `ZoneCorruptionScalar`, which nothing read once Resolve
+        //    drain became boss-only aura. It is deleted rather than reworded, because a check that
+        //    still passes while measuring nothing is the tautology a rename leaves behind.
+        Check("the screen is cleansed", world.GetFlag(Flags.Cleansed(LoopRoomId)));
+
+        // 8. And the payoff is reachable. The two nodes give one each where the prototype's gave one
+        // and two, so this total is the same total three later sections inherit — see `LoopRoom`.
+        Check("the flag-gated growth has appeared", IsAvailable(LoopHarvest));
+        Check("it harvests", InteractionService.ActivateHotspot(Hotspot(LoopHarvest)));
         Check("two bitterroot in the satchel", inv.GetCount("herb_bitterroot") == 2);
 
-        var form3 = entities.Resolve(Placement(Rat).Entity, Rat);
-        Check("Form 3 is a plain animal", form3.Label == "Field Rat");
-        Check("the animal is farmable", InteractionService.ActivateEntity(Rat));
-        Check("tallow taken", inv.GetCount("rat_tallow") == 1);
+        var form3 = entities.Resolve(Placement(LoopBeast).Entity, LoopBeast);
+        Check("Form 3 is a plain animal", form3.Label == LoopPurifiedName);
+        Check("the animal is farmable", InteractionService.ActivateEntity(LoopBeast));
+        Check("tallow taken", inv.GetCount("mat_tallow") == 1);
     }
 
     // ---- Vitality --------------------------------------------------------
@@ -506,7 +528,7 @@ public static class SliceVerifier
         // a balance decision and pinning them would only manufacture false failures.
         Check("with their ingredients intact",
             recipe.Inputs[0].ItemId == "herb_bitterroot" && recipe.Inputs[0].Amount > 0 &&
-            recipe.Inputs[1].ItemId == "rat_tallow" && recipe.Inputs[1].Amount > 0);
+            recipe.Inputs[1].ItemId == "mat_tallow" && recipe.Inputs[1].Amount > 0);
         Check("and it points at a real item", inv.GetItem(recipe.OutputItemId) != null);
 
         // The rename settled on 2026-07-29. A stale property name in the .tres would deserialise
@@ -535,12 +557,12 @@ public static class SliceVerifier
         Check("and produces nothing", inv.GetCount("salve_clearmind") == 0);
 
         // -- A craft that works --
-        inv.AddItem("rat_tallow", 1);
+        inv.AddItem("mat_tallow", 1);
         Check("with everything in hand it can be made", inv.CanCraft("recipe_salve_clearmind"));
         Check("and crafting reports success", inv.Craft("recipe_salve_clearmind"));
         Check("the output arrives", inv.GetCount("salve_clearmind") == 1);
         Check("the inputs are gone",
-            inv.GetCount("herb_bitterroot") == 0 && inv.GetCount("rat_tallow") == 0);
+            inv.GetCount("herb_bitterroot") == 0 && inv.GetCount("mat_tallow") == 0);
         Check("and it cannot be made twice off one set of materials",
             !inv.CanCraft("recipe_salve_clearmind"));
 
@@ -555,19 +577,19 @@ public static class SliceVerifier
             OutputItemId = "salve_clearmind",
             RequiredBlueprintId = "lore_verify_page",
         };
-        gated.Inputs.Add(new RecipeIngredient { ItemId = "herb_gravecap", Amount = 1 });
+        gated.Inputs.Add(new RecipeIngredient { ItemId = "herb_graveflower", Amount = 1 });
         inv.DebugRegisterRecipe(gated);
 
         Check("a recipe needing a blueprint knows it does", gated.NeedsBlueprint);
         Check("an unlearned blueprint is not discovered", !inv.IsDiscovered("lore_verify_page"));
 
         // Materials in hand, so the only thing standing in the way is the knowledge.
-        inv.AddItem("herb_gravecap", 1);
+        inv.AddItem("herb_graveflower", 1);
         Check("and without it the recipe refuses", !inv.CanCraft("verify_gated"));
         Check("naming knowledge, not materials, as the reason",
             inv.Inspect("verify_gated") == CraftBlock.Unknown);
         Check("attempting an unknown recipe fails", !inv.Craft("verify_gated"));
-        Check("and consumes nothing", inv.GetCount("herb_gravecap") == 1);
+        Check("and consumes nothing", inv.GetCount("herb_graveflower") == 1);
 
         Check("learning it reports newly-learned", inv.Discover("lore_verify_page"));
         Check("and it is now known", inv.IsDiscovered("lore_verify_page"));
@@ -578,9 +600,9 @@ public static class SliceVerifier
 
         // Picking up a Lore item teaches it, which is what makes the journal purely additive.
         Check("a blueprint not yet seen is unknown", !inv.IsDiscovered("catalyst_ashincense"));
-        inv.AddItem("herb_gravecap", 1);
+        inv.AddItem("herb_graveflower", 1);
         Check("picking up a non-Lore item teaches nothing",
-            !inv.IsDiscovered("herb_gravecap"));
+            !inv.IsDiscovered("herb_graveflower"));
 
         // -- Using a salve --
         vitality.SetTo(vitality.Max - 20f);
@@ -619,33 +641,61 @@ public static class SliceVerifier
         vitality.ResetAll();
     }
 
-    // ---- Heist mechanics -------------------------------------------------
+    // ---- Inside a run ----------------------------------------------------
 
+    /// <summary>
+    /// What is left of the heist section after unit 3b, and the *reason* it is left is worth stating,
+    /// because it is the one thing §7 decision 7's rule did not have a word for. That rule says split
+    /// the gates by what they cover, not by what they touch, and delete the ones covering
+    /// <c>DreamRunManager</c> outright. It needed a third category: <b>gates that touch a dying
+    /// mechanism in order to probe a living one.</b>
+    ///
+    /// <para>
+    /// Every check below covers a file that outlives unit 6 — <c>Hud</c>'s pool order and dimming,
+    /// <c>RoomView</c>'s handling of a navigation raised from inside a <c>RoomEntered</c> handler,
+    /// <c>RealmTransitionManager</c>'s lock, <c>ResolveManager</c>'s absent ambient drain — and a live
+    /// run is simply the only place any of them can be stood in. Ten checks that covered
+    /// <c>DreamRunManager</c> and nothing else went with the prototype: the pursuer's start room and
+    /// both distance readings, the drain rate, the Resolve-exhausted ending, and the anchor. Whatever
+    /// unit 6's pocket turns out to be, it owes this file its own versions of those.
+    /// </para>
+    /// </summary>
+    /// <remarks>
+    /// The section is named for a *run* rather than a heist on purpose. The word "heist" names a
+    /// mechanism that is being deleted; "inside a run" names the condition four surviving files
+    /// actually branch on, and it is the wording unit 6 can keep.
+    /// </remarks>
     private static void GateHeistMechanics()
     {
-        Section("heist  clock, pursuit and both failure endings");
+        Section("inside a run  what the Dream does to the surviving screens");
 
         var run = DreamRunManager.Instance;
         var resolve = ResolveManager.Instance;
+        var nav = NavigationManager.Instance;
 
         // Invariant 2: Vitality must never appear in the Dream. Every ending in there is an
         // ejection priced in Resolve, and if the body followed you in, the two-pool split — and
         // with it the reason the two routes cost different currencies — collapses. Captured here
-        // rather than in the Vitality gate because this is the gate that actually goes inside,
-        // through both failure endings and a success.
+        // rather than in the Vitality gate because this is the gate that actually goes inside.
         var vitality = VitalityManager.Instance;
         var vitalityOnEntry = vitality?.Current ?? 0f;
 
-        Check("the heist is registered", run.GetHeist("waystation_heist") != null);
+        Check("the verifier's own run is registered", run.GetHeist(LoopHeistId) != null);
 
-        // -- Being touched --
+        // Entered by clicking, not by calling `Begin`. This is the only coverage anywhere of the wiring
+        // from a Waking hotspot to a crossing — `HotspotKind.CrossToDream` is used by no `.tres` now
+        // that the prototype is gone, and a hotspot kind that nothing exercises is a hotspot kind that
+        // breaks silently. It lives here rather than in the micro-loop because this is the section that
+        // knows it is standing on a corpse.
+        nav.GoToRoom(LoopRoomId);
         resolve.SetTo(resolve.Max);
-        Check("a run begins", run.Begin("waystation_heist"));
-        Check("the pursuer starts on the prize", run.PursuerRoomId == "dream_way_solar");
-        Check("and is three rooms off", run.PursuerDistance == 3);
+        Check("touching what the cairn hid begins a run",
+            InteractionService.ActivateHotspot(Hotspot(LoopRelic)) && run.IsRunning);
+        Check("and it put you inside the maze", nav.CurrentRoomId == DreamEntryRoomId);
+        Check("realm is locked for the duration", RealmTransitionManager.Instance.TransitionsLocked);
 
         // Inside a run the nerve is the pool at risk, so it takes the top slot and the body dims.
-        Check("the nerve becomes the top bar inside a heist",
+        Check("the nerve becomes the top bar inside a run",
             _hud == null || _hud.TopPoolLabel == "RESOLVE");
         Check("and the body dims to say it is not in play",
             _hud == null || _hud.VitalityOpacity < 1f);
@@ -656,56 +706,45 @@ public static class SliceVerifier
         Check("and the nerve is never dimmed",
             _hud == null || Mathf.IsEqualApprox(_hud.ResolveOpacity, 1f));
 
-        Walk("dream_way_gallery");
-        Check("closing the distance is reported", run.PursuerDistance == 2);
-
         // An ordinary door, to prove the view tracks the player at all before we ask it to
         // survive the hard case. Without this, "the view never renders the wrong room" could
         // be passed by a view that renders nothing.
+        Walk(DreamInnerRoomId);
         Check("the view follows an ordinary door",
-            _view == null || _view.DisplayedRoomId == "dream_way_gallery");
+            _view == null || _view.DisplayedRoomId == DreamInnerRoomId);
 
-        // Burn some of the clock, then walk straight into it.
-        resolve.SetTo(resolve.Max * 0.5f);
-        Walk("dream_way_stair");
-        Walk("dream_way_solar");
-        Check("walking into the pursuer ends the run", !run.IsRunning);
-        Check("returning refills the bar", Mathf.IsEqualApprox(resolve.Current, resolve.Max));
-        Check("and throws you back to the Waking world",
-            NavigationManager.Instance.CurrentRoomId == "waystation_yard" &&
-            RealmTransitionManager.Instance.CurrentRealm == GameRealm.Waking);
-
+        // Then the hard case, which the plan for this unit had down as deleted and which is kept because
+        // the fixture pays for it either way: the three-room chain and the parked pursuer exist for the
+        // stranding check, so walking one more door is free, and what it probes is `RoomView` rather
+        // than the pursuer.
+        //
         // Being caught navigates *from inside* the RoomEntered handler that reported the step
         // into the pursuer's room. The ejection's RoomEntered therefore reaches every later
         // subscriber first, and the stale one lands last — so a view that trusts the payload
         // finishes by drawing the Dream room the player was just yanked out of. Managers stay
         // correct throughout, which is why the gates above pass and the game still looked
         // broken: no drain, no exits, the Dream still on screen. Written up in handoff.md,
-        // "Closed post-mortem: the ejection failure."
+        // "Closed post-mortem: the ejection failure." **Unit 6 must keep a probe of this shape**
+        // whatever ends a pocket run, because the defect is in the subscriber and not in the ending.
+        Walk(DreamDeepRoomId);
+        Check("walking into the pursuer ends the run", !run.IsRunning);
+        Check("and throws you back out to the Waking world",
+            nav.CurrentRoomId == LoopRoomId &&
+            RealmTransitionManager.Instance.CurrentRealm == GameRealm.Waking);
+        Check("and leaves the realm unlocked", !RealmTransitionManager.Instance.TransitionsLocked);
         Check("the view shows where you were ejected to, not where you were caught",
-            _view == null || _view.DisplayedRoomId == "waystation_yard");
+            _view == null || _view.DisplayedRoomId == LoopRoomId);
         Check("and the HUD names that room too",
-            _hud == null || _hud.DisplayedRoomName == "The Forgotten Waystation Yard");
+            _hud == null || _hud.DisplayedRoomName == "The Road, Barred");
 
-        // -- Running out of nerve --
-        resolve.SetTo(resolve.Max);
-        Check("a second run begins", run.Begin("waystation_heist"));
-        Check("drain is at least the base rate",
-            run.CurrentDrainPerSecond() >= run.ActiveHeist.DrainPerSecond);
-
-        resolve.SetTo(0f);
-        Check("running out of Resolve ends the run", !run.IsRunning);
-        Check("and ejects you", NavigationManager.Instance.CurrentRoomId == "waystation_yard");
-        Check("and you are ready to try again", Mathf.IsEqualApprox(resolve.Current, resolve.Max));
-
-        // -- Nothing outside a heist touches the bar, as built --
+        // -- Nothing outside a run touches the bar, as built --
         // True today only because boss fights do not exist. combat.md §6 has Resolve draining in
         // a Waking boss fight too — though only while that boss's tether is unbroken — so when
-        // auras land these two widen to "no drain outside a heist, or a boss fight against a
+        // auras land these two widen to "no drain outside a run, or a boss fight against a
         // Corrupted entity" rather than being deleted. The rule that survives unchanged is that
         // there is no *ambient* drain, which is what these two actually pin down.
         var held = resolve.Current;
-        Check("no drain outside a heist", Mathf.IsZeroApprox(resolve.CurrentRatePerSecond()));
+        Check("no drain outside a run", Mathf.IsZeroApprox(resolve.CurrentRatePerSecond()));
         Check("the bar holds still in the Waking world",
             Mathf.IsEqualApprox(resolve.Current, held));
 
@@ -713,7 +752,7 @@ public static class SliceVerifier
         Check("Vitality never moved in the Dream",
             vitality == null || Mathf.IsEqualApprox(vitality.Current, vitalityOnEntry));
 
-        // And the emphasis came back with us, through both failure endings above.
+        // And the emphasis came back with us, through the ending above.
         Check("the body is the top bar again once the run is over",
             _hud == null || _hud.TopPoolLabel == "VITALITY");
         Check("and is undimmed again, because it can be hurt out here",
@@ -750,8 +789,8 @@ public static class SliceVerifier
         SetRealm(GameRealm.Dream);
 
         Check("world was actually cleared",
-            !WorldStateManager.Instance.GetFlag("zone.waystation.purified") &&
-            InventoryCraftingManager.Instance.GetCount("rat_tallow") == 0);
+            !WorldStateManager.Instance.GetFlag(Flags.Cleansed(LoopRoomId)) &&
+            InventoryCraftingManager.Instance.GetCount("mat_tallow") == 0);
 
         Check("and Vitality was actually cleared",
             Mathf.IsEqualApprox(VitalityManager.Instance.Current, VitalityManager.Instance.Max));
@@ -759,12 +798,17 @@ public static class SliceVerifier
         Check("load reads", SaveService.Load(path));
 
         Check("entity states restored",
-            EntityStateManager.Instance.GetState(Rat) == EntityState.Purified);
-        Check("zone phase restored", WorldStateManager.Instance.IsZoneCleansed("waystation"));
-        Check("flags restored", WorldStateManager.Instance.GetFlag("waystation.bench_found"));
+            EntityStateManager.Instance.GetState(LoopBeast) == EntityState.Purified);
+        // A stronger version of the "zone phase restored" check it replaces, and by accident rather than
+        // design: the save was taken in `verify_wilds`, so the load re-derives *that* screen's verdict
+        // on arrival and never touches the loop room's. This flag therefore comes out of the file or not
+        // at all — which is the round trip the deleted `SaveGame.ZonePhases` field used to be needed for.
+        Check("the cleansed screen restored",
+            WorldStateManager.Instance.GetFlag(Flags.Cleansed(LoopRoomId)));
+        Check("flags restored", WorldStateManager.Instance.GetFlag(LoopBenchFlag));
         Check("inventory restored",
             InventoryCraftingManager.Instance.GetCount("herb_bitterroot") == 2 &&
-            InventoryCraftingManager.Instance.GetCount("rat_tallow") == 1);
+            InventoryCraftingManager.Instance.GetCount("mat_tallow") == 1);
         Check("realm restored", RealmTransitionManager.Instance.CurrentRealm == GameRealm.Waking);
         Check("room restored", NavigationManager.Instance.CurrentRoomId == "verify_wilds");
         Check("Vitality restored",
@@ -772,36 +816,109 @@ public static class SliceVerifier
 
         SaveService.DeleteSave(path);
 
-        // -- A save taken inside a heist must not strand you there --
+        // -- A save taken inside a run must not strand you there --
         // No Dream room has a door back to the Waking world, so a load that restores a Dream
-        // room without a run is a soft lock with no drain, no exit and a dead anchor.
+        // room without a run is a soft lock with no drain, no exit and a dead anchor. This covers
+        // `SaveService`, which outlives unit 6 — the run is the condition, not the subject.
+        //
+        // The walk is what forced the fixture to be **three rooms rather than two**: the save has to be
+        // taken one door in, so that "does not strand you" is about a Dream room the player reached
+        // rather than the one `Begin` put them in, and with two rooms that second door is the pursuer's.
         const string dreamPath = "user://verify_slice_dream.json";
         var run = DreamRunManager.Instance;
 
-        Check("a run begins for the stranding check", run.Begin("waystation_heist"));
-        run.DebugSetPursuerRoom("dream_way_cistern");
-        Walk("dream_way_gallery");
+        Check("a run begins for the stranding check", run.Begin(LoopHeistId));
+        Walk(DreamInnerRoomId);
 
         Check("a save can be taken from inside the maze",
-            NavigationManager.Instance.CurrentRoomId == "dream_way_gallery" &&
+            NavigationManager.Instance.CurrentRoomId == DreamInnerRoomId &&
             SaveService.Save(dreamPath));
 
         // Simulate a fresh session: the run is gone, only the file remains.
         run.ForceClear();
 
-        Check("loading a mid-heist save reads", SaveService.Load(dreamPath));
+        Check("loading a mid-run save reads", SaveService.Load(dreamPath));
         Check("and does not strand you inside the Dream maze",
             !run.IsDreamRoom(NavigationManager.Instance.CurrentRoomId));
-        Check("and returns you to the heist's exit",
-            NavigationManager.Instance.CurrentRoomId == "waystation_yard");
+        Check("and returns you to the run's exit",
+            NavigationManager.Instance.CurrentRoomId == LoopRoomId);
         Check("and puts you back in the Waking world",
             RealmTransitionManager.Instance.CurrentRealm == GameRealm.Waking);
         Check("and leaves the realm unlocked",
             !RealmTransitionManager.Instance.TransitionsLocked);
         Check("and leaves no run running", !run.IsRunning);
-        Check("and shows you the outside", _view == null || _view.DisplayedRoomId == "waystation_yard");
+        Check("and shows you the outside", _view == null || _view.DisplayedRoomId == LoopRoomId);
 
         SaveService.DeleteSave(dreamPath);
+
+        // -- A save from before the format lost a field --
+        // `SaveGame.ZonePhases` was deleted today (unit 2), and the claim in the comment standing where
+        // it used to be — that an old save still loads, and loads *correctly* rather than merely without
+        // crashing — is the one thing the round trip above cannot check, because every file it reads was
+        // written by today's code. So this file is hand-authored in the old shape: a `ZonePhases` object
+        // System.Text.Json has nowhere to put, and no `screen.*.cleansed` flag at all. Nothing in the
+        // game can produce it any more, which is exactly why it needs a gate rather than a comment.
+        const string oldPath = "user://verify_slice_legacy.json";
+        const string restorePath = "user://verify_slice_restore.json";
+        SaveService.Save(restorePath);
+
+        Check("a save from before the format lost a field still loads",
+            WriteLegacySave(oldPath, EntityState.Purified) && SaveService.Load(oldPath));
+        Check("and its cleansed screen comes back",
+            WorldStateManager.Instance.GetFlag(Flags.Cleansed(LoopRoomId)));
+
+        // The other direction, and it is what makes the line above a derivation rather than a default:
+        // the same file with the creature still standing on that screen has to come back uncleansed.
+        Check("the same save with the creature still standing loads too",
+            WriteLegacySave(oldPath, EntityState.Corrupted) && SaveService.Load(oldPath));
+        Check("and that screen comes back uncleansed, from what is standing on it",
+            !WorldStateManager.Instance.GetFlag(Flags.Cleansed(LoopRoomId)));
+
+        // Put back exactly what this section used to leave behind, rather than whatever the legacy file
+        // happened to carry: the gates below inherit this world.
+        SaveService.DeleteSave(oldPath);
+        Check("the world this section borrowed is handed back", SaveService.Load(restorePath));
+        SaveService.DeleteSave(restorePath);
+    }
+
+    /// <summary>
+    /// A save file in the pre-unit-2 shape, for the two checks at the end of
+    /// <see cref="GatePersistence"/>: the deleted <c>ZonePhases</c> member present, and no
+    /// <c>screen.&lt;id&gt;.cleansed</c> flag anywhere.
+    /// </summary>
+    /// <remarks>
+    /// Written as text rather than through <see cref="SaveService"/> because no code path can produce
+    /// this file any more — the field it turns on is gone from <see cref="SaveGame"/>. A fixture that
+    /// could be generated by the code under test would not be testing anything.
+    ///
+    /// <para>
+    /// The room and the flag were re-pointed at the verifier's own fixture by unit 3b, but
+    /// <c>ZonePhases</c> keeps its <c>"waystation"</c> key deliberately: this file is a *period piece*,
+    /// and the zone it names is exactly as deleted as the field that holds it. Renaming the key to
+    /// something current would make the fixture describe a save that never existed.
+    /// </para>
+    /// </remarks>
+    private static bool WriteLegacySave(string path, EntityState beast)
+    {
+        using var file = FileAccess.Open(path, FileAccess.ModeFlags.Write);
+        if (file == null) return false;
+
+        file.StoreString($@"{{
+  ""Version"": 1,
+  ""CurrentRoomId"": ""{LoopRoomId}"",
+  ""CurrentRealm"": 0,
+  ""Resolve"": 100,
+  ""Vitality"": 100,
+  ""ReturnCampRoomId"": """",
+  ""Flags"": {{ ""{LoopBenchFlag}"": true }},
+  ""ZonePhases"": {{ ""waystation"": 2 }},
+  ""EntityStates"": {{ ""{LoopBeast}"": {(int)beast} }},
+  ""Inventory"": {{}},
+  ""Stash"": {{}},
+  ""DiscoveredBlueprints"": [],
+  ""Wounds"": {{}}
+}}");
+        return true;
     }
 
     // ---- The wound ledger --------------------------------------------------
@@ -1073,14 +1190,14 @@ public static class SliceVerifier
 
         // -- Crafting is a thing you do at a bench, or not at all --
         inv.AddItem("herb_bitterroot", 5);
-        inv.AddItem("rat_tallow", 5);
+        inv.AddItem("mat_tallow", 5);
         Check("a full satchel still will not craft in the open",
             !inv.CanCraft("recipe_salve_clearmind"));
         Check("and the refusal names the venue, not the materials",
-            inv.Inspect("recipe_salve_clearmind") == CraftBlock.NotAtCamp);
+            inv.Inspect("recipe_salve_clearmind") == CraftBlock.NotAtStation);
 
         // Order inside Inspect, which is the part that is easy to get wrong: an unlearned recipe must
-        // stay Unknown even in the open. Answering NotAtCamp first would confirm the recipe exists to
+        // stay Unknown even in the open. Answering NotAtStation first would confirm the recipe exists to
         // a player who has not found the page yet, and the journal is supposed to be the only thing
         // that tells them that.
         var gated = new RecipeData
@@ -1136,13 +1253,30 @@ public static class SliceVerifier
 
         var run = DreamRunManager.Instance;
         resolve.SetTo(resolve.Max);
-        Check("a run begins for the invariant-2 check", run.Begin("waystation_heist"));
+        Check("a run begins for the invariant-2 check", run.Begin(LoopHeistId));
         vitality.SetTo(vitality.Max - 25f);
         nav.GoToRoom("verify_camp");
         Check("a workbench inside a live run is not a camp", !camp.AtCamp);
         Check("so arriving at one cannot refill the body in there",
             Mathf.IsEqualApprox(vitality.Current, vitality.Max - 25f));
+
+        // -- Invariant 2's other arm: a field station with no bench under it --
+        // Everything above is the bench, and the bench proves nothing about the guard in
+        // `AtVenueFor`: `AtCamp` already refuses inside a run, so that arm passes whether the guard
+        // is there or not. The station arm is the only one the guard is load-bearing on, and until
+        // unit 3b's third break-test came back with the camp checks red and no crafting check moved,
+        // it had no probe at all. `verify_station` exists for these two lines.
+        //
+        // They are a pair on purpose, in one room with one satchel, so the only thing that differs
+        // between them is the run. Assert the refusal and stop and it would still pass with the venue
+        // permanently broken; assert only that it works and it says nothing about the Dream.
+        nav.GoToRoom(StationRoomId);
+        Check("a room can be a venue without being a camp", !camp.AtCamp);
+        Check("and a field station is shut inside a live run",
+            inv.Inspect(StationRecipeId) == CraftBlock.NotAtStation);
         run.ForceClear();
+        Check("and open again the moment the run ends, same room, same satchel",
+            inv.Inspect(StationRecipeId) == CraftBlock.None);
         SetRealm(GameRealm.Waking);
 
         // -- One box, reachable from every bench --
@@ -1174,11 +1308,15 @@ public static class SliceVerifier
 
         // -- What a collapse costs: what you can remake, and nothing else --
         inv.ResetAll();
-        inv.AddItem("herb_bitterroot", 3);     // Reagent  — farmable
+        inv.AddItem("herb_bitterroot", 3);     // Component — farmable
         inv.AddItem("catalyst_ashincense", 1); // Catalyst — craftable, so never a softlock
         inv.AddItem("salve_clearmind", 2);     // Salve    — hers, finite, uncraftable
-        inv.AddItem("herb_gravecap", 4);
-        Check("something is put in the cache before dying", inv.Deposit("herb_gravecap", 4));
+        // Something the collapse must *not* touch, and it has to be a fourth id rather than more of the
+        // three above, so that "the cache was not reached into" cannot be satisfied by a satchel stack.
+        // Was `herb_gravecap` until unit 3b deleted that item; safe to reuse graveflower because
+        // `ResetAll` above emptied both the satchel and the cache.
+        inv.AddItem("herb_graveflower", 4);
+        Check("something is put in the cache before dying", inv.Deposit("herb_graveflower", 4));
 
         nav.GoToRoom("verify_wilds");
         vitality.SetTo(vitality.Max - 10f);
@@ -1189,12 +1327,13 @@ public static class SliceVerifier
             nav.CurrentRoomId == "verify_camp_two");
         Check("with the body back", Mathf.IsEqualApprox(vitality.Current, vitality.Max));
         Check("and the nerve back", Mathf.IsEqualApprox(resolve.Current, resolve.Max));
-        Check("reagents are gone, because you can go and get more",
+        Check("components are gone, because you can go and get more",
             inv.GetCount("herb_bitterroot") == 0);
         Check("catalysts too, because you can make more",
             inv.GetCount("catalyst_ashincense") == 0);
         Check("but her salves come back with you", inv.GetCount("salve_clearmind") == 2);
-        Check("and dying does not reach into the cache", inv.GetStashCount("herb_gravecap") == 4);
+        Check("and dying does not reach into the cache",
+            inv.GetStashCount("herb_graveflower") == 4);
 
         // The rule behind those, stated where it cannot drift: **death destroys what you can remake
         // and keeps what you cannot.** Lore and Relic have no authored item yet, so they are asserted
@@ -1203,18 +1342,39 @@ public static class SliceVerifier
         Check("a blueprint page would survive a collapse",
             InventoryCraftingManager.SurvivesDeath(ItemCategory.Lore));
         Check("so would a relic", InventoryCraftingManager.SurvivesDeath(ItemCategory.Relic));
-        Check("a reagent would not", !InventoryCraftingManager.SurvivesDeath(ItemCategory.Reagent));
+        // The destructive side, and this pair is the *moved probe* rather than two new checks. It used
+        // to read "a trap does not survive a collapse" / "nor does the gear you were wearing" — §18's
+        // rule, reversed by §19 on 2026-07-31 and built 2026-08-03. Deleting those two lines would have
+        // been the obvious move and would have quietly retired the claim underneath them, which was
+        // never "equipment burns": it is **a new category inherits the destructive default**, the
+        // safe-direction-to-fail property the switch's `_ => false` arm is chosen for. So the claim
+        // stands here on the two categories that still burn (`deleting-a-gated-mechanism`).
+        Check("a component would not",
+            !InventoryCraftingManager.SurvivesDeath(ItemCategory.Component));
         Check("nor a catalyst", !InventoryCraftingManager.SurvivesDeath(ItemCategory.Catalyst));
 
-        // The two categories added on 2026-07-30 fall on the destructive side, and that is the
-        // ratified decision rather than the default arm happening to catch them: Jeremy's reason for
-        // cutting durability was that "losing items on death will make it so people may have to
-        // recraft, making his trade more impactful than one and done". Exempt equipment here and that
-        // reason evaporates — the recraft pressure is the *only* pressure left on the smithing side.
-        Check("a trap does not survive a collapse",
-            !InventoryCraftingManager.SurvivesDeath(ItemCategory.Trap));
-        Check("nor does the gear you were wearing",
-            !InventoryCraftingManager.SurvivesDeath(ItemCategory.Equipment));
+        // And the reversal itself, asserted rather than assumed. §19: "Equipment survives death —
+        // reversing §18" and "Traps are permanent". The reason the old argument does not survive: it was
+        // that recrafting keeps the trade relevant instead of one-and-done, which only holds while there
+        // is something to remake. §19 made a trap a thing you own once, so destroying one would delete a
+        // permanent object outright — and it made the kit a startup cost in dormant commons, so burning
+        // the coat would turn a one-time price into a tax that compounds on failure.
+        Check("a trap is permanent, so a collapse cannot take it",
+            InventoryCraftingManager.SurvivesDeath(ItemCategory.Trap));
+        Check("and the gear you were wearing comes back with you",
+            InventoryCraftingManager.SurvivesDeath(ItemCategory.Equipment));
+
+        // Live rather than predicate-only, because the two can disagree: `LoseUnprotectedItems` reads a
+        // category off the *registry*, so an item whose id resolves to nothing defaults to Component and
+        // burns regardless of what it was authored as. That is exactly the 33-node defect this unit
+        // fixes, and this is the check that would have caught it here.
+        inv.ResetAll();
+        inv.AddItem("salve_clearmind", 1);
+        inv.AddItem("herb_bitterroot", 2);
+        vitality.SetTo(vitality.Max);
+        inv.LoseUnprotectedItems();
+        Check("a real collapse keeps what the predicate says it keeps",
+            inv.GetCount("salve_clearmind") == 1 && inv.GetCount("herb_bitterroot") == 0);
 
         // -- Collapsing before you have ever found a camp --
         // Driven through the public method rather than the signal, so both entry points are covered.
@@ -1234,21 +1394,21 @@ public static class SliceVerifier
 
         nav.GoToRoom("verify_camp");
         inv.ResetAll();
-        inv.AddItem("rat_tallow", 3);
-        Check("something is cached for the round trip", inv.Deposit("rat_tallow", 3));
+        inv.AddItem("mat_tallow", 3);
+        Check("something is cached for the round trip", inv.Deposit("mat_tallow", 3));
         nav.GoToRoom("verify_wilds");
         Check("the camp save writes", SaveService.Save(path));
 
         camp.ResetAll();
         inv.ResetAll();
         Check("the return point was actually cleared", camp.ReturnCampRoomId == "");
-        Check("and the cache with it", inv.GetStashCount("rat_tallow") == 0);
+        Check("and the cache with it", inv.GetStashCount("mat_tallow") == 0);
 
         Check("the camp save loads", SaveService.Load(path));
         Check("and it puts you back on open ground, where nothing can rebind",
             nav.CurrentRoomId == "verify_wilds");
         Check("so the return point came out of the file", camp.ReturnCampRoomId == "verify_camp");
-        Check("and so did the cache", inv.GetStashCount("rat_tallow") == 3);
+        Check("and so did the cache", inv.GetStashCount("mat_tallow") == 3);
 
         SaveService.DeleteSave(path);
 
@@ -1262,14 +1422,22 @@ public static class SliceVerifier
     }
 
     /// <summary>
-    /// The verifier's own rooms, registered once before any gate runs. Two camps and one patch of
-    /// open ground, all under a <c>verify_</c> prefix that the authoring sweep skips.
+    /// The verifier's own rooms and its one heist, registered once before any gate runs, all under a
+    /// <c>verify_</c> prefix and a <c>ChapterId</c> of <c>"verify"</c> that the authoring sweeps skip.
     ///
-    /// Registered up front rather than inside <see cref="GateCamps"/> because
+    /// Registered up front rather than inside the gates that use them because
     /// <see cref="GatePersistence"/> needs somewhere to stand that Jeremy cannot turn into a camp.
     /// It saves a wounded bar and loads it back, and arriving at a camp refills both pools — so
     /// taking that round trip in an authored room would go red the day a workbench lands in it.
     /// </summary>
+    /// <remarks>
+    /// Ten rooms and one heist since unit 3b, which is worth stating plainly: <b>every fixture the
+    /// gates below stand on is built here, in code, and none of it is content.</b> Before the
+    /// retirement the first four gate sections stood on eight authored <c>.tres</c> files that existed
+    /// for no other reason, and the cost of that was paid twice — once when the boot room moved and
+    /// every one of them silently meant "wherever the game put me", and again when the prototype came
+    /// to be deleted. A gate that names its fixture can have the fixture swapped under it.
+    /// </remarks>
     private static void RegisterVerifyRooms()
     {
         var nav = NavigationManager.Instance;
@@ -1278,10 +1446,435 @@ public static class SliceVerifier
         nav.DebugRegisterRoom(VerifyRoom("verify_camp", "A Bench Under Canvas", withBench: true));
         nav.DebugRegisterRoom(VerifyRoom("verify_camp_two", "A Second Bench", withBench: true));
         nav.DebugRegisterRoom(VerifyRoom("verify_wilds", "Open Ground", withBench: false));
+        nav.DebugRegisterRoom(VerifyRoom(StationRoomId, "A Mortar In The Open",
+            withBench: false, station: StationId));
 
         nav.DebugRegisterRoom(CueRoom("verify_cues", painted: false));
         nav.DebugRegisterRoom(CueRoom("verify_cues_painted", painted: true));
+
+        nav.DebugRegisterRoom(BlightRoom("verify_blighted", withCreature: false));
+        nav.DebugRegisterRoom(BlightRoom("verify_held", withCreature: true));
+
+        nav.DebugRegisterRoom(ArenaRoom());
+
+        // The retired prototype's replacement: two Waking screens and the closed three-room Dream
+        // chain the surviving heist-shaped probes run inside.
+        nav.DebugRegisterRoom(LoopRoom());
+        nav.DebugRegisterRoom(LoopInnerRoom());
+
+        nav.DebugRegisterRoom(DreamRoom(DreamEntryRoomId, "A Way In", DreamInnerRoomId));
+        nav.DebugRegisterRoom(DreamRoom(DreamInnerRoomId, "Further In", DreamEntryRoomId, DreamDeepRoomId));
+        nav.DebugRegisterRoom(DreamRoom(DreamDeepRoomId, "The Far End", DreamInnerRoomId));
+
+        DreamRunManager.Instance?.DebugRegisterHeist(LoopHeist());
     }
+
+    /// <summary>
+    /// A fixture for <see cref="GateEncounters"/>: seven bodies on one screen, each shaped for exactly one
+    /// question the turn loop has to answer. Synthetic for <see cref="GateWoundLedger"/>'s reason and one
+    /// more of its own — a gate that fights an authored creature <b>wins</b>, and a win writes a
+    /// <c>freed.*</c> or <c>killed.*</c> flag that the ending's bill reads as something the player did.
+    ///
+    /// <para>
+    /// Every field here exists to keep a check honest rather than to describe a creature. The frail pair
+    /// die to one bare-handed strike, so the three win routes cost one turn each and the gate reads a flag
+    /// instead of a loop counter. The durable ones cannot be finished by accident, so a fight can be
+    /// started and abandoned repeatedly without the fixture running out. And <see cref="ArenaTough"/> and
+    /// <see cref="ArenaCut"/> share one <see cref="EntityData"/> on purpose: the wound-persistence pair
+    /// must differ in their <see cref="EntityState"/> and in <i>nothing else</i>, which is hard to promise
+    /// with two files and free with one.
+    /// </para>
+    /// </summary>
+    /// <remarks>
+    /// This is the only <c>verify_</c> room that gets navigated to with creatures on it, so unlike
+    /// <c>verify_held</c> every placement here is complete — <c>RoomView.BuildEntities</c> warns on a
+    /// placement with no <c>Entity</c>, and a pushed warning per gate run is noise that trains people to
+    /// ignore the log.
+    /// </remarks>
+    private static RoomData ArenaRoom()
+    {
+        var room = new RoomData
+        {
+            Id = ArenaRoomId,
+            DisplayName = "Somewhere To Fight",
+            ChapterId = "verify",
+        };
+
+        // Frail to exactly the weakest attack in the game, so "one strike ends it" holds whatever the gate
+        // above happened to leave equipped. The two differ only in `PurifiedName`, which is the authored
+        // discriminator between "there was a person in there" and "there was never anyone".
+        var husk = Arena("verify_arena_husk", GameConfig.BareHandedPotency, purifiedName: "");
+        var person = Arena("verify_arena_person", GameConfig.BareHandedPotency, purifiedName: "Somebody");
+
+        // Typed so the resolver has work to do — 2x to Edge, 0.5x to Blunt — and durable enough that
+        // nothing below finishes it by accident.
+        var tough = Arena("verify_arena_tough", ArenaDurable, purifiedName: "Somebody");
+        tough.VulnerableTo = DamageType.Edge;
+        tough.ResistantTo = DamageType.Blunt;
+
+        // The two that hit back, and they differ in `Deals` and nothing else, because that is the single
+        // field the armour test turns on. Anything else differing would leave the ward check able to pass
+        // for the wrong reason.
+        var edged = Arena("verify_arena_edged", ArenaDurable, purifiedName: "Somebody");
+        edged.VulnerableTo = DamageType.Blunt;
+        edged.ResistantTo = DamageType.Caustic;
+        edged.Deals = DamageType.Edge;
+        edged.Damage = ArenaBlow;
+
+        var burning = Arena("verify_arena_burning", ArenaDurable, purifiedName: "Somebody");
+        burning.VulnerableTo = DamageType.Blunt;
+        burning.ResistantTo = DamageType.Caustic;
+        burning.Deals = DamageType.Fire;
+        burning.Damage = ArenaBlow;
+
+        // The one the panel gate fights, and the only body here that has to be *finishable in a few
+        // turns* — the strike loop reports the turn count §5 asks for, so a durable body would report the
+        // hang guard instead. Its two types are set and deliberately distinct, because the reading the
+        // panel prints has to be checkable for both halves at once; `Damage` is 1 so it can hit back
+        // through three turns without the bar mattering.
+        var shown = Arena("verify_arena_shown", 30, purifiedName: "Somebody");
+        shown.VulnerableTo = DamageType.Fire;
+        shown.Deals = DamageType.Caustic;
+        shown.Damage = 1;
+
+        room.Entities.Add(new EntityPlacement { InstanceId = ArenaBeast, Entity = husk });
+        room.Entities.Add(new EntityPlacement { InstanceId = ArenaFreed, Entity = person });
+        room.Entities.Add(new EntityPlacement { InstanceId = ArenaKilled, Entity = person });
+        room.Entities.Add(new EntityPlacement { InstanceId = ArenaTough, Entity = tough });
+        room.Entities.Add(new EntityPlacement { InstanceId = ArenaCut, Entity = tough });
+        room.Entities.Add(new EntityPlacement { InstanceId = ArenaHitter, Entity = edged });
+        room.Entities.Add(new EntityPlacement { InstanceId = ArenaBurner, Entity = burning });
+        room.Entities.Add(new EntityPlacement { InstanceId = ArenaShown, Entity = shown });
+
+        // A way out, because a fight that outlives the screen it started on was a real defect and only
+        // `--shots` could see it — every other check in this section stands in one room and never moves.
+        // It leads to `verify_wilds` rather than a camp: arriving at a bench refills both pools, which
+        // would wash away the parting blow the door is supposed to charge.
+        room.Hotspots.Add(new HotspotData
+        {
+            Id = ArenaDoor,
+            Label = "A Way Out",
+            Kind = HotspotKind.Navigate,
+            TargetRoomId = "verify_wilds",
+        });
+
+        return room;
+    }
+
+    /// <summary>
+    /// A body with nothing set that the gate does not need. <see cref="EntityData.Damage"/> is zeroed
+    /// rather than left at its default of 8, because a creature that hits back is the exception here:
+    /// every fight the gate runs for a reason other than the ward test has to be able to go long without
+    /// draining the bar into a collapse and a respawn that navigates out of the room.
+    /// </summary>
+    private static EntityData Arena(string id, int durability, string purifiedName) => new()
+    {
+        Id = id,
+        CorruptedName = "Something In The Way",
+        PurifiedName = purifiedName,
+        Durability = durability,
+        Deals = DamageType.None,
+        Damage = 0,
+    };
+
+    private const string ArenaRoomId = "verify_arena";
+
+    private const string ArenaBeast = "verify.arena_beast";
+    private const string ArenaFreed = "verify.arena_freed";
+    private const string ArenaKilled = "verify.arena_killed";
+    private const string ArenaTough = "verify.arena_tough";
+    private const string ArenaCut = "verify.arena_cut";
+    private const string ArenaHitter = "verify.arena_hitter";
+    private const string ArenaBurner = "verify.arena_burner";
+    private const string ArenaShown = "verify.arena_shown";
+
+    private const string ArenaDoor = "verify_arena_door";
+
+    /// <summary>Enough that no sequence of strikes below can finish one of the durable bodies.</summary>
+    private const int ArenaDurable = 400;
+
+    /// <summary>What the two hitters hit for, chosen so halving it lands on a whole number.</summary>
+    private const int ArenaBlow = 10;
+
+    /// <summary>
+    /// What the waystation yard was, in code: a barred road, a creature barring it, a two-step puzzle
+    /// that exposes the way across, and a harvest node that only appears once the screen is clean.
+    /// Unit 3b deleted the prototype and this is where its surviving coverage stands now — the shapes
+    /// below are copied field for field from <c>waystation_yard.tres</c>, because the gates that read
+    /// them are gates about <see cref="InteractionService"/> and <see cref="EntityStateManager"/> and
+    /// were never gates about a rat.
+    ///
+    /// <para>
+    /// <b>Not <see cref="ArenaRoom"/>, and the reason is ordering.</b> The migrated micro-loop purifies
+    /// its creature and cleanses its screen; <see cref="GateEncounters"/> runs later and needs the arena
+    /// bodies still Corrupted. One fixture serving both would make <c>RunGates</c>' order load-bearing in
+    /// a new way, and that order is already the most fragile thing in this file.
+    /// </para>
+    /// </summary>
+    /// <remarks>
+    /// The two harvest nodes yield <b>one bitterroot each</b> where the prototype's yielded two and a
+    /// gravecap, and that is deliberate rather than tidy: <c>SliceVerifier.cs:100</c>, <c>:406</c> and
+    /// <c>:1910</c> all record that later sections inherit the exact stacks the micro-loop harvested, so
+    /// the totals have to come out at two bitterroot and one tallow. Seeding them with
+    /// <c>AddItem</c> instead would have deleted the coverage that <i>harvesting</i> is what put them
+    /// there. Gravecap is gone entirely — it had one source in the game, that source was the shed, and
+    /// no recipe wanted one.
+    /// </remarks>
+    private static RoomData LoopRoom()
+    {
+        var room = new RoomData
+        {
+            Id = LoopRoomId,
+            DisplayName = "The Road, Barred",
+            ChapterId = "verify",
+        };
+
+        room.Entities.Add(new EntityPlacement { InstanceId = LoopBeast, Entity = LoopCreature() });
+
+        // `yard_to_shed`: refused by `BlockedByEntityId` while the body is Corrupted, which is a branch
+        // that sits *ahead* of `IsAvailable` in `ActivateHotspot` and so cannot be probed by a flag.
+        room.Hotspots.Add(new HotspotData
+        {
+            Id = LoopDoor,
+            Label = "Further In",
+            Kind = HotspotKind.Navigate,
+            TargetRoomId = LoopInnerRoomId,
+            BlockedByEntityId = LoopBeast,
+            BlockedText = "verify: it is in the way.",
+        });
+
+        // `yard_cairn`: gated on its own flag being *false*, so it fires exactly once.
+        room.Hotspots.Add(new HotspotData
+        {
+            Id = LoopCairn,
+            Label = "Something Piled Up",
+            Kind = HotspotKind.Interact,
+            ExamineText = "verify: there is something under it.",
+            RequiredFlag = LoopRelicFlag,
+            RequiredFlagValue = false,
+            SetsFlag = LoopRelicFlag,
+        });
+
+        // `yard_relic`: hidden until the cairn is searched. Still a `CrossToDream` even though the
+        // Dream half is retiring, because it is the only thing anywhere that covers the *wiring* from a
+        // Waking click to `DreamRunManager.Begin` — clicked from `GateHeistMechanics`, which is the
+        // section that already knows it is standing on a corpse, and not from the micro-loop.
+        room.Hotspots.Add(new HotspotData
+        {
+            Id = LoopRelic,
+            Label = "The Thing Under It",
+            Kind = HotspotKind.CrossToDream,
+            HeistId = LoopHeistId,
+            RequiredFlag = LoopRelicFlag,
+        });
+
+        // `yard_bitterroot`: the payoff, and it does not exist until the screen is clean.
+        room.Hotspots.Add(new HotspotData
+        {
+            Id = LoopHarvest,
+            Label = "Something Growing",
+            Kind = HotspotKind.Harvest,
+            ItemId = "herb_bitterroot",
+            ItemAmount = 1,
+            RequiredFlag = Flags.Cleansed(LoopRoomId),
+        });
+
+        return room;
+    }
+
+    /// <summary>
+    /// What the waystation shed was: somewhere behind the barred door, holding a bench and a harvest
+    /// node with no flag on it — the take-once-then-refuse probe, which needs a node that starts
+    /// available and stops being available by being taken.
+    /// </summary>
+    private static RoomData LoopInnerRoom()
+    {
+        var room = new RoomData
+        {
+            Id = LoopInnerRoomId,
+            DisplayName = "Behind The Road",
+            ChapterId = "verify",
+        };
+
+        room.Hotspots.Add(new HotspotData
+        {
+            Id = LoopInnerDoor,
+            Label = "Back Out",
+            Kind = HotspotKind.Navigate,
+            TargetRoomId = LoopRoomId,
+        });
+
+        room.Hotspots.Add(new HotspotData
+        {
+            Id = LoopInnerHarvest,
+            Label = "Something Growing",
+            Kind = HotspotKind.Harvest,
+            ItemId = "herb_bitterroot",
+            ItemAmount = 1,
+        });
+
+        room.Hotspots.Add(new HotspotData
+        {
+            Id = LoopInnerBench,
+            Label = "Your Workbench",
+            Kind = HotspotKind.Workbench,
+            SetsFlag = LoopBenchFlag,
+        });
+
+        return room;
+    }
+
+    /// <summary>
+    /// The body in the road. Shaped to the three things the state table and the micro-loop ask of it:
+    /// two names so <c>Resolve</c> has a wrong field to pick, a <see cref="EntityData.HarvestItemId"/>
+    /// so a Purified body can be farmed, and <see cref="EntityData.Damage"/> zeroed so ten turns of
+    /// bare-handed work cannot collapse the player and navigate the gate out of its own room.
+    /// <see cref="EntityData.Durability"/> is left at the authored default so the strike loop is still
+    /// a loop — a one-hit body would pass the same check while measuring nothing.
+    /// </summary>
+    private static EntityData LoopCreature() => new()
+    {
+        Id = "verify_loop_creature",
+        CorruptedName = LoopCorruptedName,
+        PurifiedName = LoopPurifiedName,
+        HarvestItemId = "mat_tallow",
+        Deals = DamageType.None,
+        Damage = 0,
+    };
+
+    /// <summary>
+    /// One link in the synthetic Dream maze. <b>Three rooms, not two</b>, and the third is not
+    /// decoration: <see cref="DreamRunManager.Begin"/> puts the player in the start room, so the
+    /// pursuer has to stand somewhere else, and <see cref="GatePersistence"/>'s stranding check has to
+    /// walk one door in before it takes its save — which with two rooms would walk it straight into the
+    /// pursuer and end the run it is trying to save from.
+    ///
+    /// <para>
+    /// The chain is closed on purpose. <see cref="DreamRunManager.HeistOwningRoom"/> derives the maze by
+    /// walking Navigate hotspots out of the start room, so a single door from any of these to a Waking
+    /// room would put the entire registry inside the heist and make
+    /// <see cref="DreamRunManager.IsDreamRoom"/> true everywhere.
+    /// </para>
+    /// </summary>
+    private static RoomData DreamRoom(string id, string displayName, params string[] doors)
+    {
+        var room = new RoomData { Id = id, DisplayName = displayName, ChapterId = "verify" };
+
+        foreach (var target in doors)
+        {
+            room.Hotspots.Add(new HotspotData
+            {
+                Id = $"{id}_to_{target}",
+                Label = "Onward",
+                Kind = HotspotKind.Navigate,
+                TargetRoomId = target,
+            });
+        }
+
+        return room;
+    }
+
+    /// <summary>
+    /// The run that five surviving files are probed from. <c>data/heists/</c> is empty since unit 3b, so
+    /// there is no authored heist left to borrow — but <c>Hud</c>, <c>CampManager</c>,
+    /// <c>InventoryCraftingManager</c> and <c>SaveService</c> each carry a guard spelled
+    /// <c>IsRunning</c>, and the only way to stand inside that guard is to be inside a run.
+    ///
+    /// <para>
+    /// The pursuer is parked in the deep room and its move interval is set past any plausible run
+    /// length. Belt and braces: <c>SliceVerifier.Run</c> is called synchronously from
+    /// <c>Main.StartGame</c>, so no frame is drawn and <c>_Process</c> never ticks while the gates
+    /// execute — but a gate that depends on the frame loop not running is a gate that changes meaning
+    /// the day someone awaits something, and this costs one field.
+    /// </para>
+    /// </summary>
+    private static DreamHeistData LoopHeist() => new()
+    {
+        Id = LoopHeistId,
+        DisplayName = "verify: a run",
+        TargetEntityId = LoopBeast,
+        ReturnRoomId = LoopRoomId,
+        StartRoomId = DreamEntryRoomId,
+        PursuerStartRoomId = DreamDeepRoomId,
+        PursuerName = "verify: something following",
+        PursuerMoveSeconds = 9999f,
+        PursuerWanderChance = 0f,
+    };
+
+    private const string LoopRoomId = "verify_loop";
+    private const string LoopInnerRoomId = "verify_loop_inner";
+
+    private const string LoopDoor = "verify_loop_door";
+    private const string LoopCairn = "verify_loop_cairn";
+    private const string LoopRelic = "verify_loop_relic";
+    private const string LoopHarvest = "verify_loop_harvest";
+
+    private const string LoopInnerDoor = "verify_loop_inner_door";
+    private const string LoopInnerHarvest = "verify_loop_inner_harvest";
+    private const string LoopInnerBench = "verify_loop_inner_bench";
+
+    private const string LoopRelicFlag = "verify.loop.relic_found";
+    private const string LoopBenchFlag = "verify.loop.bench_found";
+
+    /// <summary>
+    /// The two names <c>Resolve</c> has to choose between. Compared against by the state-presentation
+    /// table, and they are consts rather than literals for one reason: the table is checking that the
+    /// resolver reads the <i>right field for the state</i>, and two distinct strings are all that takes.
+    /// </summary>
+    private const string LoopCorruptedName = "Something In The Road";
+    private const string LoopPurifiedName = "A Plain Animal";
+
+    private const string DreamEntryRoomId = "verify_dream_entry";
+    private const string DreamInnerRoomId = "verify_dream_inner";
+    private const string DreamDeepRoomId = "verify_dream_deep";
+    private const string LoopHeistId = "verify_heist";
+
+    /// <summary>
+    /// A fixture for <see cref="GateMending"/>: one blight, and optionally one creature still standing
+    /// on the same screen. Built in code for the reason <see cref="CueRoom"/> is — the interesting case
+    /// is a screen that is <i>held</i> and <i>fouled</i> at once, which no authored room is, because
+    /// every authored blight screen has to stay playable while its prose is unwritten.
+    ///
+    /// <para>
+    /// Mending the real blights instead would be worse than synthetic: the twelve are content, and a gate
+    /// that mends one leaves a flag behind that a later gate reads as progress. These two rooms are
+    /// disposable, so the mechanism can be driven in both directions and reset.
+    /// </para>
+    /// </summary>
+    /// <remarks>
+    /// The creature is a placement with an <c>InstanceId</c> and <b>no <c>Entity</c></b>, which is a
+    /// shape <see cref="GateFights"/> fails authored content for. That is deliberate and it is why
+    /// <c>verify_held</c> is never navigated to: <see cref="MendManager.IsHeld"/> reads the id and the
+    /// state and nothing else, so a body is all this fixture needs, while <c>RoomView</c> would want an
+    /// overlay to draw. The authoring sweeps skip every <c>verify_</c> room, so the shape is not a lie
+    /// told to a gate — it is a room no gate reads as content.
+    /// </remarks>
+    private static RoomData BlightRoom(string id, bool withCreature)
+    {
+        var room = new RoomData { Id = id, DisplayName = "Broken Ground", ChapterId = "verify" };
+
+        room.Hotspots.Add(new HotspotData
+        {
+            Id = $"{id}_blight",
+            Label = "Something Broken",
+            Kind = HotspotKind.Mend,
+            ItemId = "herb_graveflower",
+            ItemAmount = 1,
+            MendPuzzle = new MendPuzzleData
+            {
+                Prompt = "verify: put it back together.",
+                Parts = new[] { "the near end", "the far end", "the piece that is wrong" },
+                Solution = new[] { 2, 0 },
+            },
+        });
+
+        if (withCreature)
+            room.Entities.Add(new EntityPlacement { InstanceId = HeldCreature });
+
+        return room;
+    }
+
+    private const string HeldCreature = "verify.held_01";
 
     /// <summary>
     /// A fixture for <see cref="GatePlaceholderCues"/>, holding one of each case the layer has to
@@ -1354,8 +1947,14 @@ public static class SliceVerifier
     /// A room built in code for <see cref="GateCamps"/>. Kept clean enough to pass the authoring
     /// sweep on its own merits even though that gate skips it — a helper that could only pass by
     /// being excluded would be worth distrusting.
+    ///
+    /// <para>
+    /// <paramref name="station"/> gives the room a field station and no bench, which is the one venue
+    /// shape unit 3b's break-test found nothing was standing on. See <see cref="StationRoomId"/>.
+    /// </para>
     /// </summary>
-    private static RoomData VerifyRoom(string id, string displayName, bool withBench)
+    private static RoomData VerifyRoom(string id, string displayName, bool withBench,
+        string station = "")
     {
         var room = new RoomData { Id = id, DisplayName = displayName, ChapterId = "verify" };
 
@@ -1377,8 +1976,48 @@ public static class SliceVerifier
             });
         }
 
+        if (!string.IsNullOrEmpty(station))
+        {
+            room.Hotspots.Add(new HotspotData
+            {
+                Id = $"{id}_station",
+                Label = "A Station",
+                Kind = HotspotKind.Station,
+                StationId = station,
+            });
+        }
+
         return room;
     }
+
+    /// <summary>
+    /// A field station standing on ground that is <b>not</b> a camp — an anvil in the open, which is
+    /// the shape <c>InventoryCraftingManager.AtVenueFor</c>'s Dream guard exists for and the shape
+    /// nothing was probing.
+    ///
+    /// <para>
+    /// <b>Found by a break-test rather than by reading.</b> Unit 3b's third break-test unregistered the
+    /// synthetic run and expected the camp, crafting and stranding checks to go red together; the camp
+    /// and stranding ones did and no crafting check moved, because there was no crafting check. The
+    /// guard's own remarks say it is *load-bearing on the field-station arm only* — <c>AtCamp</c>
+    /// already refuses inside a run, so the bench arm passes whether the guard is there or not — and a
+    /// probe standing at a bench would have been exactly the unfalsifiable check
+    /// <c>deleting-a-gated-mechanism</c> warns about. It needed a venue that is a station and nothing
+    /// else, and no fixture had one.
+    /// </para>
+    ///
+    /// <para>
+    /// <b>The recipe is the one station recipe with no blueprint</b>, and that is why it is this one
+    /// rather than a tool. <c>Inspect</c> checks knowledge *before* the venue and deliberately so — an
+    /// unlearned recipe refuses on ignorance rather than revealing itself by complaining about where you
+    /// are standing — so a probe on any of the other ten would read <c>Unknown</c> in both arms and
+    /// measure nothing. Discovering the blueprint first would work and would also make this probe fail
+    /// the day the discovery API moves, for a reason that has nothing to do with what it asserts.
+    /// </para>
+    /// </summary>
+    private const string StationRoomId = "verify_station";
+    private const string StationId = "mortar";
+    private const string StationRecipeId = "recipe_salve_clearmind";
 
     // ---- Authored content ------------------------------------------------
 
@@ -1451,16 +2090,16 @@ public static class SliceVerifier
         // it is up, the subscription rebuilds immediately (proven above — those slots appeared with
         // nothing calling into the panel); while it is down, the change is deferred to Open.
         panel.Close();
-        inv.AddItem("rat_tallow", 1);
+        inv.AddItem("mat_tallow", 1);
         panel.Open();
         Check("a pickup made while it was down is there on opening", panel.SlotCount == 2);
-        inv.RemoveItem("rat_tallow", 1);
+        inv.RemoveItem("mat_tallow", 1);
         Check("and the grid is back to one when it goes", panel.SlotCount == 1);
 
         // The load case, which is where a deferred rebuild actually bites: ImportStacks replaces
         // the whole satchel at once, and it happens while no panel is on screen.
         panel.Close();
-        inv.ImportStacks(new Dictionary<string, int> { ["salve_clearmind"] = 1, ["rat_tallow"] = 2 });
+        inv.ImportStacks(new Dictionary<string, int> { ["salve_clearmind"] = 1, ["mat_tallow"] = 2 });
         panel.Open();
         Check("a loaded satchel draws the loaded stacks", panel.SlotCount == 2);
         Check("and nothing of the old one survives", !inv.Has("herb_bitterroot"));
@@ -1501,8 +2140,735 @@ public static class SliceVerifier
         // change without this line becoming a lie about what it is checking.
         Check("and its slot is gone", panel.SlotCount == slotsBefore - 1);
 
+        // -- Reading a tile without hovering it (the first playtest, 2026-08-03) --
+        // *"I didn't realize I had the axe"*: a swatch is a colour, and a tooltip needs you to already
+        // suspect something is there. So every slot carries its name, and the name is the manager's word
+        // for the item rather than the id — a grid of `mat_scrap_iron` would pass a weaker check.
+        inv.ResetAll();
+        inv.AddItem("salve_clearmind", 2);
+        inv.AddItem("herb_bitterroot", 1);
+        panel.Open();
+
+        var names = panel.SlotNames.ToList();
+        Check("every drawn slot carries a caption", names.Count == panel.SlotCount && names.All(n => n != ""));
+        Check("and it is the item's display name, not its id",
+            names.Contains(inv.GetItem("salve_clearmind").DisplayName) &&
+            names.Contains(inv.GetItem("herb_bitterroot").DisplayName));
+
+        Check("a stack count is drawn dark enough to read against a pale swatch", panel.SlotCountsAreLegible);
+        // The other half of that stopgap, and the half no screenshot would ever show: the override steps
+        // aside the day the scene sets a colour of its own.
+        Check("and the code override defers to a colour the scene sets", InventoryPanel.CountColourDefersToTheScene());
+
+        // -- Where the caption and the count sit on the tile --
+        // The second playtest, and both halves of it were code I wrote for the first. The caption stopped
+        // 48px short of the right edge to keep clear of the count, which left about eight characters and cut
+        // every longer name — *"Cairnsto"*, *"Corrosiv"*, *"Rendere"*. So the band takes the whole tile and
+        // the count moves instead. A screenshot found this; the three checks below are what would have.
+        var (caption, count, swatch) = InventoryPanel.CaptionLayoutOnATile();
+        Check("the caption band is at least as wide as the swatch it labels", caption.Size.X >= swatch.Size.X);
+        Check("and the stack count sits on the swatch rather than off its corner", swatch.Encloses(count));
+        // *"The number of items needs to move left a tiny bit to be on the icon where it should be."*
+        Check("with the caption and the count clear of one another", !caption.Intersects(count));
+        // Stronger than the check above, and the one that actually pins the arrangement: *above*, not merely
+        // *not overlapping*. Two disjoint boxes pass `!Intersects` by being side by side, which is the wrong
+        // fix — the number belongs over the artwork, clear of the text below it.
+        Check("and the count sits above the caption rather than beside it", count.End.Y <= caption.Position.Y);
+        // *"Everything is right besides it being in the middle."* The round before this one made the swatch
+        // square again and held the count's box on the same absolute pixels, which every check above passed —
+        // and on a swatch 40px taller those pixels are the middle of the icon. So this measures the two *gaps*
+        // rather than a position: whatever the swatch's height, the number is the same few pixels in from the
+        // corner it is meant to be in. `Encloses` above says it is on the artwork; this says where.
+        Check("with the count the same few pixels in from both of the swatch's near edges",
+            Mathf.IsEqualApprox(swatch.End.X - count.End.X, InventoryPanel.CountInset) &&
+            Mathf.IsEqualApprox(swatch.End.Y - count.End.Y, InventoryPanel.CountInset));
+        // *"The placement is correct but it isn't square."* Asked for twice, so unlike the gate this replaced
+        // it is a requirement rather than a description of whatever the last round happened to build. It holds
+        // by *narrowing* the swatch to its height — the caption fixes the bottom and the scene fixes the top,
+        // so the height is spoken for and the width is the only dimension left to move.
+        Check("and the swatch a square, since squaring it is what narrowing it is for",
+            Mathf.IsEqualApprox(swatch.Size.X, swatch.Size.Y));
+
+        // -- The tab strip --
+        // *"there should be a tab for each item type so go through them quicker/easier"* — but only for a
+        // type you actually carry, so the strip is never a row of dead ends.
+        Check("All is the tab on a satchel nobody has touched", panel.ActiveTabLabel == InventoryPanel.AllTabLabel);
+        Check("and under it the grid is still one slot per held stack", panel.SlotCount == 2);
+
+        Check("the two kinds carried each get a tab, beside All", panel.TabCount == 3);
+        Check("Lore gets none, because nothing authored is Lore yet",
+            !panel.TabbedCategories.Contains(ItemCategory.Lore));
+
+        panel.DebugSelectTab(ItemCategory.Salve);
+        Check("a tab narrows the grid to its kind", panel.SlotCount == 1);
+        Check("and says which kind that is in the player's word", panel.ActiveTabLabel == "Salves");
+        Check("the one slot left is the salve",
+            panel.SlotNames.Single() == inv.GetItem("salve_clearmind").DisplayName);
+
+        // Selection is about what you last looked at, not about what is on screen now.
+        panel.DebugSelect("herb_bitterroot");
+        panel.DebugSelectTab(ItemCategory.Salve);
+        Check("an item filtered out of the grid keeps the detail column",
+            panel.DetailName == inv.GetItem("herb_bitterroot").DisplayName);
+
+        panel.DebugSelectTab(null);
+        Check("All puts everything back", panel.SlotCount == 2);
+
+        // A tab arrives with the first of its kind and leaves with the last, which is the whole reason the
+        // strip is rebuilt rather than authored: it grows as the game does.
+        inv.AddItem("trap_snare", 1);
+        Check("a new kind brings a tab with it", panel.TabCount == 4 &&
+            panel.TabbedCategories.Contains(ItemCategory.Trap));
+
+        panel.DebugSelectTab(ItemCategory.Trap);
+        inv.RemoveItem("trap_snare", 1);
+        Check("spending the last of a kind takes its tab away", panel.TabCount == 3 &&
+            !panel.TabbedCategories.Contains(ItemCategory.Trap));
+        // The failure this prevents is an empty grid with no obvious way out of it.
+        Check("and the filter it was holding falls back to All",
+            panel.ActiveTabLabel == InventoryPanel.AllTabLabel && panel.SlotCount == 2);
+
         panel.Close();
         Check("it is left closed for whatever runs next", !panel.IsOpen);
+    }
+
+    // ---- Encounters ------------------------------------------------------
+
+    /// <summary>
+    /// The turn loop: what an action costs, what a blow is worth once it has been through the loop rather
+    /// than beside it, and which of three flags a win writes. `docs/combat.md` §18 is the authority on
+    /// every rule below.
+    ///
+    /// <para><b>Late on purpose, for two reasons.</b> It churns the satchel harder than any other gate —
+    /// two weapons, a coat, six traps and a fistful of salves — and <see cref="GatePersistence"/>
+    /// deliberately inherits the reagents the micro-loop harvested, which is the same argument that put
+    /// <see cref="GateCraftingAndUse"/> down here. And it is the only gate that <i>equips</i> anything, so
+    /// running it before <see cref="GateWoundLedger"/> would mean every number that gate reads from the
+    /// resolver had a coat sitting behind it.</para>
+    ///
+    /// <para><b>Everything happens in one room, and that is not tidiness.</b>
+    /// <c>NavigationManager.FindPlacement</c> searches only the current room (by design — an instance id
+    /// is a placement, and placements are room-scoped), so a fight whose opponent is elsewhere resolves
+    /// to nothing and every verb below silently returns false. Which is exactly why the death gate is
+    /// last: it collapses the player, and a collapse walks them to a camp.</para>
+    /// </summary>
+    private static void GateEncounters()
+    {
+        Section("encounters  the turn loop, and what a fight leaves behind");
+
+        var encounters = EncounterManager.Instance;
+        var nav = NavigationManager.Instance;
+        var inv = InventoryCraftingManager.Instance;
+        var combat = CombatManager.Instance;
+        var states = EntityStateManager.Instance;
+        var world = WorldStateManager.Instance;
+        var vitality = VitalityManager.Instance;
+
+        Check("the manager is registered", encounters != null);
+        if (encounters == null || nav == null || inv == null || combat == null
+            || states == null || world == null || vitality == null) return;
+
+        const string Axe = "weapon_splitting_axe";
+        const string Maul = "weapon_bell_maul";
+        const string Coat = "armour_tanners_coat";
+        const string Jack = "armour_padded_jack";      // deliberately never picked up
+        const string Deadfall = "trap_deadfall";       // sets itself off
+        const string Oil = "trap_oil_slick";           // waits for a turn
+        const string Vitriol = "trap_vitriol_flask";   // waits for a turn
+        const string Salve = "salve_clearmind";
+        const string Reagent = "herb_bitterroot";      // a Component, so death takes it
+
+        nav.GoToRoom(ArenaRoomId);
+        Check("the arena is walkable", nav.CurrentRoomId == ArenaRoomId);
+
+        var missing = new[] { ArenaBeast, ArenaFreed, ArenaKilled, ArenaTough, ArenaCut, ArenaHitter,
+                ArenaBurner, ArenaShown }
+            .Where(id => Placement(id)?.Entity == null).ToList();
+        Check($"and every body on it resolves{Listing(missing)}", missing.Count == 0);
+        if (missing.Count > 0) return;
+
+        encounters.ResetAll();
+        combat.ResetAll();
+        inv.ResetAll();
+        vitality.ResetAll();
+
+        foreach (var id in new[] { ArenaBeast, ArenaFreed, ArenaKilled, ArenaTough, ArenaCut, ArenaHitter,
+            ArenaBurner, ArenaShown })
+            states.SetState(id, EntityState.Corrupted);
+
+        inv.AddItem(Axe, 1);
+        inv.AddItem(Maul, 1);
+        inv.AddItem(Coat, 1);
+        inv.AddItem(Salve, GameConfig.SalveSlotsPerFight + 3);
+
+        // Every trap in the arsenal, so gate 1 can ask for the (n+1)th without naming a file. The cap
+        // check needs the refused trap to be *held*: `InspectRig` tests the satchel before it tests the
+        // sites, so an unheld trap would answer NotHeld and the check would pass for the wrong reason.
+        var traps = inv.Catalogue.Values
+            .Where(i => i != null && i.Category == ItemCategory.Trap && !string.IsNullOrEmpty(i.Id))
+            .Select(i => i.Id).OrderBy(id => id).ToList();
+        foreach (var id in traps) inv.AddItem(id, 1);
+
+        // -- 0: the debug rig key, which a player cannot prove works --------
+        // F8 exists because `Rig` shipped with no reachable verb: the fight screen cannot host it (§18 —
+        // rigging is free before a fight and costs a turn inside one, so it belongs on the room), and the
+        // satchel has no Set button yet. The key is *pressed* here rather than merely bound, because on a
+        // real playthrough it answers "no traps in the satchel" until unit 6 grants a trap blueprint —
+        // correct and broken look identical on screen. That is the manufactured-probe case: a stopgap that
+        // defers to content which does not exist yet needs the suite to hand it the content.
+        //
+        // Deliberately does not name the creature it should pick. The routine takes the room's first body
+        // and every creature-bearing room in the game holds exactly one, so *which* is not a claim worth
+        // gating; that it filled a rig from the satchel at all is.
+        var arenaBodies = new[] { ArenaBeast, ArenaFreed, ArenaKilled, ArenaTough, ArenaCut, ArenaHitter,
+            ArenaBurner, ArenaShown };
+        Check("nothing is set on the arena before the rig key is pressed",
+            arenaBodies.Sum(id => encounters.RiggedAgainst(id).Count) == 0);
+
+        Main.RigEverythingPossibleHere();
+
+        var setByKey = arenaBodies.Sum(id => encounters.RiggedAgainst(id).Count);
+        Check($"and pressing it fills one creature's sites out of the satchel ({setByKey} of "
+            + $"{GameConfig.RigSlotsPerFight})",
+            setByKey == GameConfig.RigSlotsPerFight);
+
+        // Cleared, because everything below counts sites on a slate it assumes is empty — an ordering
+        // hazard the probe introduced and therefore has to close.
+        encounters.ResetAll();
+        Check("and the slate clears behind it, which every check below assumes",
+            arenaBodies.Sum(id => encounters.RiggedAgainst(id).Count) == 0);
+
+        // -- 1: two sites, and the third is refused ------------------------
+        Check($"the arsenal has more traps than a creature has sites ({traps.Count} traps, "
+            + $"{GameConfig.RigSlotsPerFight} sites)",
+            traps.Count > GameConfig.RigSlotsPerFight);
+
+        var rigged = new List<string>();
+        for (var i = 0; i < GameConfig.RigSlotsPerFight; i++)
+            if (encounters.Rig(ArenaTough, traps[i])) rigged.Add(traps[i]);
+
+        Check($"a creature's sites fill to the dial's own number ({rigged.Count} of "
+            + $"{GameConfig.RigSlotsPerFight})",
+            rigged.Count == GameConfig.RigSlotsPerFight
+            && encounters.RiggedAgainst(ArenaTough).Count == GameConfig.RigSlotsPerFight);
+
+        // Four lines rather than one conjunction, and the break-test is why: `&&` short-circuits, so a
+        // raised cap made the inspection go red and left the *act* unrun — which meant "it did not land"
+        // passed for no reason at all. Anywhere an inspection and its act are checked together, the act
+        // has to be reached whether the inspection agreed or not.
+        var overflow = traps[GameConfig.RigSlotsPerFight];
+        Check("the trap that gets refused is one you are actually carrying", inv.Has(overflow));
+        Check("the sites say they are full", encounters.InspectRig(ArenaTough, overflow) == RigBlock.SlotsFull);
+        Check("and the act refuses too, not only the inspection", !encounters.Rig(ArenaTough, overflow));
+        Check("and nothing was quietly swapped out for it",
+            !encounters.RiggedAgainst(ArenaTough).Contains(overflow)
+            && encounters.RiggedAgainst(ArenaTough).Count == GameConfig.RigSlotsPerFight);
+
+        // "Already set" beats "no room", which is the right order: the player who re-clicks a trap they
+        // already placed is told what happened rather than told the sites are full.
+        Check("setting the same trap twice is refused as already set, not as no room",
+            encounters.InspectRig(ArenaTough, rigged[0]) == RigBlock.AlreadyRigged);
+        Check("a salve is not something you can set", encounters.InspectRig(ArenaTough, Salve) == RigBlock.NotATrap);
+        Check("and nothing at all is nothing at all",
+            encounters.InspectRig(ArenaTough, "verify_no_such_item") == RigBlock.NoSuchItem);
+
+        // Put one down and ask again — an id taken from the same list, so an arsenal that grows cannot
+        // leave this check naming a file nobody carries any more.
+        inv.RemoveItem(overflow, inv.GetCount(overflow));
+        Check("a trap you are not carrying cannot be set",
+            encounters.InspectRig(ArenaTough, overflow) == RigBlock.NotHeld);
+        inv.AddItem(overflow, 1);
+
+        foreach (var id in rigged.ToList()) encounters.Unrig(ArenaTough, id);
+        Check("taking them all back off leaves the sites empty",
+            encounters.RiggedAgainst(ArenaTough).Count == 0);
+
+        // -- 2: free outside the fight, a turn inside it -------------------
+        var hitter = Placement(ArenaHitter).Entity;
+        Check("the body that hits back deals something worth measuring",
+            hitter.Deals != DamageType.None && hitter.Damage > 0);
+
+        vitality.ResetAll();
+        Check("rigging before you commit costs no turn and no blood",
+            encounters.Rig(ArenaHitter, Oil) && encounters.Rig(ArenaHitter, Vitriol)
+            && encounters.TurnNumber == 0
+            && Mathf.IsEqualApprox(vitality.Current, vitality.Max));
+
+        Check("committing is not itself a turn", encounters.Engage(ArenaHitter));
+        Check("and the turn count is still nothing", encounters.TurnNumber == 0);
+
+        var beforeUnrig = vitality.Current;
+        Check("but changing your mind inside a fight is an action",
+            encounters.Unrig(ArenaHitter, Vitriol) && encounters.TurnNumber == 1);
+        Check("and an action is the creature getting one",
+            Mathf.IsEqualApprox(vitality.Current, beforeUnrig - hitter.Damage));
+
+        Check("and you can leave", encounters.Flee());
+        encounters.Unrig(ArenaHitter, Oil);
+
+        // -- 3: the traps that set themselves off, and the ones that wait ---
+        var tough = Placement(ArenaTough).Entity;
+        var deadfall = inv.GetItem(Deadfall);
+        var oil = inv.GetItem(Oil);
+
+        Check("the two traps disagree about who sets them off",
+            deadfall != null && oil != null && deadfall.TriggersItself && !oil.TriggersItself);
+
+        combat.ResetAll();
+        Check("both go on the sites", encounters.Rig(ArenaTough, Deadfall) && encounters.Rig(ArenaTough, Oil));
+
+        var volley = CombatManager.DamageAgainst(deadfall.Deals, tough, deadfall.Potency);
+        var waiting = CombatManager.DamageAgainst(oil.Deals, tough, oil.Potency);
+
+        Check("committing fires the trap that fires itself", encounters.Engage(ArenaTough));
+        Check("and it landed before turn 1, which is what makes placement free",
+            combat.WoundsOn(ArenaTough) == volley && volley > 0 && encounters.TurnNumber == 0);
+        // The clause about `waiting` is what stops the equality above being unfalsifiable: if the oil
+        // were worth nothing against this body, "the total is the deadfall's alone" would hold whether
+        // the oil fired or not.
+        Check("and the one that waits for you has not fired, though it would have been felt",
+            waiting > 0 && combat.WoundsOn(ArenaTough) == volley);
+
+        Check("setting it off yourself lands it", encounters.Trigger(Oil));
+        Check("and costs the turn the self-triggering one did not", encounters.TurnNumber == 1);
+        Check("and the ledger holds both", combat.WoundsOn(ArenaTough) == volley + waiting);
+
+        Check("a trap that has already done its work refuses a second firing", !encounters.Trigger(Deadfall));
+        Check("and refusing spent nothing", encounters.TurnNumber == 1);
+
+        Check("out again", encounters.Flee());
+        encounters.Unrig(ArenaTough, Deadfall);
+        encounters.Unrig(ArenaTough, Oil);
+
+        // -- 4: fourfold, driven through Strike ----------------------------
+        var axe = inv.GetItem(Axe);
+        var maul = inv.GetItem(Maul);
+
+        Check("the two weapons swing with the same weight, or the comparison means nothing",
+            axe != null && maul != null && axe.Potency == maul.Potency && axe.Potency > 0);
+        Check("and differ only in what they deal",
+            axe.Deals == DamageType.Edge && maul.Deals == DamageType.Blunt);
+        Check("and the body fears one of those and shrugs off the other",
+            tough.VulnerableTo == axe.Deals && tough.ResistantTo == maul.Deals);
+
+        combat.ResetAll();
+        Check("the axe goes in hand", inv.Equip(Axe) && inv.EquippedWeapon?.Id == Axe);
+        Check("and one swing lands", encounters.Engage(ArenaTough) && encounters.Strike());
+        var edgeHit = combat.WoundsOn(ArenaTough);   // read before Flee: settling an anchored body closes it
+        Check("out", encounters.Flee());
+
+        combat.ResetAll();
+        Check("the maul goes in hand", inv.Equip(Maul) && inv.EquippedWeapon?.Id == Maul);
+        Check("and one swing lands", encounters.Engage(ArenaTough) && encounters.Strike());
+        var bluntHit = combat.WoundsOn(ArenaTough);
+        Check("out", encounters.Flee());
+
+        Check($"the type it fears hurts more through the loop, not only beside it ({edgeHit} vs {bluntHit})",
+            edgeHit > bluntHit && bluntHit > 0);
+        Check("and by exactly the two dials' own ratio, rather than a number written here",
+            edgeHit == Mathf.RoundToInt(
+                bluntHit * (GameConfig.VulnerableMultiplier / GameConfig.ResistantMultiplier)));
+        Check("and the loop's arithmetic is the resolver's, so a fight cannot disagree with the ledger",
+            edgeHit == CombatManager.DamageAgainst(axe.Deals, tough, axe.Potency)
+            && bluntHit == CombatManager.DamageAgainst(maul.Deals, tough, maul.Potency));
+
+        // -- 5: a coat turns aside one type and no other -------------------
+        var coat = inv.GetItem(Coat);
+        var burner = Placement(ArenaBurner).Entity;
+
+        Check("the coat turns aside what one of the two hitters deals",
+            coat != null && coat.WardsAgainst == hitter.Deals);
+        Check("and not what the other deals, which is the case that makes the check mean anything",
+            coat.WardsAgainst != burner.Deals);
+        Check("and the two hit for the same, so what follows is about type and nothing else",
+            hitter.Damage == burner.Damage && hitter.Damage > 0);
+
+        inv.Unequip(EquipSlot.Armour);
+        vitality.ResetAll();
+        Check("unprotected, you take its blow", encounters.Engage(ArenaHitter) && encounters.Strike());
+        var bare = vitality.Max - vitality.Current;
+        Check("out", encounters.Flee());
+
+        vitality.ResetAll();
+        Check("the coat goes on", inv.Equip(Coat) && inv.EquippedArmour?.Id == Coat);
+        Check("and you take the same blow again", encounters.Engage(ArenaHitter) && encounters.Strike());
+        var warded = vitality.Max - vitality.Current;
+        Check("out", encounters.Flee());
+
+        Check($"the coat halves the blow it was made for ({warded} of {bare})",
+            bare > 0 && Mathf.IsEqualApprox(warded,
+                Mathf.Max(1, Mathf.RoundToInt(bare * GameConfig.WardMultiplier))));
+        // Halved, never negated (§18): an immunity reads as a lock and sends the player hunting a key.
+        Check("and halving is not negating — a warded blow is still a blow", warded > 0);
+
+        vitality.ResetAll();
+        Check("wearing it against a type it does not ward",
+            encounters.Engage(ArenaBurner) && encounters.Strike());
+        var wrongType = vitality.Max - vitality.Current;
+        Check("out", encounters.Flee());
+        Check($"buys nothing at all ({wrongType} of {bare})", Mathf.IsEqualApprox(wrongType, bare));
+
+        // Printed, not asserted. "No authored coat wards Fire" is true today and a legitimate thing for
+        // Jeremy to change tomorrow; a gate that went red the day a fire coat was authored is a gate
+        // that teaches people to stop running the suite. The fixture above is what carries the claim.
+        GD.Print("       armour authored: " + string.Join(", ", inv.Catalogue.Values
+            .Where(i => i != null && i.Slot == EquipSlot.Armour)
+            .Select(i => $"{i.Id} wards {i.WardsAgainst}").OrderBy(s => s)));
+
+        inv.Unequip(EquipSlot.Armour);
+
+        // -- 6: flight is guaranteed and costs one parting strike ----------
+        vitality.ResetAll();
+        Check("flight from a fresh commitment succeeds",
+            encounters.Engage(ArenaHitter) && encounters.Flee());
+        Check("and cost exactly one parting blow",
+            Mathf.IsEqualApprox(vitality.Current, vitality.Max - hitter.Damage));
+        Check("and left no fight behind it", !encounters.InFight);
+
+        vitality.ResetAll();
+        Check("flight from the middle of one succeeds too",
+            encounters.Engage(ArenaHitter) && encounters.Strike() && encounters.Flee());
+        Check("and cost the turn's blow plus the parting one, and no roll came into it",
+            Mathf.IsEqualApprox(vitality.Current, vitality.Max - hitter.Damage * 2));
+
+        Check("with nothing to break off from, breaking off is refused", !encounters.Flee());
+
+        // -- 6b: a fight does not outlive the screen it started on ----------
+        // Found by `--shots` and by nothing else (2026-08-03). Every check above stands still, so a fight
+        // that survived a door click was invisible to all of them: the panel stayed open for the rest of
+        // the run, two chapters away, titled after a creature nobody was next to. Two halves, because
+        // either one alone is wrong — the door is a way of breaking off and pays a parting blow like one,
+        // and *every other* way of changing rooms ends the fight for nothing, so no path can leave one
+        // behind. The second half is the invariant; the first is only the price.
+        vitality.ResetAll();
+        Check("committed, and then the door is clicked", encounters.Engage(ArenaHitter));
+        Check("walking out works while a fight is live",
+            InteractionService.ActivateHotspot(Hotspot(ArenaDoor)) && nav.CurrentRoomId == "verify_wilds");
+        Check("and the fight did not come along", !encounters.InFight);
+        Check("and the door charged the parting blow, because leaving IS breaking off",
+            Mathf.IsEqualApprox(vitality.Current, vitality.Max - hitter.Damage));
+
+        nav.GoToRoom(ArenaRoomId);
+        vitality.ResetAll();
+        Check("committed again, then moved by something that is not a door at all",
+            encounters.Engage(ArenaHitter));
+        nav.GoToRoom("verify_wilds");
+        Check("the fight is gone that way too — the backstop, which every path goes through",
+            !encounters.InFight);
+        Check("and that one was free, because a collapse navigates and must not be billed twice",
+            Mathf.IsEqualApprox(vitality.Current, vitality.Max));
+
+        nav.GoToRoom(ArenaRoomId);
+
+        // -- 7: the three win routes, and the three flags ------------------
+        foreach (var id in new[] { ArenaBeast, ArenaFreed, ArenaKilled })
+        {
+            world.SetFlag(Flags.Freed(id), false);
+            world.SetFlag(Flags.Killed(id), false);
+            world.SetFlag(Flags.Defeated(id), false);
+        }
+
+        combat.ResetAll();
+        vitality.ResetAll();
+
+        Check("a thing that was never a person is fought",
+            encounters.Engage(ArenaBeast) && encounters.Strike() && !encounters.InFight);
+        Check("and writing it down says defeated, and neither of the other two",
+            world.GetFlag(Flags.Defeated(ArenaBeast))
+            && !world.GetFlag(Flags.Freed(ArenaBeast)) && !world.GetFlag(Flags.Killed(ArenaBeast)));
+        Check("and the body is purified", states.GetState(ArenaBeast) == EntityState.Purified);
+
+        states.Sever(ArenaFreed);
+        Check("a person whose tether was cut first", states.GetState(ArenaFreed) == EntityState.Severed);
+        Check("goes down the same way",
+            encounters.Engage(ArenaFreed) && encounters.Strike() && !encounters.InFight);
+        Check("and is freed — not killed, and not merely defeated",
+            world.GetFlag(Flags.Freed(ArenaFreed))
+            && !world.GetFlag(Flags.Killed(ArenaFreed)) && !world.GetFlag(Flags.Defeated(ArenaFreed)));
+
+        Check("a person still anchored when the last blow lands",
+            states.GetState(ArenaKilled) == EntityState.Corrupted);
+        Check("goes down too, because overkill is never refused",
+            encounters.Engage(ArenaKilled) && encounters.Strike() && !encounters.InFight);
+        Check("and is killed by it — the flag that keeps the ending's count honest",
+            world.GetFlag(Flags.Killed(ArenaKilled))
+            && !world.GetFlag(Flags.Freed(ArenaKilled)) && !world.GetFlag(Flags.Defeated(ArenaKilled)));
+        // The one consequence of that ruling worth asserting rather than leaving to be discovered: the
+        // enum has three members and Purified is the terminal one, so the screen cleanses either way.
+        // The weight of the overkill route lives in the ending's count of freed.*, not in a dirty room.
+        Check("and purified all the same, whichever route you took",
+            states.GetState(ArenaKilled) == EntityState.Purified);
+        Check("and a finished body is no longer hostile",
+            encounters.InspectEngage(ArenaKilled) == EngageBlock.NotHostile);
+        Check("so it cannot be fought again — the act, not only the inspection",
+            !encounters.Engage(ArenaKilled) && !encounters.InFight);
+
+        // -- 8: the bill the flag domains promise --------------------------
+        // Scoped to the chapters, on GateFights' precedent: it excludes every verify_ fixture, so the
+        // two numbers are the authored roster and nothing else. Unit 3b narrowed the *reason* without
+        // touching the predicate — the scoping used to exclude the waystation prototype as well, and the
+        // fixtures alone still require it: `verify_arena` carries eight placements and `verify_loop` one.
+        // **What will move this:** unit 6's three bosses. They have no PurifiedName, so they land in the
+        // second number and it becomes 9 — the promise is co-located on Flags.Defeated, and this is the
+        // check that makes it a promise rather than a note.
+        var people = 0;
+        var beasts = 0;
+        foreach (var (_, room) in nav.Rooms)
+        {
+            if (room?.ChapterId?.StartsWith("ch") != true) continue;
+
+            foreach (var p in room.Entities ?? new Godot.Collections.Array<EntityPlacement>())
+            {
+                if (p?.Entity == null) continue;
+                if (string.IsNullOrEmpty(p.Entity.PurifiedName)) beasts++;
+                else people++;
+            }
+        }
+
+        Check($"the placed roster bills 24 people, so freed.* + killed.* can only ever total 24 ({people})",
+            people == 24);
+        Check($"and 6 that were never people, so defeated.* can only ever total 6 ({beasts})", beasts == 6);
+
+        // -- 9: what the end of a fight does to the ledger -----------------
+        Check("the pair are one authored body standing in two states",
+            Placement(ArenaTough)?.Entity?.Id == Placement(ArenaCut)?.Entity?.Id);
+
+        combat.ResetAll();
+        states.SetState(ArenaTough, EntityState.Corrupted);
+        states.SetState(ArenaCut, EntityState.Severed);
+
+        Check("the anchored one takes a wound", encounters.Engage(ArenaTough) && encounters.Strike());
+        var anchoredHit = combat.WoundsOn(ArenaTough);
+        Check("and it is on the ledger while the fight is on", anchoredHit > 0);
+        Check("out", encounters.Flee());
+        Check("and it closes the moment the fight ends, so an anchored body cannot be worn down in shifts",
+            combat.WoundsOn(ArenaTough) == 0);
+
+        Check("the severed one takes the same wound", encounters.Engage(ArenaCut) && encounters.Strike());
+        Check("exactly the same, since it is the same body and the same weapon",
+            combat.WoundsOn(ArenaCut) == anchoredHit);
+        Check("out", encounters.Flee());
+        Check("and keeps it, so cleanup can be spread across visits",
+            combat.WoundsOn(ArenaCut) == anchoredHit);
+
+        // -- 10: two salves to a fight, and nothing arbitrates -------------
+        combat.ResetAll();
+        vitality.ResetAll();
+        vitality.Damage(80f);
+
+        Check("both sites are loaded before the fight",
+            encounters.Rig(ArenaHitter, Oil) && encounters.Rig(ArenaHitter, Vitriol)
+            && encounters.RiggedAgainst(ArenaHitter).Count == GameConfig.RigSlotsPerFight);
+        Check("and the satchel has more salves than the fight will allow",
+            inv.GetCount(Salve) > GameConfig.SalveSlotsPerFight);
+
+        var heldBefore = inv.GetCount(Salve);
+        Check("committed, wounded", encounters.Engage(ArenaHitter));
+
+        // The bound is a hang guard, not a rule: `Treat` refusing forever is the pass condition, and a
+        // `while` over a verb that could always succeed is the shape verify-slice-blind-spots calls the
+        // worst failure class.
+        var used = 0;
+        while (used <= GameConfig.SalveSlotsPerFight + 2 && encounters.Treat(Salve)) used++;
+
+        Check($"treating inside a fight stops at the dial's own number ({used} of "
+            + $"{GameConfig.SalveSlotsPerFight})",
+            used == GameConfig.SalveSlotsPerFight && encounters.SalvesUsed == used);
+        Check("each one cost a turn and nothing more", encounters.TurnNumber == used);
+        Check("and the refusal spent no salve", inv.GetCount(Salve) == heldBefore - used);
+
+        // §19: "nothing arbitrates." The two caps are separate allowances, so hitting one must not have
+        // quietly cost the other — which is the failure a single shared pool would produce and which
+        // would look, from the outside, exactly like a fight that had gone on a bit long.
+        Check("the trap sites were never in that trade",
+            encounters.RiggedAgainst(ArenaHitter).Count == GameConfig.RigSlotsPerFight);
+        Check("and a trap still goes off with the salve allowance spent out", encounters.Trigger(Oil));
+
+        Check("out", encounters.Flee());
+        encounters.Unrig(ArenaHitter, Oil);
+        encounters.Unrig(ArenaHitter, Vitriol);
+
+        // -- 11: one thing in each slot ------------------------------------
+        Check("the axe goes in the weapon slot", inv.Equip(Axe) && inv.EquippedWeapon?.Id == Axe);
+        Check("the maul replaces it rather than joining it",
+            inv.Equip(Maul) && inv.EquippedWeapon?.Id == Maul);
+        Check("and the axe is still in the satchel, because wearing is not spending", inv.Has(Axe));
+
+        Check("a coat fills the other slot and leaves the weapon where it is",
+            inv.Equip(Coat) && inv.EquippedArmour?.Id == Coat && inv.EquippedWeapon?.Id == Maul);
+        // Nothing chooses a slot at the call site: `Equip` reads `ItemData.Slot`, so armour cannot land
+        // in the weapon slot even by mistake. Asserted as the absence rather than as a refusal.
+        Check("and nothing put the coat where the weapon goes", inv.EquippedIn(EquipSlot.Weapon) == Maul);
+
+        // Split for the reason gate 1's overflow is split: the act must be reached even when the
+        // inspection has already gone red, or the act is never actually tested.
+        Check("wearing what you already wear is refused",
+            inv.InspectEquip(Coat) == EquipBlock.AlreadyWorn);
+        Check("and the act says so too", !inv.Equip(Coat));
+
+        Check("the coat used for the not-held case was never picked up", !inv.Has(Jack));
+        Check("so it cannot be worn", inv.InspectEquip(Jack) == EquipBlock.NotHeld);
+        Check("and the act refuses that too", !inv.Equip(Jack));
+        Check("a salve is not equipment", inv.InspectEquip(Salve) == EquipBlock.NotEquipment);
+        Check("and nothing at all is nothing at all",
+            inv.InspectEquip("verify_no_such_item") == EquipBlock.NoSuchItem);
+
+        Check("a slot empties once", inv.Unequip(EquipSlot.Weapon));
+        Check("and not twice", !inv.Unequip(EquipSlot.Weapon));
+        Check("and there is no slot called none", !inv.Unequip(EquipSlot.None));
+        Check("bare hands are a legal way to stand", inv.EquippedWeapon == null);
+
+        // -- 13: the screen, driven with no mouse and no eyes --------------
+        // Before the death gate rather than after it, because that one walks the player to a camp and
+        // the panel needs a body in the room to be about.
+        var fight = _hud?.Fight;
+        Check("the fight panel reached the Hud", fight != null);
+
+        if (fight != null)
+        {
+            combat.ResetAll();
+            vitality.ResetAll();
+            Check("it starts down", !fight.IsOpen);
+
+            Check("the maul is in hand for this", inv.Equip(Maul));
+            Check("committing puts it up", encounters.Engage(ArenaShown) && fight.IsOpen);
+            Check("and it is about the body you committed to", fight.OpponentId == ArenaShown);
+            Check("which it names, in its condition",
+                fight.TitleText.Length > 0 && fight.ConditionText.Length > 0);
+
+            // §7's legibility promise, and §18's requirement that the confirm line carry *both* halves —
+            // the second is what makes the coat a decision instead of a coin flip. The fixture's two
+            // types were chosen to have distinct, searchable words for exactly this check.
+            var reading = fight.ReadingText;
+            Check($"and the reading names what it flinches from — \"fire\"",
+                reading.Contains("fire", StringComparison.OrdinalIgnoreCase));
+            Check("and what it comes at you with, which is the half that decides the coat",
+                reading.Contains("caustic", StringComparison.OrdinalIgnoreCase));
+            Check("and whether anything still has hold of it",
+                reading.Contains("hold of it", StringComparison.OrdinalIgnoreCase));
+
+            Check("there is a strike on the strip, named for what is in hand",
+                fight.VerbCount >= 1
+                && Enumerable.Range(0, fight.VerbCount)
+                    .Any(i => fight.VerbLabelAt(i).Contains(inv.DisplayNameOf(Maul))));
+
+            // The reading above says what the creature barely notices; until 2026-08-03 the verb never said
+            // what you were about to hit it with, so both halves of the decision were on screen in two
+            // vocabularies that never met. Both checks read `EncounterManager.Words` rather than the word,
+            // so rewording *"weight"* moves the label and the gate together — what cannot pass is a strike
+            // that names no type at all.
+            var maulWords = EncounterManager.Words(inv.GetItem(Maul)?.Deals ?? DamageType.None);
+            Check($"and the strike says what it will deliver — \"{maulWords}\"",
+                Enumerable.Range(0, fight.VerbCount)
+                    .Any(i => fight.VerbLabelAt(i).Contains(maulWords)));
+
+            // The arm that matters, because it is the one the boot hands you: with nothing equipped the
+            // label must still name a type. Repainted through the synchronous door — the strip's own
+            // repaint is deferred and this harness never yields a frame, so `DebugRepaintNow` is what
+            // makes the label readable here, and it is also why this pair covers `RebuildVerbs` and not
+            // the subscription. That gets its own check below.
+            //
+            // It asks for *"bare hands"* as well as the word, and that is not belt-and-braces: the fixture's
+            // maul is Blunt too, so `Contains("weight")` alone passes on a strip that never repainted and
+            // still says `Bell Maul`. A check that cannot fail on the bug it is named for is the first
+            // blind-spot class in `verify-slice-blind-spots`, and it took a green run to notice.
+            var fistWords = EncounterManager.Words(GameConfig.BareHandedType);
+            var signalsBefore = fight.SatchelSignalsSeen;
+            Check("bare-handed, it names the type anyway", inv.Unequip(EquipSlot.Weapon));
+            fight.DebugRepaintNow();
+            Check($"which is the half a player has at the cottage — \"bare hands ({fistWords})\"",
+                Enumerable.Range(0, fight.VerbCount)
+                    .Any(i => fight.VerbLabelAt(i).Contains("bare hands")
+                        && fight.VerbLabelAt(i).Contains(fistWords)));
+            Check("and the maul goes back on for the rest of this", inv.Equip(Maul));
+            fight.DebugRepaintNow();
+
+            // That the strip *heard* the satchel, which is the half of this the harness can have: taking a
+            // weapon off emits `InventoryChanged` and nothing else, and the panel ignored that signal until
+            // 2026-08-03 — so a strike could go on advertising a weapon no longer in hand. The repaint it
+            // triggers is deferred and this suite never yields a frame, so the check is over the handler
+            // running rather than over the pixels, and `DebugRepaintNow` above is what stands in for the
+            // frame. Deleting the `+=` leaves this count still.
+            //
+            // Two tidier spellings were tried first and both went red against correct code: a C#
+            // `signal += handler` marshals into a *custom* callable, so `GetSignalConnectionList` yields an
+            // entry whose `Target` is null and whose `Delegate` does not survive the round trip, and
+            // `IsConnected` with a freshly-made callable to the same handler does not match it either.
+            // Worth remembering before reaching for either again — a signal connected from C# is not
+            // introspectable from C#.
+            Check("and the strip heard the satchel change, not only the log",
+                fight.SatchelSignalsSeen > signalsBefore);
+
+            Check("and there is a way out on it",
+                Enumerable.Range(0, fight.VerbCount)
+                    .Any(i => fight.VerbLabelAt(i).Contains("Break off")));
+
+            // The first playtest could see the room straight through this panel: it is the only one of the
+            // three never handed `PanelTheme.tres`, so its PanelContainer fell back to Godot's default.
+            // *"the battle should be center in the screen and put a tint black overlay over everything."*
+            // The behaviour is gated; the centring is not — that is a layout number on a node the contract
+            // never named, and Jeremy sets it in the editor. See `verify-slice-blind-spots`.
+            Check("the panel draws on something opaque", fight.DrawsOnSomethingOpaque);
+            Check("and the room behind it is tinted out", fight.DimsTheRoom);
+            // The failure that looks exactly like the feature: a scrim in front of the strip greys out the
+            // very buttons the tint was supposed to make legible, and passes every other check here.
+            Check("with the tint behind the verbs and not over them", fight.DimDrawsBehindTheVerbs);
+
+            Check("pressing the strike takes a turn",
+                fight.DebugPressVerbNamed("Strike") && encounters.TurnNumber == 1);
+            Check("and the transcript said something about it", fight.LogText.Length > 0);
+
+            var turns = fight.DebugStrikeUntilDone();
+            Check($"and striking until it stops does stop ({turns} turns)",
+                turns > 0 && !encounters.InFight);
+            Check("and the screen came down with the fight", !fight.IsOpen);
+        }
+
+        // -- 12: what death takes, and what it does not --------------------
+        // **Last in the section**, because a collapse walks the player to a camp and `FindPlacement`
+        // only ever searches the room they are standing in.
+        combat.ResetAll();
+        inv.AddItem(Reagent, 2);
+
+        // The state, not the act: the maul is already in hand from the panel gate above, and `Equip`
+        // answers AlreadyWorn to that — which is correct of it and not what this line is asking.
+        inv.Equip(Maul);
+        inv.Equip(Coat);
+        Check("dressed for it",
+            inv.EquippedWeapon?.Id == Maul && inv.EquippedArmour?.Id == Coat);
+        Check("and carrying something loose", inv.Has(Reagent));
+
+        // Low enough that one warded blow finishes it — warded, because the coat has to still be on when
+        // the bar empties for the check below to be about anything.
+        vitality.SetTo(3f);
+        Check("engaging at the end of your strength", encounters.Engage(ArenaHitter));
+        Check("its answer puts you down", encounters.Strike() && vitality.Current > 3f);
+        Check("and the fight is over rather than following you out of the room", !encounters.InFight);
+        Check("you wake at a camp", CampManager.IsCamp(nav.CurrentRoom));
+
+        // §19, reversing §18: a fight can take nothing permanent from you. Equipment and traps survive,
+        // loose components do not — so the run costs you supplies and never the axe you walked in with.
+        Check("still wearing what you were wearing",
+            inv.EquippedWeapon?.Id == Maul && inv.EquippedArmour?.Id == Coat);
+        Check("and still carrying it, because worn is not spent", inv.Has(Maul) && inv.Has(Coat));
+        Check("and still carrying the traps you set", traps.All(id => inv.Has(id)));
+        Check("but the loose reagents stayed on the floor where you fell", !inv.Has(Reagent));
+
+        // -- Leave nothing behind ------------------------------------------
+        inv.Unequip(EquipSlot.Weapon);
+        inv.Unequip(EquipSlot.Armour);
+        encounters.ResetAll();
+        combat.ResetAll();
+        vitality.ResetAll();
+
+        foreach (var id in new[] { ArenaBeast, ArenaFreed, ArenaKilled })
+        {
+            world.SetFlag(Flags.Freed(id), false);
+            world.SetFlag(Flags.Killed(id), false);
+            world.SetFlag(Flags.Defeated(id), false);
+        }
+
+        world.SetFlag(Flags.Cleansed(ArenaRoomId), false);
     }
 
     /// <summary>
@@ -1536,6 +2902,28 @@ public static class SliceVerifier
             .ToDictionary(kv => kv.Key, kv => kv.Value);
 
         Check("authored rooms are registered", rooms.Count > 0);
+
+        // -- What unit 3b took out, asserted rather than assumed --
+        // A deletion pass leaves nothing behind in the code to notice a file surviving in somebody's
+        // working tree: the loaders scan directories, so a re-appearing `.tres` simply loads, and every
+        // sweep in this file would keep passing while the game quietly grew a screen nobody can reach.
+        // These three are the notice. They are cheap and they will be deleted the day the thing they
+        // name becomes authorable again — which for heists is unit 6, and for the other two is never.
+        var waystation = rooms.Where(kv => kv.Value?.ChapterId?.StartsWith("waystation") == true)
+            .Select(kv => kv.Key).OrderBy(k => k).ToList();
+        Check($"the waystation prototype is gone{Listing(waystation)}", waystation.Count == 0);
+
+        var gravecap = InventoryCraftingManager.Instance.Catalogue.Keys
+            .Where(id => id.StartsWith("herb_gravecap")).OrderBy(k => k).ToList();
+        Check($"and so is the item only it paid out{Listing(gravecap)}", gravecap.Count == 0);
+
+        // `data/heists/` is empty and stays empty. `DreamRunManager` retires in unit 6 along with the
+        // loader, and until then this goes red the moment anyone authors a run into a mechanism that is
+        // scheduled for deletion — which is the whole value of it, and why it counts files rather than
+        // registry entries: the loader is what would silently make a file real.
+        Check($"and no heist is authored into a mechanism that retires in unit 6 "
+            + $"({FilesIn(GameConfig.HeistDataDir)} files)",
+            FilesIn(GameConfig.HeistDataDir) == 0);
 
         // Two checks stood here until 2026-08-01 — that a hazard was authored somewhere, and that at
         // least one was reachable in the Waking world rather than stranded behind spectral vision.
@@ -1649,6 +3037,725 @@ public static class SliceVerifier
         GateWorldGraph(rooms);
         GateCombatShapes(rooms);
         GateFights(rooms);
+        GateMending(rooms);
+        GateStations(rooms);
+        GateRoster(rooms);
+    }
+
+    /// <summary>
+    /// Stations, materials and the three access tools — unit 4a (<c>combat.md</c> §19).
+    /// </summary>
+    /// <remarks>
+    /// <b>The first two checks here are the reason this section exists, and they were red when written.</b>
+    /// 33 Harvest hotspots across the skeleton pass yielded <c>mat_heartwood</c>, <c>mat_pitch</c>,
+    /// <c>mat_scrap_iron</c>, <c>mat_cured_hide</c> and <c>mat_cairnstone</c>, and not one of those item
+    /// files had been written. 439 checks passed over it, because the content sweep asks whether a
+    /// Harvest hotspot's <c>ItemId</c> is *non-empty* and never whether it resolves — so
+    /// <c>AddItem</c> wrote a phantom stack under the raw id, the grid displayed
+    /// <c>mat_heartwood</c> as its own name, and <c>LoseUnprotectedItems</c> read the missing category
+    /// as <c>Component</c> and burned it on death.
+    /// <para>
+    /// That is the fifth blind-spot class in <c>handoff.md</c> §3 in its purest form: <i>any "for each X,
+    /// assert P(X)" sweep is silently conditional on X having loaded</i>. The room sweep and the item
+    /// catalogue are two collections that had never once been crossed, so every property either one
+    /// claimed was true — of itself. <b>The lesson generalises past items: whenever one authored
+    /// collection names an id belonging to another, the crossing is the check, and it will not appear on
+    /// its own.</b>
+    /// </para>
+    /// </remarks>
+    private static void GateStations(Dictionary<string, RoomData> rooms)
+    {
+        Section("stations  the tally, the venues, and the three tools");
+
+        var inv = InventoryCraftingManager.Instance;
+        var world = WorldStateManager.Instance;
+        var nav = NavigationManager.Instance;
+
+        // Authored recipes only, on the same `verify_` convention the room sweep uses at line 1677 and
+        // for the same reason: the gates register two recipes in code to exercise the blueprint rules,
+        // and a fixture is not content. Found by this section's own files-on-disk check reading 6 of 4 —
+        // which is precisely the discrepancy that check exists to surface, arriving on its first run.
+        var authored = inv.Recipes
+            .Where(pair => !pair.Key.StartsWith("verify_") && pair.Value != null)
+            .ToDictionary(pair => pair.Key, pair => pair.Value);
+
+        // -- 1. Every id the world names has to resolve --
+        // Scoped to Harvest and Mend, the two kinds that pay out an item. Not scoped to `ch*`: a
+        // dangling id is a defect wherever it is, fixtures included.
+        var danglingYield = new List<string>();
+        foreach (var (roomId, room) in rooms)
+            foreach (var h in room.Hotspots ?? new Godot.Collections.Array<HotspotData>())
+            {
+                if (h is not { Kind: HotspotKind.Harvest or HotspotKind.Mend }) continue;
+                if (string.IsNullOrEmpty(h.ItemId)) continue;
+                if (inv.GetItem(h.ItemId) == null) danglingYield.Add($"{roomId}/{h.Id} -> {h.ItemId}");
+            }
+
+        Check($"every item a hotspot pays out exists in the catalogue{Listing(danglingYield)}",
+            danglingYield.Count == 0);
+
+        // -- 2. The same hole, from the recipe side --
+        var danglingRecipe = new List<string>();
+        foreach (var (recipeId, recipe) in authored)
+        {
+            foreach (var input in recipe.Inputs)
+            {
+                if (input == null || string.IsNullOrEmpty(input.ItemId)) continue;
+                if (inv.GetItem(input.ItemId) == null)
+                    danglingRecipe.Add($"{recipeId} needs {input.ItemId}");
+                if (input.Amount <= 0)
+                    danglingRecipe.Add($"{recipeId} asks for {input.Amount} {input.ItemId}");
+            }
+
+            // A world repair outputs no item on purpose; anything else must output one that exists.
+            if (!recipe.RepairsWorld && inv.GetItem(recipe.OutputItemId) == null)
+                danglingRecipe.Add($"{recipeId} makes {recipe.OutputItemId}");
+        }
+
+        Check($"every item a recipe names exists too{Listing(danglingRecipe)}",
+            danglingRecipe.Count == 0);
+
+        // -- 3. Files on disk against the registry, for both content types --
+        // Only `data/rooms/` had this count before today. A malformed `.tres` returns null from
+        // GD.Load and is simply *absent* — every sweep above then passes over a smaller world without
+        // saying so, which is the failure this catches and nothing else does.
+        Check($"every item file on disk registered an item ({inv.Catalogue.Count} of {FilesIn(GameConfig.ItemDataDir)})",
+            FilesIn(GameConfig.ItemDataDir) > 0 && inv.Catalogue.Count == FilesIn(GameConfig.ItemDataDir));
+        Check($"every recipe file on disk registered a recipe ({authored.Count} of {FilesIn(GameConfig.RecipeDataDir)})",
+            FilesIn(GameConfig.RecipeDataDir) > 0 && authored.Count == FilesIn(GameConfig.RecipeDataDir));
+
+        // -- 4. The vocabulary ceiling, as a check rather than a comment --
+        // §19: eight materials, and "a ninth material wanting to exist is a signal that a recipe wants
+        // redesigning". The yields are scoped to `ch*` because the ceiling is a rule about *authored
+        // content* — the check name says so. That was not the original reason: the scoping was put here
+        // to tolerate `herb_gravecap`, a ninth noun sitting on prototype ground, and unit 3b deleted
+        // both. It is redundant now, and deliberately kept — see GateWorldGraph's spine block for the
+        // one check that holds the redundancy true rather than leaving five sweeps assuming it.
+        string[] roster =
+        {
+            "herb_bitterroot", "mat_tallow", "herb_graveflower",
+            "mat_heartwood", "mat_pitch", "mat_scrap_iron", "mat_cured_hide", "mat_cairnstone",
+        };
+
+        var missingRoster = roster.Where(id => inv.GetItem(id)?.Category != ItemCategory.Component).ToList();
+        Check($"the eight named materials all exist as components{Listing(missingRoster)}",
+            missingRoster.Count == 0);
+
+        var offRoster = new List<string>();
+        foreach (var (roomId, room) in rooms)
+        {
+            if (room.ChapterId is not ("ch1" or "ch2" or "ch3")) continue;
+            foreach (var h in room.Hotspots ?? new Godot.Collections.Array<HotspotData>())
+            {
+                if (h is not { Kind: HotspotKind.Harvest or HotspotKind.Mend }) continue;
+                if (string.IsNullOrEmpty(h.ItemId) || roster.Contains(h.ItemId)) continue;
+                offRoster.Add($"{roomId}/{h.Id} -> {h.ItemId}");
+            }
+        }
+
+        Check($"and no authored node pays out anything off the roster{Listing(offRoster)}",
+            offRoster.Count == 0);
+
+        // -- 5. The two predicates, paired --
+        // Totality first: a `switch` over an enum with a `_` arm can never throw, so "is it total" has
+        // to be asked as "does every member get an answer at all", which for a bool-returning predicate
+        // means calling it on all of them and asserting it does not fault. What makes that non-empty is
+        // the second half — the two must disagree *somewhere*, or one has silently become a copy of the
+        // other and the tally would be following the death rule instead of the slot rule.
+        var categories = System.Enum.GetValues<ItemCategory>();
+        var disagreements = categories
+            .Where(c => InventoryCraftingManager.CountsAgainstSlots(c) !=
+                        !InventoryCraftingManager.SurvivesDeath(c))
+            .ToList();
+
+        Check($"CountsAgainstSlots answers for all {categories.Length} categories",
+            categories.All(c => InventoryCraftingManager.CountsAgainstSlots(c) ||
+                                !InventoryCraftingManager.CountsAgainstSlots(c)));
+        Check($"and is not the negation of SurvivesDeath{Listing(disagreements.Select(c => c.ToString()).ToList())}",
+            disagreements.Count > 0);
+        Check("a component is a tally entry, not a carried thing",
+            !InventoryCraftingManager.CountsAgainstSlots(ItemCategory.Component));
+        Check("but a salve you carry occupies something",
+            InventoryCraftingManager.CountsAgainstSlots(ItemCategory.Salve));
+
+        // -- 6. Both directions of the venue rule, driven live --
+        // Only the first can regress silently: a venue check that stopped refusing would let crafting
+        // happen anywhere and no other gate would notice, whereas one that stopped allowing turns every
+        // craft red at once.
+        inv.ResetAll();
+        world.ResetAll();
+        inv.AddItem("mat_heartwood", 1);
+        inv.AddItem("mat_scrap_iron", 1);
+        inv.Discover("lore_craft_edges");
+
+        nav.GoToRoom("verify_wilds");
+        Check("a station recipe is refused where there is no station",
+            inv.Inspect("recipe_tool_bill_hook") == CraftBlock.NotAtStation);
+
+        nav.GoToRoom("ch2_smithy");
+        Check("and allowed at the anvil it names",
+            inv.Inspect("recipe_tool_bill_hook") == CraftBlock.None);
+        Check("while the mortar's work is not done at the anvil",
+            InventoryCraftingManager.RoomHasStation(nav.CurrentRoom, "mortar") == false);
+
+        nav.GoToRoom("verify_camp");
+        Check("and the camp bench satisfies every station",
+            inv.Inspect("recipe_tool_bill_hook") == CraftBlock.None);
+
+        // -- 7. Crafting a tool sets its flag, and the flag opens the door authored against it --
+        // Driven through the graph rather than asserted about the flag, because the flag agreeing with
+        // itself is what the unit-1 authoring already guaranteed. What was never true until today is
+        // that anything *sets* it: RecipeData had no SetsFlag, so no recipe in the project could open
+        // anything. Reachability is the only phrasing that would have caught that.
+        // The room named here is the door's own target, not the blight behind it. `ch1_stonefield` was
+        // the obvious choice and is wrong: it sits behind the Bill Hook *and*
+        // `freed.ch1.messenger_01`, so crafting one tool would not reach it and the gate would have
+        // failed for a reason that had nothing to do with crafting. One door, one flag, one claim.
+        Check("the bramble is shut before the tool exists", !Reaches(rooms, "ch1_bramble"));
+        Check("the tool is made", inv.Craft("recipe_tool_bill_hook"));
+        Check("which sets the flag its door was authored against",
+            world.GetFlag("learned.tool_bill_hook"));
+        Check("and the bramble opens", Reaches(rooms, "ch1_bramble"));
+
+        // -- 8. A tool cannot be forged twice --
+        Check("the same tool refuses a second forging",
+            inv.Inspect("recipe_tool_bill_hook") == CraftBlock.AlreadyMade);
+        Check("and the refusal survives losing the tool itself",
+            inv.RemoveItem("tool_bill_hook", 1) &&
+            inv.Inspect("recipe_tool_bill_hook") == CraftBlock.AlreadyMade);
+
+        // -- 9. The unit 6 dependency, stated as a gate --
+        // Every tool recipe needs a blueprint that no authored Lore page grants yet: `items.md` §8 pays
+        // for each craft family with a Dream knowledge pocket, and pockets are unit 6. Until then the
+        // honest state is *the recipe exists, the flag works, and you cannot learn it*. This is what
+        // unit 6 turns green — it should start failing the day a real page lands, and the failure is the
+        // notice to delete the debug key.
+        inv.ResetAll();
+        world.ResetAll();
+
+        var toolRecipes = authored.Values
+            .Where(r => r.SetsFlag.StartsWith("learned.tool_"))
+            .ToList();
+
+        Check($"all three access tools are authored as recipes ({toolRecipes.Count} of 3)",
+            toolRecipes.Count == 3);
+        Check("each names a blueprint",
+            toolRecipes.All(r => r.NeedsBlueprint));
+        Check("none is learnable from anything authored yet — unit 6 turns this red",
+            toolRecipes.All(r => !inv.Catalogue.Values.Any(
+                i => i != null && i.Category == ItemCategory.Lore && i.Id == r.RequiredBlueprintId)));
+        Check("so every tool is unknown on a fresh game",
+            toolRecipes.All(r => inv.Inspect(r.Id) == CraftBlock.Unknown));
+
+        // And the debug key that stands in for the pockets. Read off the registry rather than a list of
+        // names, so unit 4b's recipes are covered the moment they are authored.
+        foreach (var r in toolRecipes) inv.Discover(r.RequiredBlueprintId);
+        Check("learning every craft family makes all three known",
+            toolRecipes.All(r => inv.Inspect(r.Id) != CraftBlock.Unknown));
+        Check("the debug key it runs from is bound",
+            InputMap.HasAction("debug_learn_all"));
+
+        // Both halves of the scaffolding, gated together. Learning every family is useless without a way
+        // to spend it, which is the defect Jeremy walked into on 2026-08-03: materials gathered, every
+        // recipe known, and no reachable verb. An unbound action is a silent no-op — `IsActionPressed`
+        // on a name that is not in the map returns false rather than throwing — so the failure mode is a
+        // key that simply does nothing, which is indistinguishable from the bug it exists to work around.
+        Check("and so is the one that spends what it learned",
+            InputMap.HasAction("debug_craft_here"));
+
+        // The third of the same family, bound 2026-08-03: `EncounterManager.Rig` had no caller outside this
+        // file, and the fight screen cannot be the one — rigging is free before a fight and costs a turn
+        // inside it (§18), so the verb belongs on the room. A key stands in until the satchel grows a Set
+        // button, the same way the two above stand in for the journal. Checked here rather than in the
+        // encounters section because what is being asserted is scaffolding, not combat: the mechanism's
+        // rules are gated thoroughly a thousand lines up, and none of that made it reachable.
+        Check("and the one that reaches the rig, which nothing else does",
+            InputMap.HasAction("debug_rig_here"));
+
+        // -- 10. Every station id agrees in both directions --
+        // A typo is otherwise a bench that silently makes nothing: the hotspot draws and takes the
+        // click, and the panel it opens is empty. Neither direction is redundant — the first catches a
+        // recipe naming a station nobody built, the second a station nobody can use.
+        var worldStations = new Dictionary<string, string>();
+        foreach (var (roomId, room) in rooms)
+            foreach (var h in room.Hotspots ?? new Godot.Collections.Array<HotspotData>())
+                if (h != null && !string.IsNullOrEmpty(h.StationId))
+                    worldStations[h.StationId] = $"{roomId}/{h.Id}";
+
+        var namedByRecipe = authored.Values
+            .Where(r => !string.IsNullOrEmpty(r.RequiresStation))
+            .Select(r => r.RequiresStation)
+            .ToHashSet();
+
+        var unbuilt = namedByRecipe.Where(s => !worldStations.ContainsKey(s)).ToList();
+        var unused = worldStations.Keys.Where(s => !namedByRecipe.Contains(s)).ToList();
+
+        Check($"every station a recipe names exists in the world{Listing(unbuilt)}", unbuilt.Count == 0);
+        Check($"and every station in the world is named by a recipe{Listing(unused)}", unused.Count == 0);
+
+        // A Station hotspot with no id is the one authoring slip neither direction above can see: it
+        // belongs to no station, so it appears in no list and opens an unfilterable panel.
+        var namelessStations = new List<string>();
+        foreach (var (roomId, room) in rooms)
+            foreach (var h in room.Hotspots ?? new Godot.Collections.Array<HotspotData>())
+                if (h is { Kind: HotspotKind.Station } && string.IsNullOrEmpty(h.StationId))
+                    namelessStations.Add($"{roomId}/{h.Id}");
+
+        Check($"and no station hotspot is nameless{Listing(namelessStations)}",
+            namelessStations.Count == 0);
+
+        // -- 11. With all three tools, every blight is reachable --
+        // The exact complement of the mending section's check that three of the twelve are *not*. That
+        // one proves the tool doors are load-bearing; this one proves they are the only *permanent*
+        // thing in the way, so the falling-action activity the good ending is costed against can
+        // actually be finished.
+        //
+        // Ordinary progression has to be granted first, or this measures the wrong thing: half the
+        // world sits behind narrative flags (`freed.ch1.messenger_01` and its kin) which play grants
+        // and which say nothing about tools. So every flag any door asks for is set *except* the tool
+        // flags, the tools are then added, and what remains unreachable is unreachable for a reason no
+        // amount of playing fixes. Granting them wholesale is safe here precisely because it is the
+        // end of the section and the flags are reset immediately after.
+        foreach (var room in rooms.Values)
+            foreach (var door in Doors(room))
+                foreach (var flag in Gates(door))
+                    if (!flag.StartsWith("learned.tool_"))
+                        world.SetFlag(flag);
+
+        var blightRooms = rooms
+            .Where(pair => pair.Value.Hotspots?.Any(h => h is { Kind: HotspotKind.Mend }) == true)
+            .Select(pair => pair.Key)
+            .ToList();
+
+        // Non-vacuity, and this section is the last place entitled to skip it: an empty sweep makes
+        // the check below pass by finding nothing, which is the fifth blind-spot class again.
+        Check($"the twelve blights are all still here ({blightRooms.Count} of 12)",
+            blightRooms.Count == 12);
+
+        var beforeTools = blightRooms.Where(id => !Reaches(rooms, id)).OrderBy(id => id).ToList();
+        Check($"three of them are still shut with progression alone{Listing(beforeTools)}",
+            beforeTools.Count == 3);
+
+        world.SetFlag("learned.tool_bill_hook");
+        world.SetFlag("learned.tool_pry_bar");
+        world.SetFlag("learned.tool_mine_pick");
+
+        var unreachableBlights = blightRooms.Where(id => !Reaches(rooms, id)).OrderBy(id => id).ToList();
+        Check($"and the three tools open the last of them{Listing(unreachableBlights)}",
+            unreachableBlights.Count == 0);
+
+        inv.ResetAll();
+        world.ResetAll();
+        nav.GoToRoom("verify_camp");
+    }
+
+    /// <summary>
+    /// The arsenal — unit 4b's 14 items and 13 recipes, checked against the rules `items.md` §§2–4
+    /// and `combat.md` §19 currently state only in prose. Added 2026-08-03 with the content itself.
+    /// </summary>
+    /// <remarks>
+    /// <b>Every check here replaces a sentence in a design doc</b>, which is the only reason a content
+    /// sweep earns 30 gates. The four that would fail *dangerously* — quietly, in a way no other gate
+    /// and no amount of playing would reveal — are worth naming, because they are why this section
+    /// exists rather than being folded into the stations sweep:
+    /// <list type="number">
+    /// <item>An <c>Equipment</c> item with <see cref="ItemData.Slot"/> left at
+    /// <c>None</c>. It catalogues, it crafts, it displays; it simply can never be worn, and the symptom
+    /// arrives in unit 3 as "the loadout screen is missing a coat".</item>
+    /// <item>A weapon dealing Fire or Caustic. §4 keeps those two types on the brew side *because* that
+    /// is what makes traps worth rigging at all — one Fire axe and the whole trap roster becomes
+    /// optional, with nothing anywhere reading as broken.</item>
+    /// <item>A Fused trap that triggers itself. It works, it does damage, and the two-step ignition
+    /// combination <see cref="GameConfig.RigSlotsPerFight"/> was set to two to permit stops existing.</item>
+    /// <item>An item nothing in the world can pay for. The closure at the bottom is the general form of
+    /// the Snare bug §3 records — *"chapter 1 could build no trap at all"* — and it is the check that
+    /// found <c>catalyst_ashincense</c> to be unobtainable on its first run.</item>
+    /// </list>
+    /// <para>
+    /// <b>Read off the catalogue, never off a list of ids</b>, with two deliberate exceptions: the seven
+    /// Craft family ids and the one known obtainability hole. Both are *census* checks, where the point
+    /// is precisely that a hardcoded expectation disagrees with the content — a sweep that derived the
+    /// family list from the recipes could never notice a typo inventing an eighth family, and it is the
+    /// check that would have caught the Pry Bar sharing <c>lore_craft_edges</c> in either direction.
+    /// </para>
+    /// </remarks>
+    private static void GateRoster(Dictionary<string, RoomData> rooms)
+    {
+        Section("roster  the arsenal, the two hands that make it, and whether you can reach any of it");
+
+        var inv = InventoryCraftingManager.Instance;
+        var world = WorldStateManager.Instance;
+        var nav = NavigationManager.Instance;
+
+        var items = inv.Catalogue.Values.Where(i => i != null).ToList();
+
+        // Same `verify_` filter as the stations sweep, same reason: a fixture is not content.
+        var authored = inv.Recipes
+            .Where(pair => !pair.Key.StartsWith("verify_") && pair.Value != null)
+            .Select(pair => pair.Value)
+            .ToList();
+
+        // -- 1. The shape of the roster, so nothing below can pass by sweeping an empty set --
+        var traps = items.Where(i => i.Category == ItemCategory.Trap).ToList();
+        var equipment = items.Where(i => i.Category == ItemCategory.Equipment).ToList();
+        var weapons = equipment.Where(i => i.Slot == EquipSlot.Weapon).ToList();
+        var armours = equipment.Where(i => i.Slot == EquipSlot.Armour).ToList();
+
+        Check($"the arsenal is all here ({weapons.Count} weapons, {armours.Count} armours, {traps.Count} traps)",
+            weapons.Count == 2 && armours.Count == 3 && traps.Count == 6);
+
+        // -- 2. Equipment totality, over all four combinations --
+        var slotless = equipment.Where(i => i.Slot == EquipSlot.None).Select(i => i.Id).ToList();
+        Check($"every equippable names a slot{Listing(slotless)}", slotless.Count == 0);
+
+        var wrongSlot = items
+            .Where(i => i.Category != ItemCategory.Equipment && i.Slot != EquipSlot.None)
+            .Select(i => $"{i.Id} is {i.Category} in the {i.Slot} slot").ToList();
+        Check($"and nothing that is not equipment names one{Listing(wrongSlot)}", wrongSlot.Count == 0);
+
+        var badWeapons = weapons
+            .Where(i => i.Deals == DamageType.None || i.WardsAgainst != DamageType.None)
+            .Select(i => $"{i.Id} deals {i.Deals} and wards {i.WardsAgainst}").ToList();
+        Check($"a weapon deals a type and wards nothing{Listing(badWeapons)}", badWeapons.Count == 0);
+
+        var badArmours = armours
+            .Where(i => i.WardsAgainst == DamageType.None || i.Deals != DamageType.None)
+            .Select(i => $"{i.Id} wards {i.WardsAgainst} and deals {i.Deals}").ToList();
+        Check($"and armour wards a type and deals nothing{Listing(badArmours)}", badArmours.Count == 0);
+
+        // -- 3. The two types that belong to her, and the hole that is on purpose --
+        var armedWithBrew = weapons
+            .Where(i => i.Deals is DamageType.Fire or DamageType.Caustic)
+            .Select(i => $"{i.Id} deals {i.Deals}").ToList();
+        Check($"no weapon deals Fire or Caustic — those are what a trap is for{Listing(armedWithBrew)}",
+            armedWithBrew.Count == 0);
+
+        var fireproof = armours.Where(i => i.WardsAgainst == DamageType.Fire).Select(i => i.Id).ToList();
+        Check($"and no coat wards Fire — the gap is deliberate{Listing(fireproof)}", fireproof.Count == 0);
+
+        // Non-vacuity for the pair above: three coats covering one type each is what makes "no Fire coat"
+        // a decision rather than an accident of there being nothing to ward with.
+        var warded = armours.Select(i => i.WardsAgainst).Distinct().OrderBy(t => t).ToList();
+        Check($"the three coats cover three different types ({string.Join(", ", warded)})",
+            warded.Count == armours.Count &&
+            warded.SequenceEqual(new[] { DamageType.Edge, DamageType.Blunt, DamageType.Caustic }));
+
+        // -- 4. §11's no-tiers rule, as arithmetic --
+        // A body is EntityData.Durability 30 and one clean blow is 10, so a second weapon hitting for 12
+        // would not read as a different tactic — it would read as an upgrade, which is the one thing the
+        // damage model refuses to have.
+        var potencies = weapons.Select(i => i.Potency).Distinct().OrderBy(p => p).ToList();
+        Check($"both weapons hit for the same amount ({string.Join(", ", potencies)}) — §11 has no tiers",
+            potencies.Count == 1 && potencies[0] > 0);
+
+        var pricedArmour = armours.Where(i => i.Potency != 0).Select(i => $"{i.Id} = {i.Potency}").ToList();
+        Check($"and a coat carries no magnitude — WardsAgainst halves, which needs none{Listing(pricedArmour)}",
+            pricedArmour.Count == 0);
+
+        // -- 5. The Fused/Mechanical split, as a check instead of a table --
+        // Stated as an equivalence so both directions fail: a Mechanical trap that needs lighting is as
+        // wrong as a Fused one that does not, and neither is visible in the inspector.
+        var wrongTrigger = traps
+            .Where(i => i.TriggersItself == (i.Deals is DamageType.Fire or DamageType.Caustic))
+            .Select(i => $"{i.Id} deals {i.Deals} and {(i.TriggersItself ? "triggers itself" : "needs lighting")}")
+            .ToList();
+        Check($"a Fused trap needs a second step and a Mechanical one does not{Listing(wrongTrigger)}",
+            wrongTrigger.Count == 0);
+
+        var fused = traps.Count(i => !i.TriggersItself);
+        Check($"and the split is two against four ({fused} fused, {traps.Count - fused} mechanical)",
+            fused == 2 && traps.Count - fused == 4);
+
+        var stackedTraps = traps.Where(i => i.MaxStack != 1).Select(i => $"{i.Id} x{i.MaxStack}").ToList();
+        Check($"a trap is an owned thing, count 0 or 1 — §19 made them permanent{Listing(stackedTraps)}",
+            stackedTraps.Count == 0);
+
+        // -- 5b. What the trap roster is *for*, as a census rather than a universal --
+        // <see cref="GateCombatShapes"/> used to demand that every trap deal damage, which was vacuously
+        // green until this roster landed and then red against correct content — `items.md` §3 authors two
+        // that deal nothing on purpose. The claim that actually holds is coverage: four traps, four
+        // distinct types, and the only route to two of them. Stated as an ordered set so a fifth damaging
+        // trap doubling up on Edge fails too, because a duplicate is a trap with no reason to be rigged.
+        var trapTypes = traps.Where(i => i.Deals != DamageType.None)
+            .Select(i => i.Deals).Distinct().OrderBy(t => t).ToList();
+        Check($"the four armed traps cover four different types ({string.Join(", ", trapTypes)})",
+            trapTypes.Count == traps.Count(i => i.Deals != DamageType.None) &&
+            trapTypes.SequenceEqual(new[]
+                { DamageType.Edge, DamageType.Blunt, DamageType.Fire, DamageType.Caustic }));
+
+        // And the two that deal nothing are the two the design names. A universal would be unfalsifiable
+        // here — there is no field yet for *holds* or *reveals* (that is unit 3's rig model), so nothing
+        // could distinguish a utility trap from a half-authored one. Naming them is what makes an inert
+        // seventh trap fail, and the reverse arm makes arming one of these two fail as well.
+        string[] utilityTraps = { "trap_snare", "trap_chime" };
+
+        var inert = traps.Where(i => i.Deals == DamageType.None).Select(i => i.Id).OrderBy(id => id).ToList();
+        var inertDrift = inert.Where(id => !utilityTraps.Contains(id)).Select(id => $"unexpectedly inert {id}")
+            .Concat(utilityTraps.Where(id => !inert.Contains(id)).Select(id => $"{id} now deals damage"))
+            .ToList();
+        Check($"and the two that deal nothing are the Snare and the Chime{Listing(inertDrift)}",
+            inertDrift.Count == 0);
+
+        // -- 6. The blueprint census, and §8's bill of eight pockets --
+        var families = authored
+            .Where(r => r.NeedsBlueprint)
+            .Select(r => r.RequiredBlueprintId)
+            .Distinct()
+            .ToList();
+
+        var untracked = families
+            .Where(f => !f.StartsWith("lore_craft_") && !f.StartsWith("lore_physick_")).ToList();
+        Check($"every blueprint id says which hand it belongs to{Listing(untracked)}", untracked.Count == 0);
+
+        // The hardcoded half, on purpose — see the remarks. A typo otherwise invents a silent family
+        // that no pocket will ever grant, and the recipe behind it is unlearnable forever.
+        string[] expectedCraft =
+        {
+            "lore_craft_edges", "lore_craft_prying", "lore_craft_stoneworking",
+            "lore_craft_mechanisms", "lore_craft_fusion", "lore_craft_forging", "lore_craft_leatherwork",
+        };
+
+        var craft = families.Where(f => f.StartsWith("lore_craft_")).ToList();
+        var familyDrift = craft.Where(f => !expectedCraft.Contains(f)).Select(f => $"unexpected {f}")
+            .Concat(expectedCraft.Where(f => !craft.Contains(f)).Select(f => $"missing {f}"))
+            .ToList();
+
+        Check($"his seven craft families are exactly the seven expected{Listing(familyDrift)}",
+            familyDrift.Count == 0);
+        Check($"which is §8's bill of eight pockets less the unauthored engine ({craft.Count} + 1 of 8)",
+            craft.Count + 1 == 8);
+
+        var physick = families.Where(f => f.StartsWith("lore_physick_")).ToList();
+        Check($"and hers are three pages of her notes rather than pockets ({physick.Count} of 3)",
+            physick.Count == 3);
+
+        // -- 7. The salve economy §2 leaves as a sentence --
+        var restorers = items.Where(i => i.VitalityRestore > 0f).ToList();
+        var wrongRestorer = restorers
+            .Where(i => i.Category != ItemCategory.Salve)
+            .Select(i => $"{i.Id} is {i.Category} and restores {i.VitalityRestore}").ToList();
+        Check($"only a salve closes a wound{Listing(wrongRestorer)}", wrongRestorer.Count == 0);
+
+        var emptySalve = items
+            .Where(i => i.Category == ItemCategory.Salve && i.VitalityRestore <= 0f)
+            .Select(i => i.Id).ToList();
+        Check($"and every salve closes one ({restorers.Count} of them){Listing(emptySalve)}",
+            emptySalve.Count == 0 && restorers.Count == 2);
+
+        var clearmind = inv.GetItem("salve_clearmind");
+        var deepmend = inv.GetItem("salve_deepmend");
+        var clearmindCost = MaterialUnits(inv.GetRecipe("recipe_salve_clearmind"));
+        var deepmendCost = MaterialUnits(inv.GetRecipe("recipe_salve_deepmend"));
+
+        Check($"Deepmend is the bigger salve ({deepmend?.VitalityRestore} against {clearmind?.VitalityRestore})",
+            clearmind != null && deepmend != null && deepmend.VitalityRestore > clearmind.VitalityRestore);
+        Check($"and it costs more to brew ({deepmendCost} units against {clearmindCost})",
+            deepmendCost > clearmindCost && clearmindCost > 0);
+
+        // The guard that keeps the lesser salve alive, and the one §2 actually asks for: two slots is a
+        // real cap, so a Deepmend that were *also* the material-efficient choice would make Clearmind
+        // dead content the moment you learned the better page. Clearmind wins per unit of herb; Deepmend
+        // wins per slot carried into the fight. Neither dominates, so both stay worth brewing.
+        Check("but Clearmind heals more per unit of material, so neither salve dominates the other",
+            clearmind != null && deepmend != null && clearmindCost > 0 && deepmendCost > 0 &&
+            clearmind.VitalityRestore / clearmindCost > deepmend.VitalityRestore / deepmendCost);
+
+        // -- 8. Which hand made it --
+        // Only checked for things that are *made*. A found material has no maker, so its Track is
+        // meaningless and asserting one would be inventing a rule to have something to check.
+        var wrongTrack = new List<string>();
+        foreach (var i in items)
+        {
+            var expected = i.Category switch
+            {
+                ItemCategory.Salve => KnowledgeTrack.Physick,
+                ItemCategory.Trap or ItemCategory.Equipment or ItemCategory.Relic => KnowledgeTrack.Craft,
+                ItemCategory.Component when i.Id.StartsWith("brew_") => KnowledgeTrack.Physick,
+                _ => i.Track,
+            };
+
+            if (i.Track != expected) wrongTrack.Add($"{i.Id} is filed under {i.Track}, should be {expected}");
+        }
+
+        Check($"every made thing is filed under the hand that makes it{Listing(wrongTrack)}",
+            wrongTrack.Count == 0);
+        Check("and both hands own something",
+            items.Any(i => i.Track == KnowledgeTrack.Craft) &&
+            items.Any(i => i.Track == KnowledgeTrack.Physick));
+
+        // -- 9. The permanence rule and its Equipment exemption, driven live --
+        // Asserted about the running bench rather than about the fields, because `AlreadyMade`'s two arms
+        // read different storage — a flag for a repair, the satchel for a trap — and only one of them is
+        // exercised by the tool recipes the stations sweep already covers.
+        inv.ResetAll();
+        world.ResetAll();
+        nav.GoToRoom("verify_camp");
+
+        inv.Discover("lore_craft_mechanisms");
+        inv.Discover("lore_craft_leatherwork");
+        inv.AddItem("mat_heartwood", 2);
+        inv.AddItem("mat_pitch", 2);
+        inv.AddItem("mat_cured_hide", 6);
+
+        Check("a trap with no station named is built at the camp bench", inv.Craft("recipe_trap_snare"));
+        Check("and refuses a second, because you already own the one",
+            inv.Inspect("recipe_trap_snare") == CraftBlock.AlreadyMade);
+        Check("with the materials for another still in the satchel, so the refusal is not poverty",
+            inv.GetCount("mat_heartwood") == 1 && inv.GetCount("mat_pitch") == 1);
+
+        Check("a coat is made", inv.Craft("recipe_armour_tanners_coat"));
+        Check("and a spare is allowed — the cache exists partly to bank one",
+            inv.Inspect("recipe_armour_tanners_coat") == CraftBlock.None &&
+            inv.Craft("recipe_armour_tanners_coat") &&
+            inv.GetCount("armour_tanners_coat") == 2);
+
+        // -- 10. The field that stays unread, and the reason is not just "not yet" --
+        // `combat.md` §19 says a fused trap "cannot be made by either track alone", which reads like a
+        // standing order to set this on the Oil Slick and the Vitriol Flask. It would be wrong, and the
+        // same section says why forty lines further down: her brews are **an authored cache she left you**,
+        // in your hands from the first hour, and learning to make them is late-game. A flag demanding you
+        // know her recipe would make the oil she left unusable until you could already replace it —
+        // deleting the inversion §19 calls "the best thing here".
+        //
+        // So the two-hand requirement on a fused trap is carried by the *ingredient*, which is exactly the
+        // right resolution: "you needed her chemistry" is a thing an input can say. What no input can say
+        // is "you need two blueprints", and that is the exorcism engine — a Dream pocket for his Craft and
+        // one of her notes for her Physick (`items.md` §8). This field is reserved for that one recipe, and
+        // authoring it is what turns this red.
+        var bothHands = authored.Where(r => r.RequiresBothTracks).Select(r => r.Id).ToList();
+        Check($"nothing needs two blueprints yet — the exorcism engine turns this red{Listing(bothHands)}",
+            bothHands.Count == 0);
+
+        // Non-vacuity for the claim above: a fused trap is priced in a brew, so its two-hand requirement
+        // is real and merely stored somewhere other than the flag. Without this the check would be
+        // satisfied by a roster that had no fused traps at all.
+        var fusedRecipes = authored
+            .Where(r => inv.GetItem(r.OutputItemId)?.Deals is DamageType.Fire or DamageType.Caustic)
+            .ToList();
+        var unfused = fusedRecipes
+            .Where(r => !r.Inputs.Any(i => i != null && i.ItemId.StartsWith("brew_")))
+            .Select(r => r.Id).ToList();
+        Check($"each of the {fusedRecipes.Count} fused traps is priced in one of her brews instead{Listing(unfused)}",
+            fusedRecipes.Count == 2 && unfused.Count == 0);
+
+        // -- 11. Obtainability, as a closure over the world --
+        // Invariant 12 as a check. The seed is what the ground pays out plus what he walks in owning;
+        // everything else has to be earned through a recipe whose inputs are already in the set.
+        var obtainable = new HashSet<string>(GameConfig.StartingItems);
+        foreach (var room in rooms.Values)
+            foreach (var h in room.Hotspots ?? new Godot.Collections.Array<HotspotData>())
+                if (h is { Kind: HotspotKind.Harvest or HotspotKind.Mend } && !string.IsNullOrEmpty(h.ItemId))
+                    obtainable.Add(h.ItemId);
+
+        // Not scoped to `ch*`, unlike the roster arm of the stations sweep: that one asks what the
+        // authored chapters *should* pay out, this one asks what the player can actually get hold of.
+        // The distinction was easier to see when the two sets differed — `herb_gravecap` used to be
+        // obtainable on prototype ground and off the roster at the same time — and it still holds, so
+        // the widest reading stays deliberate rather than accidental.
+        Check($"the ground pays out something to start from ({obtainable.Count} ids before any bench)",
+            obtainable.Count > GameConfig.StartingItems.Length);
+
+        // A fixed point rather than one pass, because the arsenal is two deep: Oil Slick is priced in
+        // Burning Oil, which is itself brewed, so a single sweep would call the trap unreachable.
+        for (var grew = true; grew;)
+        {
+            grew = false;
+            foreach (var r in authored)
+            {
+                if (r.RepairsWorld || string.IsNullOrEmpty(r.OutputItemId)) continue;
+                if (obtainable.Contains(r.OutputItemId)) continue;
+                if (r.Inputs.Any(i => i == null || !obtainable.Contains(i.ItemId))) continue;
+
+                obtainable.Add(r.OutputItemId);
+                grew = true;
+            }
+        }
+
+        // The one hole, named rather than scoped away. `catalyst_ashincense` is the only Catalyst in the
+        // game and has no recipe: the catalyst economy — *craftable, so a failed heist never softlocks* —
+        // is unbuilt, and line 1249 of this very file already calls it "craftable" in a comment. Listed
+        // here so a *second* unobtainable item cannot arrive quietly, and checked from both sides so
+        // authoring the recipe also turns this red, which is the notice to delete the entry.
+        string[] knownHoles = { "catalyst_ashincense" };
+
+        var newHoles = items.Select(i => i.Id)
+            .Where(id => !obtainable.Contains(id) && !knownHoles.Contains(id))
+            .OrderBy(id => id).ToList();
+        var closedHoles = knownHoles.Where(id => obtainable.Contains(id)).ToList();
+
+        Check($"every item in the catalogue can be reached from the ground{Listing(newHoles)}",
+            newHoles.Count == 0);
+        Check($"and the only one that cannot is still the catalyst{Listing(closedHoles)}",
+            closedHoles.Count == 0);
+
+        var unpayable = authored
+            .Where(r => r.Inputs.Any(i => i == null || !obtainable.Contains(i.ItemId)))
+            .Select(r => r.Id).ToList();
+        Check($"and every recipe is priced in things the world pays out{Listing(unpayable)}",
+            unpayable.Count == 0);
+
+        inv.ResetAll();
+        world.ResetAll();
+        nav.GoToRoom("verify_camp");
+    }
+
+    /// <summary>
+    /// How many units of material a recipe costs, summed across its inputs. Used by
+    /// <see cref="GateRoster"/> for the one comparison `items.md` §2 makes between the two salves —
+    /// *"5 against 3"* — which is about the total weight of herb, not the number of distinct lines.
+    /// </summary>
+    private static int MaterialUnits(RecipeData recipe) =>
+        recipe?.Inputs == null ? 0 : recipe.Inputs.Where(i => i != null).Sum(i => i.Amount);
+
+    /// <summary>
+    /// How many <c>.tres</c> files sit in a content directory. The registry side of a
+    /// files-on-disk count — see <see cref="GateStations"/> for why one is needed per loader.
+    /// </summary>
+    private static int FilesIn(string dir)
+    {
+        var count = 0;
+        using var handle = DirAccess.Open(dir);
+        if (handle == null) return 0;
+
+        handle.ListDirBegin();
+        for (var f = handle.GetNext(); f != ""; f = handle.GetNext())
+            if (!handle.CurrentIsDir() && (f.EndsWith(".tres") || f.EndsWith(".tres.remap")))
+                count++;
+
+        return count;
+    }
+
+    /// <summary>
+    /// Whether a room can be walked to from the starting room right now, honouring flag gates. Used
+    /// by <see cref="GateStations"/> to ask a question about the world that no field can answer:
+    /// *does making this tool actually open anything?*
+    /// </summary>
+    /// <remarks>
+    /// The <i>live</i> counterpart to the static walk in <see cref="GateMending"/>, and the difference
+    /// is the whole point of having both. That one asks a question about the content — *which blights sit
+    /// behind a <c>learned.tool_</c> door* — by skipping those doors whatever the flags say. This one
+    /// asks a question about the run: it consults
+    /// <see cref="World.InteractionService.IsAvailable"/>, so a door opens here exactly when it would
+    /// open under the player's hand. Only the live form can show that crafting a thing *changed*
+    /// anything, which is the one claim `RecipeData.SetsFlag` exists to support.
+    /// </remarks>
+    private static bool Reaches(Dictionary<string, RoomData> rooms, string targetRoomId)
+    {
+        var seen = new HashSet<string> { GameConfig.StartingRoomId };
+        var queue = new Queue<string>(seen);
+
+        while (queue.Count > 0)
+        {
+            if (!rooms.TryGetValue(queue.Dequeue(), out var room)) continue;
+
+            foreach (var door in Doors(room))
+            {
+                if (!World.InteractionService.IsAvailable(door)) continue;
+                if (seen.Add(door.TargetRoomId)) queue.Enqueue(door.TargetRoomId);
+            }
+        }
+
+        return seen.Contains(targetRoomId);
     }
 
     /// <summary>
@@ -1721,13 +3828,24 @@ public static class SliceVerifier
             collided.Count == 0);
 
         // -- The chapter spine --
-        // Scoped to `ch*` chapters because the waystation and its Dream graph are the retiring
-        // prototype and were never authored to these rules. Everything below is about the ledger.
+        // Scoped to `ch*` chapters because these are the ledger's rules, and the waystation and its Dream
+        // graph were never authored to them. **Unit 3b deleted those eight rooms, which made this
+        // predicate and four others like it redundant** — `rooms` already excludes the verifier's own
+        // fixtures by key prefix, so `ch*` and "every authored room" are now the same set.
+        //
+        // The plan for 3b said to widen all five. They stay instead, and the redundancy is *asserted*
+        // immediately below rather than assumed, which buys the same thing for one line: no sweep
+        // changes meaning, and an off-spine authored room goes red by name here instead of being
+        // skipped silently by five sweeps at once and covered by none of them.
         var spine = rooms
             .Where(kv => kv.Value?.ChapterId?.StartsWith("ch") == true)
             .ToDictionary(kv => kv.Key, kv => kv.Value);
 
         Check("the chapter spine is authored", spine.Count > 0);
+
+        var offSpine = rooms.Keys.Where(k => !spine.ContainsKey(k)).OrderBy(k => k).ToList();
+        Check($"and every authored room is on it, so the `ch*` sweeps skip nothing{Listing(offSpine)}",
+            offSpine.Count == 0);
 
         // Every door can be walked back through. A one-way door in a point-and-click is a softlock
         // waiting for a player who forgot something, and nothing in any ledger asks for one — so if
@@ -1825,12 +3943,19 @@ public static class SliceVerifier
             if (item.Slot != EquipSlot.None && item.Category != ItemCategory.Equipment)
                 slotNotEquip.Add(id);
 
-            // A weapon or a trap whose whole purpose is a damage type, with no damage type. Traps are
-            // consumed win or lose (§13), so authoring an inert one spends the player's materials on
-            // nothing and looks like a resolver bug from the outside.
-            var mustDeal = item.Category == ItemCategory.Trap
-                || (item.Category == ItemCategory.Equipment && item.Slot == EquipSlot.Weapon);
-            if (mustDeal && item.Deals == DamageType.None) armedWithNothing.Add(id);
+            // A weapon with no damage type is a weapon that cannot be swung.
+            //
+            // **This covered traps too until 2026-08-04, and it was wrong on a premise that had already
+            // been reversed.** The reasoning was "traps are consumed win or lose (§13), so an inert one
+            // spends materials on nothing" — but §19 made traps permanent on 2026-08-01, and more to the
+            // point `items.md` §3 authors two on purpose that deal nothing at all: the Snare holds and the
+            // Chime reveals. The gate was vacuously green for as long as no trap existed, and went red the
+            // hour the roster landed — against correct content. What survives is the weapon half; the
+            // claim worth making about traps is a census rather than a universal, and it lives in
+            // <see cref="GateRoster"/> beside the rest of the roster.
+            if (item.Category == ItemCategory.Equipment && item.Slot == EquipSlot.Weapon &&
+                item.Deals == DamageType.None)
+                armedWithNothing.Add(id);
 
             // Warding is the armour half of the pair. On a weapon it is a field someone filled in
             // hopefully, and nothing reads it.
@@ -1842,7 +3967,7 @@ public static class SliceVerifier
             equipNoSlot.Count == 0);
         Check($"no non-equipment claims an equip slot{Listing(slotNotEquip)}",
             slotNotEquip.Count == 0);
-        Check($"every weapon and trap deals some kind of harm{Listing(armedWithNothing)}",
+        Check($"every weapon deals some kind of harm{Listing(armedWithNothing)}",
             armedWithNothing.Count == 0);
         Check($"nothing but armour wards against a damage type{Listing(wardNotArmour)}",
             wardNotArmour.Count == 0);
@@ -2026,11 +4151,12 @@ public static class SliceVerifier
         // destroyed and never purified — so those owe nothing and this stays quiet when unit 6 places
         // a boss in a room with no aftermath at all.
         //
-        // Scoped to `ch*` for the same reason the spine checks in GateWorldGraph are: the waystation
-        // is the retiring prototype and was authored to the *old* model, where a purified creature was
-        // farmable wildlife reached through EntityState rather than a person reached through a hotspot.
-        // `waystation.rat_01` therefore has a PurifiedName and owes nobody, and it is the one placement
-        // in the game that legitimately fails this. It goes away with the retirement, not before.
+        // Scoped to `ch*` for the same reason the spine checks in GateWorldGraph are, and the scoping
+        // has outlived what it was for: `waystation.rat_01` was authored to the *old* model, where a
+        // purified creature was farmable wildlife reached through EntityState rather than a person
+        // reached through a hotspot, so it had a PurifiedName and owed nobody. It was the one placement
+        // in the game that legitimately failed this, and unit 3b deleted it. The predicate is redundant
+        // now and kept — the spine block asserts that it skips nothing.
         var noOneToFree = new List<string>();
         foreach (var (roomId, room) in rooms)
         {
@@ -2087,8 +4213,9 @@ public static class SliceVerifier
 
         // Printed, never asserted — see the summary. Reading these against `placement.md` is how a
         // content pass gets checked; failing on them is how a suite gets ignored. Counted over the
-        // chapter spine only, so the figures are the bill's figures and the prototype rat is not
-        // quietly making every total one too many. Today it reads 30 / 11 / 3, and 24 freed to 6
+        // chapter spine only, so the figures are the bill's figures. That mattered while the prototype
+        // rat was quietly making every total one too many; unit 3b deleted it, and the scoping is kept
+        // for the reason the spine block gives. Today it reads 30 / 11 / 3, and 24 freed to 6
         // defeated; unit 6 takes the fights to 33.
         var spine = rooms.Where(kv => kv.Value?.ChapterId?.StartsWith("ch") == true)
             .ToDictionary(kv => kv.Key, kv => kv.Value);
@@ -2097,6 +4224,142 @@ public static class SliceVerifier
             .SelectMany(kv => kv.Value.Hotspots.Where(h => h != null))
             .SelectMany(Gates)
             .ToList();
+
+        // -- §5: the first fight a fresh game can walk into is winnable with what the boot gives you --
+        // Added 2026-08-03, and nothing asserted it before. It is the kind of fact that stops being true
+        // silently: the boot room already moved once (unit 3b), the roster moves again in unit 6, and
+        // neither change touches anything that would go red. Jeremy, on being told nothing covered it:
+        // *"I figured you would have designed it this way."*
+        //
+        // **Every claim here is a relationship between authored values — no turn count, no durability and
+        // no damage figure is written down.** §5's 3–6 turn band is tuning, and a gate on tuning goes red
+        // the first time Jeremy wants a fight to feel different, which is how a suite gets ignored. So
+        // "winnable" is not "≤ 6 turns", it is *fells it before it fells you*: two derived numbers
+        // compared against each other, with the whole economy free to move underneath them.
+        //
+        // "Can walk into" is walked rather than assumed. A fresh save holds no flags, so a door wanting
+        // one is shut; a door a creature bars needs a fight won first. The frontier stops at both, which
+        // leaves the screens a player sees before anything at all has been earned.
+        // Both stopping rules are arguments rather than baked in, because a break-test caught the walk
+        // being *unfalsifiable* with them baked in: commenting out all three `continue`s took the frontier
+        // from 9 fights on 16 screens to 30 on 59, and **every check stayed green**, because the nearest
+        // fight happens to sit two ungated doors out either way. That is the seventh blind-spot class — a
+        // guard nothing can reach — and the fix is the two differential checks below, which compare the
+        // real walk against a walk that ignores each rule in turn.
+        static Dictionary<string, int> Walk(Dictionary<string, RoomData> map, bool wardensBar, bool flagsBar)
+        {
+            var seen = new Dictionary<string, int> { [GameConfig.StartingRoomId] = 0 };
+            var frontier = new Queue<string>(seen.Keys);
+
+            while (frontier.Count > 0)
+            {
+                var from = frontier.Dequeue();
+                if (!map.TryGetValue(from, out var room)) continue;
+
+                foreach (var door in Doors(room))
+                {
+                    if (wardensBar && !string.IsNullOrEmpty(door.BlockedByEntityId)) continue;
+                    if (flagsBar && door.RequiredFlags?.Length > 0) continue;
+                    if (flagsBar && !string.IsNullOrEmpty(door.RequiredFlag) && door.RequiredFlagValue)
+                        continue;
+
+                    if (seen.TryAdd(door.TargetRoomId, seen[from] + 1)) frontier.Enqueue(door.TargetRoomId);
+                }
+            }
+
+            return seen;
+        }
+
+        var fresh = Walk(rooms, wardensBar: true, flagsBar: true);
+
+        // Differentials, not counts. Asserting "16 screens" would go red the day chapter 1 grows a screen;
+        // asserting that *ignoring a rule opens screens the rule was closing* is a claim about the map's
+        // shape that survives any amount of content, and it is red the moment the walk stops honouring it.
+        Check("a creature standing in a doorway shuts screens off from a fresh game",
+            Walk(rooms, wardensBar: false, flagsBar: true).Count > fresh.Count);
+        Check("and so does a door wanting a flag nobody has earned yet",
+            Walk(rooms, wardensBar: true, flagsBar: false).Count > fresh.Count);
+
+        // Scoped to the *nearest* fight rather than to every reachable one, and the distinction is a
+        // design decision rather than a convenience: a later creature the walk happens to reach is
+        // allowed to be unwinnable today, because flight is guaranteed (§3) and "come back with the
+        // right tool" is the shape the whole equipment ladder is built on. What may not be true is that
+        // the *first* one turns a player away, since they have nothing to come back with.
+        var withFights = fresh
+            .Where(kv => rooms.TryGetValue(kv.Key, out var r) && r?.Entities?.Any(p => p?.Entity != null) == true)
+            .ToList();
+
+        Check($"a fresh game can walk into a fight at all "
+            + $"({withFights.Count} of {fresh.Count} reachable screens hold one)",
+            withFights.Count > 0);
+
+        var doorsAway = withFights.Count == 0 ? 0 : withFights.Min(kv => kv.Value);
+        var nearest = withFights
+            .Where(kv => kv.Value == doorsAway)
+            .OrderBy(kv => kv.Key)
+            .SelectMany(kv => rooms[kv.Key].Entities
+                .Where(p => p?.Entity != null && !string.IsNullOrEmpty(p.InstanceId))
+                .Select(p => (Room: kv.Key, P: p)))
+            .ToList();
+
+        var kitWeapons = GameConfig.StartingItems
+            .Select(id => InventoryCraftingManager.Instance?.GetItem(id))
+            .Where(i => i is { Slot: EquipSlot.Weapon, Potency: > 0 } && i.Deals != DamageType.None)
+            .ToList();
+
+        Check($"and the boot kit arms them for it ({kitWeapons.Count} weapon(s) in "
+            + $"{GameConfig.StartingItems.Length} starting item(s))",
+            kitWeapons.Count > 0);
+
+        // Ceilings, because a fight is turns and a fraction of a turn does nothing. Unwarded on purpose:
+        // the armour slot starts empty (`items.md` §4 — *"the first coat should be a moment rather than a
+        // default"*), so the boot's exposure is the real exposure.
+        static int TurnsToFell(EntityData e, DamageType type, int potency)
+        {
+            var perTurn = CombatManager.DamageAgainst(type, e, potency);
+            return perTurn <= 0 ? int.MaxValue : Mathf.CeilToInt(e.Durability / (float)perTurn);
+        }
+
+        static int TurnsToFall(EntityData e) =>
+            e.Deals == DamageType.None || e.Damage <= 0
+                ? int.MaxValue
+                : Mathf.CeilToInt(GameConfig.VitalityMax / e.Damage);
+
+        var unwinnable = new List<string>();
+        var noLesson = new List<string>();
+        var punchable = new List<string>();
+
+        foreach (var (roomId, p) in nearest)
+        {
+            var e = p.Entity;
+            var fall = TurnsToFall(e);
+            var armed = kitWeapons.Count == 0
+                ? int.MaxValue
+                : kitWeapons.Min(w => TurnsToFell(e, w.Deals, w.Potency));
+            var fists = TurnsToFell(e, GameConfig.BareHandedType, GameConfig.BareHandedPotency);
+
+            // `<=` and not `<`: the player acts first (EncounterManager opens with `_playersTurn = true`),
+            // so trading blow for blow to a dead heat is a win for whoever swung first.
+            if (armed > fall) unwinnable.Add($"{roomId}/{p.InstanceId}: {armed} to fell, {fall} to fall");
+
+            // The ratified reading of the first fight: it teaches resistance by *being* the pairing the
+            // starting tool answers. Left as the check rather than tuning the numbers — Jeremy: *"this
+            // seems the smart option"* — together with the fight screen naming your own damage type.
+            if (kitWeapons.All(w => w.Deals != e.VulnerableTo)) noLesson.Add($"{roomId}/{p.InstanceId}");
+
+            // And the gap, which is the whole point: `BareHandedPotency` exists so that a player out of
+            // items has verbs rather than none, and its own summary says it is *"deliberately outside
+            // §5's band"*. If fists were a plan, the tool would not be a lesson.
+            if (fists <= fall) punchable.Add($"{roomId}/{p.InstanceId}: {fists} to fell, {fall} to fall");
+        }
+
+        Check($"the nearest fight ({doorsAway} door(s) out) falls to the boot kit before it "
+            + $"falls you{Listing(unwinnable)}",
+            nearest.Count > 0 && unwinnable.Count == 0);
+        Check($"and the kit is the thing it is weak to, which is what the fight teaches{Listing(noLesson)}",
+            noLesson.Count == 0);
+        Check($"and bare hands lose it, which is what makes that worth teaching{Listing(punchable)}",
+            punchable.Count == 0);
 
         // -- And now the same thing in play, on one real authored screen --
         // Everything above reads the .tres files. None of it proves a creature *appears*: the whole
@@ -2109,7 +4372,15 @@ public static class SliceVerifier
         // ch1_low_track is chosen because it is the first fight in the game: the screen a player
         // reaches third, and the one where a broken placement would be most obvious and least
         // excusable. It is not a camp, so standing here refills nothing and disturbs no later gate.
+        //
+        // "Because it is the first fight" was a sentence in this comment for a day and is now checked
+        // against the walk above, which is worth the one line: the choice of screen is the *reason* the
+        // probe means anything, and re-pointing the boot room would have left it silently probing an
+        // ordinary fight while still claiming to probe the first one.
         const string firstFight = "ch1.logger_01";
+        Check("and the screen driven below is that nearest fight, not a screen chosen once and left",
+            nearest.Any(f => f.P.InstanceId == firstFight));
+
         NavigationManager.Instance.GoToRoom("ch1_low_track");
         var onScreen = Live();
 
@@ -2139,6 +4410,294 @@ public static class SliceVerifier
             + $"{wardens.Count(w => spine.ContainsKey(placedIn[w]))} warden(s); aftermath "
             + $"{aftermath.Count(f => f.StartsWith("freed."))} freed / "
             + $"{aftermath.Count(f => f.StartsWith("defeated."))} defeated");
+    }
+
+    /// <summary>
+    /// The twelve blights, and the rule that finishes a screen — added 2026-08-03 with unit 2
+    /// (<c>combat.md</c> §22, <c>build-plan.md</c> §4).
+    ///
+    /// <para>
+    /// <b>The bill is asserted here, unlike the fight counts.</b> Twelve is not a content total that a
+    /// later unit will grow: §1 puts twelve Graveflower in the world, §20 prices the exorcism engine at
+    /// eight of them, and §23 rules that <i>"fifteen mends stays fifteen"</i> — the other three are the
+    /// major repairs, which are recipes and land in unit 4 with no new blight hotspot. So a thirteenth
+    /// blight is not new content, it is a Graveflower the ending was not priced against, and that is
+    /// worth a red line.
+    /// </para>
+    ///
+    /// <para>
+    /// Three of the checks below exist because of failures that are <i>silent in both the inspector and
+    /// in play</i>: an out-of-range <c>Solution</c> index (a board that can never be finished), a
+    /// <c>MendPuzzle</c> that failed to deserialise (a blight that opens nothing), and a harvest node
+    /// yielding Graveflower (the hoard inflating past the price of the good ending). None of them throws,
+    /// and none of them looks wrong on screen.
+    /// </para>
+    /// </summary>
+    private static void GateMending(Dictionary<string, RoomData> rooms)
+    {
+        Section("mending  the twelve blights, and what finishes a screen");
+
+        const string flower = "herb_graveflower";
+
+        // -- The bill --
+        var blights = new List<(string RoomId, string Chapter, HotspotData Data)>();
+        foreach (var (roomId, room) in rooms)
+            foreach (var h in room.Hotspots)
+                if (h is { Kind: HotspotKind.Mend })
+                    blights.Add((roomId, room.ChapterId ?? "", h));
+
+        var perChapter = new[] { "ch1", "ch2", "ch3" }
+            .Select(c => blights.Count(b => b.Chapter == c))
+            .ToArray();
+
+        Check($"the world holds exactly 12 blights ({blights.Count})", blights.Count == 12);
+        Check($"split 2 / 4 / 6 across the chapters "
+            + $"({perChapter[0]} / {perChapter[1]} / {perChapter[2]})",
+            perChapter[0] == 2 && perChapter[1] == 4 && perChapter[2] == 6);
+
+        // The remainder, which the split above cannot see: a blight authored into a room the chapter
+        // ledgers never account for is one the ending never counted. It caught the waystation and the
+        // dream pockets until unit 3b deleted them, and it is what unit 6's pockets will land against.
+        Check("and none of them is authored off the chapter spine",
+            blights.Count == perChapter.Sum());
+
+        // -- The yield, which is the whole economy of the good ending --
+        Check("Graveflower is in the item catalogue",
+            InventoryCraftingManager.Instance?.Catalogue.ContainsKey(flower) == true);
+
+        var wrongYield = new List<string>();
+        var flagCollision = new List<string>();
+        var wouldRefill = new List<string>();
+        var flags = new Dictionary<string, string>();
+
+        foreach (var (roomId, _, h) in blights)
+        {
+            var where = $"{roomId}/{h.Id}";
+
+            if (h.ItemId != flower || h.ItemAmount != 1)
+                wrongYield.Add($"{where}: {h.ItemId} x{h.ItemAmount}");
+
+            // Mended flags are derived from the hotspot id, so a collision is two blights that are one
+            // blight: mend either and the other reads as done, on a screen nobody touched.
+            if (!flags.TryAdd(h.ResolvedMendedFlag, where))
+                flagCollision.Add($"{h.ResolvedMendedFlag}: {flags[h.ResolvedMendedFlag]} + {where}");
+
+            // Inert rather than harmful — the chapter refill only clears Harvest flags — but a field
+            // that reads as "this comes back" on the one hotspot in the game that must not is worth
+            // catching, because the fix if it ever *did* work is a second Graveflower per chapter.
+            if (h.RefillsAtMilestone) wouldRefill.Add(where);
+        }
+
+        Check($"every blight pays exactly 1 Graveflower{Listing(wrongYield)}", wrongYield.Count == 0);
+        Check($"and no two share a mended flag{Listing(flagCollision)}", flagCollision.Count == 0);
+        Check($"and none of them is marked to come back{Listing(wouldRefill)}", wouldRefill.Count == 0);
+
+        // Graveflower grows on mended ground and nowhere else (§22), so a mend is its only source. A
+        // harvest node handing it out is the cheap way to break the ending's arithmetic, and it would
+        // look exactly like every other herb node on screen.
+        var otherSource = new List<string>();
+        foreach (var (roomId, room) in rooms)
+            foreach (var h in room.Hotspots)
+            {
+                if (h == null || h.Kind == HotspotKind.Mend) continue;
+                if (h.ItemId == flower) otherSource.Add($"{roomId}/{h.Id} ({h.Kind})");
+            }
+
+        Check($"nothing but a mend yields Graveflower{Listing(otherSource)}", otherSource.Count == 0);
+
+        // -- The boards --
+        // Reported as five separate offender lists rather than one IsSolvable() sweep, because the five
+        // causes want five different fixes and the first one is not an authoring mistake at all: a null
+        // MendPuzzle on a hotspot that has one in its .tres means the sub-resource failed to load, which
+        // is the malformed-file failure that otherwise passes every registry check in this suite.
+        var noPuzzle = new List<string>();
+        var noParts = new List<string>();
+        var noSolution = new List<string>();
+        var outOfRange = new List<string>();
+        var repeatedStep = new List<string>();
+
+        foreach (var (roomId, _, h) in blights)
+        {
+            var where = $"{roomId}/{h.Id}";
+            var puzzle = h.MendPuzzle;
+
+            if (puzzle == null) { noPuzzle.Add(where); continue; }
+            if (puzzle.Parts == null || puzzle.Parts.Length == 0) { noParts.Add(where); continue; }
+            if (puzzle.Solution == null || puzzle.Solution.Length == 0) { noSolution.Add(where); continue; }
+
+            var steps = new HashSet<int>();
+            foreach (var step in puzzle.Solution)
+            {
+                if (step < 0 || step >= puzzle.Parts.Length)
+                    outOfRange.Add($"{where}: step {step} of {puzzle.Parts.Length} parts");
+                else if (!steps.Add(step))
+                    repeatedStep.Add($"{where}: step {step} twice");
+            }
+        }
+
+        Check($"every blight carries a puzzle that loaded{Listing(noPuzzle)}", noPuzzle.Count == 0);
+        Check($"every puzzle has parts to click{Listing(noParts)}", noParts.Count == 0);
+        Check($"and a solution to click them in{Listing(noSolution)}", noSolution.Count == 0);
+        Check($"no solution names a part that is never drawn{Listing(outOfRange)}",
+            outOfRange.Count == 0);
+        Check($"and no step is asked for twice{Listing(repeatedStep)}", repeatedStep.Count == 0);
+
+        // -- §22: a chapter 3 blight must not be solvable in chapter 1 --
+        // Checked against the door graph rather than against a field, because that is where the fact
+        // actually lives: none of the three tool blights carries a RequiredFlag, on purpose, since the
+        // screen it stands on is already unreachable without the tool. A gate reading a field here would
+        // pass while the geography quietly changed underneath it — which is the version that can happen,
+        // since the doors are content and the blights are not.
+        var reached = new HashSet<string> { GameConfig.StartingRoomId };
+        var queue = new Queue<string>(reached);
+        while (queue.Count > 0)
+        {
+            if (!rooms.TryGetValue(queue.Dequeue(), out var room)) continue;
+            foreach (var door in Doors(room))
+            {
+                if (Gates(door).Any(f => f.StartsWith("learned.tool_"))) continue;
+                if (reached.Add(door.TargetRoomId)) queue.Enqueue(door.TargetRoomId);
+            }
+        }
+
+        var behindATool = blights.Where(b => !reached.Contains(b.RoomId)).ToList();
+        var toolRooms = behindATool.Select(b => b.RoomId).OrderBy(r => r).ToList();
+
+        Check($"exactly 3 blights cannot be reached with no tool learned{Listing(toolRooms)}",
+            behindATool.Count == 3);
+        Check("one in each chapter, so no chapter's tool form arrives early",
+            behindATool.Select(b => b.Chapter).Distinct().Count() == 3);
+
+        // -- And now the mechanism, on ground that is safe to break --
+        var world = WorldStateManager.Instance;
+        var inv = InventoryCraftingManager.Instance;
+        var states = EntityStateManager.Instance;
+        var nav = NavigationManager.Instance;
+
+        var fouled = nav.GetRoom("verify_blighted");
+        var held = nav.GetRoom("verify_held");
+        Check("the mending fixtures registered", fouled != null && held != null);
+        if (fouled == null || held == null) return;
+
+        var site = fouled.Hotspots[0];
+        var before = inv?.GetCount(flower) ?? 0;
+
+        world.SetFlag(site.ResolvedMendedFlag, false);
+        world.SetFlag(Flags.Cleansed(fouled.Id), false);
+
+        Check("an unmended blight leaves its screen fouled", MendManager.IsFouled(fouled));
+        Check("and so the screen is not cleansed", !MendManager.IsCleansed(fouled));
+        Check("a blight nobody has touched can be mended", MendManager.CanMend(site));
+
+        Check("mending it reports success", MendManager.Mend(site));
+        Check("the mended flag is set", world.GetFlag(site.ResolvedMendedFlag));
+        Check("the flower is paid, once", (inv?.GetCount(flower) ?? 0) == before + 1);
+        Check("the screen is no longer fouled", !MendManager.IsFouled(fouled));
+
+        // Mending the last thing on the screen is what finishes it — the direction that matters, and
+        // the one the whole Waking colour scheme hangs off.
+        Check("and mending the last thing on it cleansed it", MendManager.IsCleansed(fouled));
+        Check("with the flag to match", world.GetFlag(Flags.Cleansed(fouled.Id)));
+
+        // The Harvest shape: refuse, do not pay twice. Without this a blight is a Graveflower tap.
+        Check("mending it again is refused", !MendManager.Mend(site));
+        Check("and pays nothing the second time", (inv?.GetCount(flower) ?? 0) == before + 1);
+        Check("nor can it be mended", !MendManager.CanMend(site));
+
+        // Arrival re-derives, which is what corrects a save written before the flag existed and what
+        // keeps the ~47 screens with nothing on them from being permanently out of step.
+        world.SetFlag(Flags.Cleansed(fouled.Id), false);
+        nav.GoToRoom(fouled.Id);
+        Check("walking onto a screen re-derives its verdict",
+            world.GetFlag(Flags.Cleansed(fouled.Id)));
+
+        // -- Held: a mended screen with something still standing on it is not finished --
+        // Driven without navigating; see BlightRoom's remarks for why this fixture stays off screen.
+        var heldSite = held.Hotspots[0];
+        world.SetFlag(heldSite.ResolvedMendedFlag, false);
+        world.SetFlag(Flags.Cleansed(held.Id), false);
+        states?.SetState(HeldCreature, EntityState.Corrupted);
+
+        Check("a creature still standing holds its screen", MendManager.IsHeld(held));
+        Check("mending the blight there does not cleanse it", MendManager.Mend(heldSite));
+        Check("because the screen is still held", !MendManager.IsCleansed(held));
+        Check("and the flag stayed shut", !world.GetFlag(Flags.Cleansed(held.Id)));
+
+        states?.Purify(HeldCreature);
+        Check("purifying it is what flips the screen", MendManager.Reevaluate(held));
+        Check("and the flag follows", world.GetFlag(Flags.Cleansed(held.Id)));
+
+        // Both directions, which is what makes the flag a cache rather than a second source of truth.
+        // Nothing in the game can currently re-corrupt a creature; the false branch is the reason the
+        // debug panel can print the verdict beside the flag and expect them to agree.
+        states?.SetState(HeldCreature, EntityState.Severed);
+        Check("a severed body still holds the screen", MendManager.IsHeld(held));
+        Check("and re-deriving takes the flag back down", !MendManager.Reevaluate(held));
+        Check("so the flag never outlives the verdict", !world.GetFlag(Flags.Cleansed(held.Id)));
+
+        // -- And now one real authored blight, on screen, through the panel --
+        // Everything above this point reads .tres files or synthetic rooms. None of it proves a blight
+        // *appears*, or that clicking it reaches the board: the Mend case in InteractionService emits an
+        // event, the Hud loads the panel from a path string, and both failures are silent. This is the
+        // same gap the fights section had to close, closed the same way — on the first blight in the
+        // game, which §22 names as the tutorial.
+        const string tutorial = "ch1_fern_gully";
+        nav.GoToRoom(tutorial);
+
+        var room1 = nav.GetRoom(tutorial);
+        var blight = room1?.Hotspots.FirstOrDefault(h => h is { Kind: HotspotKind.Mend });
+        Check("the first blight in the game is authored", blight != null);
+
+        if (blight != null && _hud?.Mend != null)
+        {
+            // The flag it will set must not already be set, or every check below is measuring a mend
+            // some earlier gate performed.
+            world.SetFlag(blight.ResolvedMendedFlag, false);
+            var paidBefore = inv?.GetCount(flower) ?? 0;
+
+            var drawn = Find(Live(), blight.Id);
+            Check("it is on screen", Blind || drawn != null);
+            Check("and drawn with its own cue", Blind || drawn?.ShowCue == true);
+            Check("and not shut", Blind || drawn?.Locked == false);
+
+            Check("clicking it is allowed", InteractionService.ActivateHotspot(blight));
+            Check("the board came up", _hud.Mend.IsOpen);
+            Check("showing that blight", _hud.Mend.BlightId == blight.Id);
+            Check($"with its 5 parts on it ({_hud.Mend.PartCount})", _hud.Mend.PartCount == 5);
+
+            Check("solving it closes the board", _hud.Mend.DebugSolve());
+            Check("the blight is mended", world.GetFlag(blight.ResolvedMendedFlag));
+            Check("and it paid a Graveflower", (inv?.GetCount(flower) ?? 0) == paidBefore + 1);
+
+            // The screen still holds a corrupted creature, so the mend is not the last thing here.
+            Check("but the screen is not cleansed, because something still stands on it",
+                !world.GetFlag(Flags.Cleansed(tutorial)));
+
+            world.SetFlag(blight.ResolvedMendedFlag, false);
+            inv?.RemoveItem(flower, 1);
+            MendManager.Reevaluate(room1);
+        }
+        else
+        {
+            Check("the mend panel reached the Hud", _hud?.Mend != null);
+        }
+
+        // -- Put the world back --
+        // The fixtures are disposable but the flags and the satchel are not: a Graveflower left behind
+        // is a material a later gate did not put there, and a mended flag is progress nobody earned.
+        world.SetFlag(site.ResolvedMendedFlag, false);
+        world.SetFlag(heldSite.ResolvedMendedFlag, false);
+        world.SetFlag(Flags.Cleansed(fouled.Id), false);
+        world.SetFlag(Flags.Cleansed(held.Id), false);
+        states?.SetState(HeldCreature, EntityState.Corrupted);
+
+        var surplus = (inv?.GetCount(flower) ?? 0) - before;
+        if (surplus > 0) inv?.RemoveItem(flower, surplus);
+
+        var forms = blights.Count(b => b.Data.MendPuzzle?.IsOrdered == true);
+        GD.Print($"       {blights.Count} blights: {blights.Count - forms} spot / {forms} ordered, "
+            + $"{behindATool.Count} of them behind a tool; {blights.Count} Graveflower in the world, "
+            + "and the engine costs 8");
     }
 
     /// <summary>Every distinct <see cref="EntityData"/> reachable through a placement. There is no registry.</summary>

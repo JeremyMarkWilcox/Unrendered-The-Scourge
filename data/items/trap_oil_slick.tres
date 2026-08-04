@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://src/Data/ItemData.cs" id="1_item"]
+
+[resource]
+script = ExtResource("1_item")
+Id = "trap_oil_slick"
+DisplayName = "Oil Slick"
+Description = "Poured wide and left to sit. Oil does not light itself, so this one waits on you — spend the turn, and it keeps paying for several after."
+Category = 5
+MaxStack = 1
+PlaceholderColor = Color(0.7607843, 0.4392157, 0.1254902, 1)
+Deals = 3
+Potency = 6
+TriggersItself = false

@@ -61,7 +61,7 @@ Id = "ch3_sump_tallow"
 Label = "Tallow"
 Kind = 3
 Region = Rect2(620, 870, 220, 160)
-ItemId = "rat_tallow"
+ItemId = "mat_tallow"
 ItemAmount = 1
 RefillsAtMilestone = true
 

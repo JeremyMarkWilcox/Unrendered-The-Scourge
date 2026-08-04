@@ -38,8 +38,9 @@ public partial class EventBus : Node
 
     [Signal] public delegate void WorldFlagChangedEventHandler(string flag, bool value);
 
-    /// <summary>Payload is a <see cref="ZonePhase"/>.</summary>
-    [Signal] public delegate void ZonePhaseChangedEventHandler(string zoneId, int phase);
+    // `ZonePhaseChanged(zoneId, phase)` went with `ZonePhase` on 2026-08-03. Nothing replaced it,
+    // because nothing needed to: cleansing is a world flag now, so the signal above already carries it
+    // and every subscriber was already listening to that one as well.
 
     // ---- Entities --------------------------------------------------------
 
@@ -95,6 +96,68 @@ public partial class EventBus : Node
     /// </summary>
     [Signal] public delegate void BlueprintDiscoveredEventHandler(string blueprintId);
 
+    // ---- Mending ---------------------------------------------------------
+
+    /// <summary>
+    /// A blight was clicked and wants its board (unit 2, <c>combat.md</c> §22). <c>Hud</c> listens and
+    /// opens <c>MendPanel</c>; nothing else does.
+    /// </summary>
+    /// <remarks>
+    /// <b>Carries the hotspot rather than its id</b>, which is a departure from every other signal
+    /// here. The panel needs the <c>MendPuzzle</c> hanging off it, and an id would mean re-finding the
+    /// hotspot in the current room — a lookup that can miss, added purely to keep the payload a string.
+    /// This is also what keeps <see cref="Unrendered.World.InteractionService"/> free of UI: it emits
+    /// and returns, so the whole mend path stays drivable with no scene tree.
+    /// </remarks>
+    [Signal] public delegate void MendRequestedEventHandler(Data.HotspotData blight);
+
+    /// <summary>
+    /// A station was clicked and wants the crafting panel, narrowed to the recipes made there. Blank
+    /// means the camp bench with nothing to narrow by — everything you know.
+    /// </summary>
+    /// <remarks>
+    /// <b>Carries the id rather than the hotspot</b>, which is the opposite choice from
+    /// <see cref="MendRequestedEventHandler"/> above and for the reason stated there: that one departs
+    /// from the string payload because the panel needs the <c>MendPuzzle</c> resource hanging off the
+    /// hotspot. A station has nothing hanging off it — the id *is* the filter, and every recipe the panel
+    /// would show is in the registry rather than on the screen. So the default holds here.
+    /// <para>
+    /// <b>Nothing subscribes yet</b>, and that is the honest state: there is no crafting panel (the
+    /// <c>Workbench</c> case in <c>InteractionService</c> says so out loud). The signal lands now anyway
+    /// because it is the seam the gates drive — a station click is assertable headlessly the moment it
+    /// emits, and the panel arriving later subscribes to something already proven to fire.
+    /// </para>
+    /// </remarks>
+    [Signal] public delegate void CraftingRequestedEventHandler(string stationId);
+
+    /// <summary>
+    /// A fight was committed to, on the placement named. The fight panel's cue to open, and
+    /// <b>the first combat signal on this bus</b> — added by unit 3a, which is the first unit in which
+    /// a fight is a thing that starts rather than a thing the arithmetic describes.
+    /// </summary>
+    /// <remarks>
+    /// Carries the instance id rather than the <c>EntityData</c>, which is the default here and correct
+    /// for the reason <see cref="CraftingRequestedEventHandler"/> gives: everything hanging off a
+    /// creature — its data, its wounds, its rig — is reachable from the id through a manager, and the id
+    /// is the key all three of those are stored under anyway.
+    /// <para>
+    /// <b>There is no per-turn signal, and there should not be one.</b> A turn changes several things at
+    /// once — a condition, a rig, a log line, a Vitality bar — and the pieces that already have signals
+    /// (<see cref="VitalityChangedEventHandler"/>, <see cref="NotifyEventHandler"/>) fire on their own.
+    /// The panel reads the rest off <c>EncounterManager</c> when it repaints, which is
+    /// <c>MendPanel</c>'s precedent exactly: <i>a property that recomputes only proves it agrees with
+    /// itself</i>, so the state has one owner and the screen asks it.
+    /// </para>
+    /// </remarks>
+    [Signal] public delegate void FightStartedEventHandler(string instanceId);
+
+    /// <summary>
+    /// The fight let go — won, fled or collapsed. <b>Deliberately carries no outcome</b>, on
+    /// <c>CombatManager.SettleEngagement</c>'s precedent: what happened is written in the body's state
+    /// and in a flag, so a payload saying it a second time is a second place the two can disagree.
+    /// </summary>
+    [Signal] public delegate void FightEndedEventHandler(string instanceId);
+
     // ---- Feedback --------------------------------------------------------
 
     /// <summary>A line of text for the player: examine flavour, refusals, pickups.</summary>
@@ -110,9 +173,6 @@ public partial class EventBus : Node
 
     public void EmitWorldFlagChanged(string flag, bool value)
         => EmitSignal(SignalName.WorldFlagChanged, flag, value);
-
-    public void EmitZonePhaseChanged(string zoneId, ZonePhase phase)
-        => EmitSignal(SignalName.ZonePhaseChanged, zoneId, (int)phase);
 
     public void EmitEntityStateChanged(string entityId, EntityState state)
         => EmitSignal(SignalName.EntityStateChanged, entityId, (int)state);
@@ -155,6 +215,18 @@ public partial class EventBus : Node
 
     public void EmitBlueprintDiscovered(string blueprintId)
         => EmitSignal(SignalName.BlueprintDiscovered, blueprintId);
+
+    public void EmitMendRequested(Data.HotspotData blight)
+        => EmitSignal(SignalName.MendRequested, blight);
+
+    public void EmitCraftingRequested(string stationId)
+        => EmitSignal(SignalName.CraftingRequested, stationId);
+
+    public void EmitFightStarted(string instanceId)
+        => EmitSignal(SignalName.FightStarted, instanceId);
+
+    public void EmitFightEnded(string instanceId)
+        => EmitSignal(SignalName.FightEnded, instanceId);
 
     public void EmitNotify(string text)
         => EmitSignal(SignalName.Notify, text);

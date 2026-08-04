@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://src/Data/ItemData.cs" id="1_item"]
+
+[resource]
+script = ExtResource("1_item")
+Id = "trap_spiked_pit"
+DisplayName = "Spiked Pit"
+Description = "Dug shallow, floored with sharpened stock, and covered over with whatever the ground was wearing. You do not have to be there when it works."
+Category = 5
+MaxStack = 1
+PlaceholderColor = Color(0.38431373, 0.3254902, 0.27450982, 1)
+Deals = 1
+Potency = 10

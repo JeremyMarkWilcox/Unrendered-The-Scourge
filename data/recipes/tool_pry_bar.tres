@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="RecipeData" format=3]
+
+[ext_resource type="Script" path="res://src/Data/RecipeIngredient.cs" id="1_ingr"]
+[ext_resource type="Script" path="res://src/Data/RecipeData.cs" id="2_recipe"]
+
+[sub_resource type="Resource" id="Resource_in1"]
+script = ExtResource("1_ingr")
+ItemId = "mat_scrap_iron"
+Amount = 2
+
+[resource]
+script = ExtResource("2_recipe")
+Id = "recipe_tool_pry_bar"
+DisplayName = "Pry Bar"
+Inputs = Array[ExtResource("1_ingr")]([SubResource("Resource_in1")])
+RequiresStation = "anvil"
+OutputItemId = "tool_pry_bar"
+OutputAmount = 1
+SetsFlag = "learned.tool_pry_bar"
+RequiredBlueprintId = "lore_craft_prying"

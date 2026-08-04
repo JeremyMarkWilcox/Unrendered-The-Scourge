@@ -10,7 +10,7 @@ namespace Unrendered.Data;
 [GlobalClass]
 public partial class EntityPlacement : Resource
 {
-    /// <summary>Unique across the whole game, e.g. "waystation.rat_01".</summary>
+    /// <summary>Unique across the whole game, e.g. "ch1.hunter_01".</summary>
     [Export] public string InstanceId { get; set; } = "";
 
     [Export] public EntityData Entity { get; set; }
@@ -25,9 +25,15 @@ public partial class EntityPlacement : Resource
     // painted screen again. The Dream's own creatures get placed in their 3D pocket, by that pocket,
     // and a Waking body no longer has a second silhouette to keep in sync.
 
-    /// <summary>
-    /// Purifying this one breaks the whole zone's distortion field: weather clears, drain
-    /// stops, everything left alive drops to Form 3.
-    /// </summary>
-    [Export] public bool IsZoneLieutenant { get; set; }
+    // `IsZoneLieutenant` — purifying this one broke the whole zone's distortion field, dropping
+    // everything else alive in the room to Form 3. Deleted 2026-08-03 (unit 2), and it is the field the
+    // build plan flagged as "build it a registry or delete it": nothing enforced that a zone had exactly
+    // one lieutenant, so two of them, or none, were both silently authorable.
+    //
+    // Delete won, and pass 2 is why the window was open: none of the 30 fight placements authored on
+    // 2026-08-02 set it, so exactly one .tres in the game ever did. What replaces the mechanism is not
+    // a registry — it is the removal of the idea that one death settles a region. Every creature is a
+    // person with their own tether (`tethered-dies-untethered-survives`), so nobody is freed as a side
+    // effect of somebody else's fight, and a screen is finished when the things *on it* are dealt with.
+    // See `MendManager.IsCleansed`.
 }

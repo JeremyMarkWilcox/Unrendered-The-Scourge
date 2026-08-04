@@ -10,7 +10,7 @@ Amount = 2
 
 [sub_resource type="Resource" id="Resource_in2"]
 script = ExtResource("1_ingr")
-ItemId = "rat_tallow"
+ItemId = "mat_tallow"
 Amount = 1
 
 [resource]
@@ -18,5 +18,6 @@ script = ExtResource("2_recipe")
 Id = "recipe_salve_clearmind"
 DisplayName = "Clearmind Salve"
 Inputs = Array[ExtResource("1_ingr")]([SubResource("Resource_in1"), SubResource("Resource_in2")])
+RequiresStation = "mortar"
 OutputItemId = "salve_clearmind"
 OutputAmount = 1

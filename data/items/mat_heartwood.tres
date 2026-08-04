@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://src/Data/ItemData.cs" id="1_item"]
+
+[resource]
+script = ExtResource("1_item")
+Id = "mat_heartwood"
+DisplayName = "Heartwood"
+Description = "Close-grained and heavy, cut from the dry heart of a fallen trunk. Takes a shaft without splitting."
+MaxStack = 20
+PlaceholderColor = Color(0.42745098, 0.30588236, 0.18431373, 1)

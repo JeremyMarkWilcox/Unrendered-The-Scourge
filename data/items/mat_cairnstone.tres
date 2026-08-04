@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://src/Data/ItemData.cs" id="1_item"]
+
+[resource]
+script = ExtResource("1_item")
+Id = "mat_cairnstone"
+DisplayName = "Cairnstone"
+Description = "Prised from a marker somebody stacked with intent. It rings when struck, and there is only so much of it in the world."
+MaxStack = 20
+PlaceholderColor = Color(0.5019608, 0.5254902, 0.5568628, 1)

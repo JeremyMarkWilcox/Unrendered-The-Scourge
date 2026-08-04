@@ -60,27 +60,62 @@ public static class Flags
     public static string Cleansed(string roomId) => $"screen.{roomId}.cleansed";
 
     /// <summary>
-    /// A person freed by severing their tether — <b>24 of the 30 regular fights</b>, one per human
-    /// sighting.
+    /// A person freed by severing their tether — <b>up to 24 of the 30 regular fights</b>, one per
+    /// human sighting.
     /// </summary>
     /// <remarks>
     /// This used to say "all 30", which is <c>placement.md</c> §6 correction 1 in miniature: the 30
     /// assumed nine creatures × three sightings, and the Beast is seen six times and frees nobody.
-    /// The six that do not free anyone set <see cref="Defeated"/> instead, so this domain counts
-    /// exactly 24 — which is the property the class comment promises, that a bill checker can count
-    /// a class of thing by prefix.
+    /// The six that do not free anyone set <see cref="Defeated"/> instead, so the human half of the
+    /// roster counts exactly 24 — which is the property the class comment promises, that a bill checker
+    /// can count a class of thing by prefix.
+    /// <para>
+    /// <b>"Exactly 24" became "up to 24" in unit 3a</b>, and the missing ones went to
+    /// <see cref="Killed"/> rather than nowhere. The count that survives as an equality is the pair:
+    /// <c>freed.* + killed.* == 24</c>, with <c>defeated.* == 6</c>. See <see cref="Killed"/> for why
+    /// a third domain was cheaper than the alternatives.
+    /// </para>
     /// </remarks>
     public static string Freed(string instanceId) => $"freed.{instanceId}";
+
+    /// <summary>
+    /// A person who died still tethered — killed by overkill rather than freed by severing. The other
+    /// half of <see cref="Freed"/>'s 24, and <b>the only flag in the game that records a failure you
+    /// chose</b>.
+    /// </summary>
+    /// <remarks>
+    /// <b>Added by unit 3a, because the fight had two endings and one name for them.</b>
+    /// <c>tethered-dies-untethered-survives</c> is the rule: cut the tether and the person walks away,
+    /// kill the body while the tether holds and the person dies with it. Both routes end the same fight
+    /// and only one of them frees anybody, so with two domains there was nowhere to write the
+    /// difference.
+    /// <para>
+    /// <b>Not folded into <see cref="Defeated"/>, though it was one line cheaper.</b> That domain's own
+    /// remark says it was split off <see cref="Freed"/> precisely so both counts stay readable; sharing
+    /// it here would have made <c>defeated.*</c> mean "the Beast, plus however many villagers you
+    /// murdered" — unreadable in exactly the way the split was meant to prevent, and it is the ending's
+    /// bill that reads these.
+    /// </para>
+    /// <para>
+    /// <b>Which flag a win writes is derived, never authored.</b> A creature with a blank
+    /// <c>EntityData.PurifiedName</c> was never a person, so it can only be <see cref="Defeated"/>; one
+    /// with a name set gets <see cref="Freed"/> or this, depending on whether the body was
+    /// <c>Severed</c> when it fell. So there is no per-creature field anyone can author wrongly, and
+    /// the moral weight of the overkill route lives in a count rather than in a special case.
+    /// </para>
+    /// </remarks>
+    public static string Killed(string instanceId) => $"killed.{instanceId}";
 
     /// <summary>
     /// A creature put down that frees nobody — the six Beast sightings, and nothing else
     /// (<c>items.md</c> §10: <i>"it is slain, not freed"</i>).
     /// </summary>
     /// <remarks>
-    /// A separate domain rather than reusing <see cref="Freed"/>, so that <c>freed.*</c> stays at 24
-    /// and <c>defeated.*</c> at 6. Sharing one name would have been cheaper by a line and would have
-    /// made both counts unreadable — and counting by prefix is the only reason these are functions
-    /// instead of string literals in the .tres files.
+    /// A separate domain rather than reusing <see cref="Freed"/>, so that the human half of the roster
+    /// stays at 24 and <c>defeated.*</c> at 6. Sharing one name would have been cheaper by a line and
+    /// would have made both counts unreadable — and counting by prefix is the only reason these are
+    /// functions instead of string literals in the .tres files. <b>Unit 3a made that argument a third
+    /// time</b> and reached the same answer: see <see cref="Killed"/>.
     /// <para>
     /// What it gates today is the carcass: the Beast is the one creature you may harvest, because it
     /// is the one that was never a person. See <c>EntityData.HarvestItemId</c>, which stays unused —

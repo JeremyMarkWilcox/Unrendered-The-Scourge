@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://src/Data/ItemData.cs" id="1_item"]
+
+[resource]
+script = ExtResource("1_item")
+Id = "brew_burning_oil"
+DisplayName = "Burning Oil"
+Description = "Pitch let down with rendered fat until it will pour and still catch. Useless in the hand — it wants a flask, a floor, and something to be standing on it."
+MaxStack = 20
+PlaceholderColor = Color(0.7176471, 0.36078432, 0.15686275, 1)
+Track = 1

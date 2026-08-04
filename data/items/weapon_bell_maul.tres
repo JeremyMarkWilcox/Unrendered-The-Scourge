@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://src/Data/ItemData.cs" id="1_item"]
+
+[resource]
+script = ExtResource("1_item")
+Id = "weapon_bell_maul"
+DisplayName = "Bell Maul"
+Description = "Heartwood shaft, iron collar, and a cairnstone head that rings when it lands. Not better than the axe. Different, which in this village is the whole of the argument."
+Category = 6
+PlaceholderColor = Color(0.5254902, 0.54509807, 0.5686275, 1)
+Deals = 2
+Potency = 10
+Slot = 1

@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="RecipeData" format=3]
+
+[ext_resource type="Script" path="res://src/Data/RecipeIngredient.cs" id="1_ingr"]
+[ext_resource type="Script" path="res://src/Data/RecipeData.cs" id="2_recipe"]
+
+[sub_resource type="Resource" id="Resource_in1"]
+script = ExtResource("1_ingr")
+ItemId = "mat_heartwood"
+Amount = 1
+
+[sub_resource type="Resource" id="Resource_in2"]
+script = ExtResource("1_ingr")
+ItemId = "mat_pitch"
+Amount = 1
+
+[resource]
+script = ExtResource("2_recipe")
+Id = "recipe_trap_snare"
+DisplayName = "Snare"
+Inputs = Array[ExtResource("1_ingr")]([SubResource("Resource_in1"), SubResource("Resource_in2")])
+OutputItemId = "trap_snare"
+OutputAmount = 1
+RequiredBlueprintId = "lore_craft_mechanisms"

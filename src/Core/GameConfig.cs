@@ -53,6 +53,32 @@ public static class GameConfig
     public const int RigSlotsPerFight = 2;
 
     /// <summary>
+    /// How many healing salves you may take into a fight (`items.md` §2). **Two, and it is a per-fight
+    /// slot cap rather than a carry limit** — the distinction is the whole reason this constant exists
+    /// beside <see cref="RigSlotsPerFight"/> instead of in the inventory.
+    /// </summary>
+    /// <remarks>
+    /// <b>There is deliberately no carry cap anywhere in the game</b>, and it would be easy to add one
+    /// here by accident. `items.md` §1 is explicit: *"There is no cap, so you are never maxed"* — written
+    /// against Jeremy's peeve, *"I do hate finding things you are maxed on in games."* A satchel limit
+    /// makes a pickup a wasted pickup; a slot limit makes a loadout a choice. Same number, opposite
+    /// feeling, and only one of them is wanted.
+    /// <para>
+    /// The two caps do not arbitrate against each other and must never be merged into one pool (§2:
+    /// *"salve slots are two healing items, trap slots are two traps, and nothing arbitrates"*). This is
+    /// also why offensive brews — Burning Oil, Corrosive Draught — are authored as
+    /// <see cref="Data.ItemCategory.Component"/> rather than Salve: they are bench inputs, never carried
+    /// into a fight, so the question of which cap they count against is void rather than answered.
+    /// </para>
+    /// <para>
+    /// Nothing reads this yet — the loadout screen is unit 3, the same milestone that first reads
+    /// <see cref="RigSlotsPerFight"/>. It lands with the shapes for the reason §18 gives: a number the
+    /// arsenal is authored against is cheaper now than after twenty items exist.
+    /// </para>
+    /// </remarks>
+    public const int SalveSlotsPerFight = 2;
+
+    /// <summary>
     /// Multiplier when you hit what a creature is vulnerable to, and when you hit what it resists.
     /// Ratified 2026-07-30 (§18): the pair replaced Defence as a number entirely.
     ///
@@ -65,6 +91,54 @@ public static class GameConfig
 
     /// <summary>Never zero. §7: an absolute reads as a lock and sends players hunting a key.</summary>
     public const float ResistantMultiplier = 0.5f;
+
+    /// <summary>
+    /// How much a matching coat takes off an incoming blow — <b>the target-side mirror of
+    /// <see cref="ResistantMultiplier"/></b>, and the same number for the same reason. Added by unit 3a,
+    /// which is the first thing that could be hit.
+    /// </summary>
+    /// <remarks>
+    /// A separate constant rather than reusing <see cref="ResistantMultiplier"/>, though they are equal
+    /// today: one is authored on a creature and read when you attack, the other is authored on an item
+    /// and read when you are attacked. Sharing the field would make tuning one of them silently tune the
+    /// other, and §18 is explicit that the coat is a *trade* — so it is the half most likely to move.
+    /// <para>
+    /// <b>Halved, never negated.</b> §18: an immunity reads as a lock, which is the argument
+    /// <see cref="ResistantMultiplier"/>'s own summary makes from the other side.
+    /// </para>
+    /// </remarks>
+    public const float WardMultiplier = 0.5f;
+
+    /// <summary>
+    /// What a strike does with nothing equipped. §18 keeps a weak baseline attack so that <b>a player out
+    /// of items has a fight with verbs rather than a fight with none</b> — this is the number that makes
+    /// that true, and it is the floor of the whole damage economy.
+    /// </summary>
+    /// <remarks>
+    /// 3 against the roster's default <c>Durability = 30</c> is ten turns unmodified — deliberately
+    /// outside §5's 3–6 band, because bare hands are meant to be the answer to *"I have nothing"* rather
+    /// than a viable plan. Guaranteed flight (§3) is what makes that safe to be genuinely bad.
+    /// <para>
+    /// It is <see cref="BareHandedType"/>, not <c>None</c>: <c>DamageAgainst</c> returns 0 for a typeless
+    /// hit, so a typeless baseline would be no baseline at all. Fists are weight, so a creature may
+    /// resist them and may even be vulnerable to them.
+    /// </para>
+    /// </remarks>
+    public const int BareHandedPotency = 3;
+
+    /// <summary>
+    /// The type a strike carries with nothing equipped. See <see cref="BareHandedPotency"/> for why it
+    /// is a real type rather than <c>None</c>.
+    /// </summary>
+    /// <remarks>
+    /// <b>A constant because it is read in three places that must agree</b>, added 2026-08-03. It was
+    /// hardcoded at <c>EncounterManager.Strike</c> and described in two doc comments, and then the fight
+    /// screen needed it too — to tell you *"Strike — bare hands (weight)"*, which is the sentence that
+    /// lets you connect the verb you are pressing to the reading above it saying the thing barely
+    /// notices weight. A fourth copy in the gate over that would have made the gate agree with itself
+    /// rather than with the game.
+    /// </remarks>
+    public const DamageType BareHandedType = DamageType.Blunt;
 
     /// <summary>
     /// Where §5's condition ladder changes word, as a fraction of durability **remaining**. Read as:
@@ -103,22 +177,46 @@ public static class GameConfig
     /// re-pointing the boot is independent of that and is what makes the new map reachable at all.
     ///
     /// <para>
-    /// The waystation and the six <c>dream_way_*</c> rooms still exist and still load; nothing walks
-    /// to them any more. They stay until the gates that use them as fixtures are re-anchored onto
-    /// synthetic <c>verify_</c> rooms, which is a separate operation on purpose — deleting a fixture
-    /// out from under a gate and authoring new content are different kinds of change, and doing both
-    /// at once makes it impossible to tell which half broke something.
+    /// The waystation and the six <c>dream_way_*</c> rooms outlived the move by a day: they still
+    /// loaded, nothing walked to them, and they stayed until the gates using them as fixtures were
+    /// re-anchored onto synthetic <c>verify_</c> rooms. **Unit 3b did that and deleted all eight.**
+    /// Splitting it in two was the right call and worth keeping as a rule — deleting a fixture out from
+    /// under a gate and authoring new content are different kinds of change, and doing both at once
+    /// makes it impossible to tell which half broke something.
     /// </para>
     ///
     /// <para>
     /// <b>This room is a camp</b> (<c>ch1_cottage_bench</c>), which is required rather than incidental:
-    /// once <c>waystation_shed</c> is gone it is the only bench in the game, and crafting, the shared
+    /// with <c>waystation_shed</c> gone it is the only bench in the game, and crafting, the shared
     /// cache and the respawn destination are all gated on standing at one. It also means arriving here
     /// refills both pools — see the fourth blind-spot class in <c>handoff.md</c> §3 before writing any
     /// gate that carries a part-drained bar through the starting room.
     /// </para>
     /// </summary>
     public const string StartingRoomId = "ch1_cottage";
+
+    /// <summary>
+    /// What he already owns. Granted once when a new game begins, and the satchel is otherwise empty.
+    /// </summary>
+    /// <remarks>
+    /// <b>This exists because unit 4b authored an item nothing in the world could give you.</b>
+    /// `items.md` §4 lists the Splitting Axe as *"starting — his own tool"* with no inputs and no recipe,
+    /// and until today "starting" had exactly one working meaning in this project: a recipe with a blank
+    /// <see cref="Data.RecipeData.RequiredBlueprintId"/> is known from the first frame. There was no
+    /// mechanism at all for a starting *object* — the satchel began empty and stayed that way — so the
+    /// axe would have been catalogued, gated, displayed in the journal, and unobtainable.
+    /// <para>
+    /// <b>The gate that matters is the general one</b>, not a check that this list is non-empty: every
+    /// authored item must be a harvest yield, a recipe output, or in here. A one-item starting kit is easy
+    /// to eyeball; an unobtainable coat two content passes from now is not.
+    /// </para>
+    /// <para>
+    /// Not a "loadout" and not equipping. The armour slot starts empty on purpose (`items.md` §4: *"the
+    /// first coat should be a moment rather than a default"*), and what it means to *wear* the axe is
+    /// unit 3's question. This puts it in the satchel and stops there.
+    /// </para>
+    /// </remarks>
+    public static readonly string[] StartingItems = { "weapon_splitting_axe" };
 
     // ---- Placeholder palette --------------------------------------------
     // Used by PlaceholderBackdrop until real art lands. Cold and desaturated for corrupted ground,

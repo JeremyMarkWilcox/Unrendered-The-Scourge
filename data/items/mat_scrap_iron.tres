@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://src/Data/ItemData.cs" id="1_item"]
+
+[resource]
+script = ExtResource("1_item")
+Id = "mat_scrap_iron"
+DisplayName = "Scrap Iron"
+Description = "Hinges, nails, a broken share. Nobody is coming back for it, and it was better iron than anything sold new."
+MaxStack = 20
+PlaceholderColor = Color(0.40392157, 0.42352942, 0.44705883, 1)

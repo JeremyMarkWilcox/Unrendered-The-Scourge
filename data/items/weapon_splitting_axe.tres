@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://src/Data/ItemData.cs" id="1_item"]
+
+[resource]
+script = ExtResource("1_item")
+Id = "weapon_splitting_axe"
+DisplayName = "Splitting Axe"
+Description = "His own, off the block by the woodshed. He has never once thought of it as a weapon and it is going to keep not being one, right up until it is."
+Category = 6
+PlaceholderColor = Color(0.5647059, 0.4392157, 0.30980393, 1)
+Deals = 1
+Potency = 10
+Slot = 1

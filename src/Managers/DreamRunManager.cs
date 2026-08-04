@@ -367,6 +367,26 @@ public partial class DreamRunManager : Node
     }
 
     /// <summary>
+    /// Register a heist that no <c>.tres</c> produced, the way
+    /// <see cref="NavigationManager.DebugRegisterRoom"/> registers a room that no file produced. For
+    /// <c>--verify-slice</c> only.
+    /// </summary>
+    /// <remarks>
+    /// Added by unit 3b, and it exists for one reason: <c>data/heists/</c> is empty now. The waystation
+    /// heist retired with the prototype, but four files that outlive this manager — <c>Hud</c>,
+    /// <c>CampManager</c>, <c>InventoryCraftingManager</c> and <c>SaveService</c> — each carry a guard
+    /// spelled <c>IsRunning</c>, and the only way to probe those guards is from inside a run. So the
+    /// verifier builds its own. **This method retires with the class in unit 6**, along with every gate
+    /// that calls it; what those gates assert has to be re-probed against whatever a Dream pocket turns
+    /// out to be, which is why the checks say <i>inside a run</i> rather than <i>inside a heist</i>.
+    /// </remarks>
+    public void DebugRegisterHeist(DreamHeistData heist)
+    {
+        if (heist == null || string.IsNullOrEmpty(heist.Id)) return;
+        _heists[heist.Id] = heist;
+    }
+
+    /// <summary>
     /// Move the pursuer by fiat. For the verifier and for debugging a maze layout — no
     /// gameplay path calls this.
     /// </summary>

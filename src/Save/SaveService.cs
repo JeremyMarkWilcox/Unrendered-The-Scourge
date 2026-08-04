@@ -23,13 +23,14 @@ public static class SaveService
             Resolve = ResolveManager.Instance?.Current ?? GameConfig.ResolveMax,
             Vitality = VitalityManager.Instance?.Current ?? GameConfig.VitalityMax,
             Flags = WorldStateManager.Instance?.ExportFlags() ?? new(),
-            ZonePhases = WorldStateManager.Instance?.ExportZonePhases() ?? new(),
             EntityStates = EntityStateManager.Instance?.ExportStates() ?? new(),
             Inventory = InventoryCraftingManager.Instance?.ExportStacks() ?? new(),
             Stash = InventoryCraftingManager.Instance?.ExportStash() ?? new(),
             DiscoveredBlueprints = InventoryCraftingManager.Instance?.ExportDiscovered() ?? new(),
             ReturnCampRoomId = CampManager.Instance?.ReturnCampRoomId ?? "",
             Wounds = CombatManager.Instance?.ExportWounds() ?? new(),
+            Equipped = InventoryCraftingManager.Instance?.ExportEquipped() ?? new(),
+            Rigs = EncounterManager.Instance?.ExportRigs() ?? new(),
         };
 
         using var file = FileAccess.Open(path, FileAccess.ModeFlags.Write);
@@ -78,7 +79,7 @@ public static class SaveService
         DreamRunManager.Instance?.ForceClear();
 
         // Restore state before navigating, so the room renders against the loaded world.
-        WorldStateManager.Instance?.ImportState(data.Flags, data.ZonePhases);
+        WorldStateManager.Instance?.ImportState(data.Flags);
         EntityStateManager.Instance?.ImportStates(data.EntityStates);
 
         // After the states above, not before: the ledger's meaning depends on which bodies are
@@ -89,6 +90,12 @@ public static class SaveService
         InventoryCraftingManager.Instance?.ImportStacks(data.Inventory);
         InventoryCraftingManager.Instance?.ImportStash(data.Stash);
         InventoryCraftingManager.Instance?.ImportDiscovered(data.DiscoveredBlueprints);
+
+        // After ImportStacks, and the order is load-bearing rather than tidy: equipping names a stack you
+        // already hold, so an import that ran first would be validating worn items against an empty
+        // satchel. The same argument as ImportWounds above — restore the thing before the reference to it.
+        InventoryCraftingManager.Instance?.ImportEquipped(data.Equipped);
+        EncounterManager.Instance?.ImportRigs(data.Rigs);
 
         // Before the navigation below, so that if the loaded room happens to be a camp, arriving
         // there rebinds a return point that already agrees with the file rather than clobbering it.

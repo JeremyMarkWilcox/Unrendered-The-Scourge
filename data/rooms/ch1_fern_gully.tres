@@ -1,9 +1,10 @@
-[gd_resource type="Resource" script_class="RoomData" load_steps=10 format=3]
+[gd_resource type="Resource" script_class="RoomData" load_steps=13 format=3]
 
 [ext_resource type="Script" uid="uid://b0jetcphiy2cm" path="res://src/Data/HotspotData.cs" id="1_hs"]
 [ext_resource type="Script" uid="uid://v0juosv2w310" path="res://src/Data/RoomData.cs" id="2_room"]
 [ext_resource type="Script" uid="uid://c4nlnfkcu2a6u" path="res://src/Data/EntityPlacement.cs" id="3_ep"]
 [ext_resource type="Resource" path="res://data/entities/creature_logger.tres" id="4_ent"]
+[ext_resource type="Script" path="res://src/Data/MendPuzzleData.cs" id="9_mpz"]
 
 [sub_resource type="Resource" id="hs_0"]
 script = ExtResource("1_hs")
@@ -46,11 +47,27 @@ InstanceId = "ch1.logger_03"
 Entity = ExtResource("4_ent")
 WakingPosition = Vector2(530, 855)
 
+[sub_resource type="Resource" id="mp_mend"]
+script = ExtResource("9_mpz")
+Prompt = "[unwritten]"
+Parts = PackedStringArray("[unwritten 1]", "[unwritten 2]", "[unwritten 3]", "[unwritten 4]", "[unwritten 5]")
+Solution = PackedInt32Array(2)
+
+[sub_resource type="Resource" id="hs_mend"]
+script = ExtResource("1_hs")
+Id = "ch1_fern_gully_blight"
+Label = "The Fallen Fence Line"
+Kind = 8
+Region = Rect2(1300, 860, 380, 170)
+ItemId = "herb_graveflower"
+ItemAmount = 1
+MendPuzzle = SubResource("mp_mend")
+
 [resource]
 script = ExtResource("2_room")
 Id = "ch1_fern_gully"
 DisplayName = "Fern Gully"
 ChapterId = "ch1"
 PlaceholderStyle = 0
-Hotspots = Array[ExtResource("1_hs")]([SubResource("hs_0"), SubResource("hs_1"), SubResource("hs_2"), SubResource("hs_3")])
+Hotspots = Array[ExtResource("1_hs")]([SubResource("hs_0"), SubResource("hs_1"), SubResource("hs_2"), SubResource("hs_3"), SubResource("hs_mend")])
 Entities = Array[ExtResource("3_ep")]([SubResource("ep_0")])

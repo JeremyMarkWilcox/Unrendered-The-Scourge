@@ -1,7 +1,8 @@
-[gd_resource type="Resource" script_class="RoomData" load_steps=6 format=3]
+[gd_resource type="Resource" script_class="RoomData" load_steps=9 format=3]
 
 [ext_resource type="Script" uid="uid://b0jetcphiy2cm" path="res://src/Data/HotspotData.cs" id="1_hs"]
 [ext_resource type="Script" uid="uid://v0juosv2w310" path="res://src/Data/RoomData.cs" id="2_room"]
+[ext_resource type="Script" path="res://src/Data/MendPuzzleData.cs" id="9_mpz"]
 
 [sub_resource type="Resource" id="hs_0"]
 script = ExtResource("1_hs")
@@ -25,9 +26,25 @@ Id = "ch3_wound_tallow"
 Label = "Tallow"
 Kind = 3
 Region = Rect2(120, 870, 220, 160)
-ItemId = "rat_tallow"
+ItemId = "mat_tallow"
 ItemAmount = 2
 RefillsAtMilestone = true
+
+[sub_resource type="Resource" id="mp_mend"]
+script = ExtResource("9_mpz")
+Prompt = "[unwritten]"
+Parts = PackedStringArray("[unwritten 1]", "[unwritten 2]", "[unwritten 3]", "[unwritten 4]")
+Solution = PackedInt32Array(1, 3, 2, 0)
+
+[sub_resource type="Resource" id="hs_mend"]
+script = ExtResource("1_hs")
+Id = "ch3_wound_blight"
+Label = "The Heaviest Board"
+Kind = 8
+Region = Rect2(1300, 860, 380, 170)
+ItemId = "herb_graveflower"
+ItemAmount = 1
+MendPuzzle = SubResource("mp_mend")
 
 [resource]
 script = ExtResource("2_room")
@@ -35,4 +52,4 @@ Id = "ch3_wound"
 DisplayName = "The Wound"
 ChapterId = "ch3"
 PlaceholderStyle = 1
-Hotspots = Array[ExtResource("1_hs")]([SubResource("hs_0"), SubResource("hs_1"), SubResource("hs_2")])
+Hotspots = Array[ExtResource("1_hs")]([SubResource("hs_0"), SubResource("hs_1"), SubResource("hs_2"), SubResource("hs_mend")])

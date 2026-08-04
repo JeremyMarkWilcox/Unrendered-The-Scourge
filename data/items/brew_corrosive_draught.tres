@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://src/Data/ItemData.cs" id="1_item"]
+
+[resource]
+script = ExtResource("1_item")
+Id = "brew_corrosive_draught"
+DisplayName = "Corrosive Draught"
+Description = "Bitterroot stood on iron filings for a fortnight, and the jar is thinner than it was. Nothing about this is medicine, which is the part she would have wanted explained."
+MaxStack = 20
+PlaceholderColor = Color(0.6039216, 0.7411765, 0.29411766, 1)
+Track = 1

@@ -1,5 +1,6 @@
 using Godot;
 using Unrendered.Core;
+using Unrendered.Data;
 using Unrendered.Managers;
 using Unrendered.World;
 
@@ -26,6 +27,8 @@ public partial class Hud : CanvasLayer
     private VBoxContainer _vitalityGroup;
     private DebugPanel _debug;
     private InventoryPanel _inventory;
+    private MendPanel _mend;
+    private FightPanel _fight;
 
     private float _notifyTimer;
     private const float NotifyHoldSeconds = 5f;
@@ -45,6 +48,21 @@ public partial class Hud : CanvasLayer
     /// mistyped scene path would otherwise cost nothing until someone pressed <c>I</c>.
     /// </summary>
     public InventoryPanel Inventory => _inventory;
+
+    /// <summary>
+    /// The mending board, or null if its scene failed to load. Nothing toggles this one — it opens
+    /// off <c>MendRequested</c> and closes itself — but it is exposed for the same reason
+    /// <see cref="Inventory"/> is: a null here is a mend that silently does nothing, which is exactly
+    /// the class of failure the gates exist to make loud.
+    /// </summary>
+    public MendPanel Mend => _mend;
+
+    /// <summary>
+    /// The fight screen. <b>Never null</b>, which is the one way this differs from the two above: it
+    /// falls back to a code-built layout rather than to nothing, so there is no version of this game in
+    /// which a fight starts and no screen appears. The gates drive it through here.
+    /// </summary>
+    public FightPanel Fight => _fight;
 
     /// <summary>Opacity of the Vitality caption and bar as drawn. For the gates.</summary>
     public float VitalityOpacity => _vitalityGroup?.Modulate.A ?? 1f;
@@ -80,6 +98,9 @@ public partial class Hud : CanvasLayer
         bus.PursuerProximityChanged += OnPursuerProximityChanged;
         bus.HeistStarted += OnHeistStarted;
         bus.HeistEnded += OnHeistEnded;
+        bus.MendRequested += OnMendRequested;
+        bus.FightStarted += OnFightStarted;
+        bus.FightEnded += OnFightEnded;
 
         OnRealmChanged((int)(RealmTransitionManager.Instance?.CurrentRealm ?? GameRealm.Waking));
         RefreshPools();
@@ -98,6 +119,9 @@ public partial class Hud : CanvasLayer
         bus.PursuerProximityChanged -= OnPursuerProximityChanged;
         bus.HeistStarted -= OnHeistStarted;
         bus.HeistEnded -= OnHeistEnded;
+        bus.MendRequested -= OnMendRequested;
+        bus.FightStarted -= OnFightStarted;
+        bus.FightEnded -= OnFightEnded;
     }
 
     // ---- Construction ----------------------------------------------------
@@ -159,7 +183,13 @@ public partial class Hud : CanvasLayer
         bottom.AddChild(_hoverLabel);
 
         // -- Controls reminder --
-        var hint = MakeLabel("[I] satchel   [F3] debug   [F5] save   [F9] load",
+        // F6 and F7 are unit 4a's crafting scaffolding and are listed because a debug key nobody knows
+        // about is not an unblock. Both come off this line when the journal lands (`build-plan.md` §4).
+        // **F8 joined them on 2026-08-03 for the same reason and comes off separately** — it reaches
+        // `EncounterManager.Rig`, which shipped in 3a with no verb anywhere, and it retires when the
+        // satchel grows a *Set* button beside Use and Equip rather than when the journal lands.
+        var hint = MakeLabel(
+            "[I] satchel   [F3] debug   [F5] save   [F9] load   [F6] learn   [F7] craft   [F8] rig",
                              16, new Color(0.62f, 0.62f, 0.66f, 0.65f));
         hint.SetAnchorsPreset(Control.LayoutPreset.BottomLeft);
         hint.Position = new Vector2(40, -44);
@@ -176,18 +206,55 @@ public partial class Hud : CanvasLayer
         _debug = new DebugPanel { Name = "DebugPanel", Visible = false };
         root.AddChild(_debug);
 
-        // Added last so it draws over the screen furniture, including the debug panel. Authored as
-        // a scene rather than built here, per handoff §2 — grids and slots are layout you need to
-        // see while tuning, and this is the first of three panels.
-        var scene = ResourceLoader.Load<PackedScene>("res://scenes/ui/InventoryPanel.tscn");
-        if (scene == null)
+        // Added last so they draw over the screen furniture, including the debug panel. Authored as
+        // scenes rather than built here, per handoff §2 — grids and slots are layout you need to
+        // see while tuning. Two of the three panels now.
+        //
+        // Each load is checked on its own and neither returns early: a mistyped inventory path used
+        // to skip everything below it, so one bad string would have taken the mending board down with
+        // the satchel and the second failure would never have been reported.
+        var inventoryScene = ResourceLoader.Load<PackedScene>("res://scenes/ui/InventoryPanel.tscn");
+        if (inventoryScene == null)
         {
             GD.PushError("Hud: could not load InventoryPanel.tscn — the satchel will not open.");
-            return;
+        }
+        else
+        {
+            _inventory = inventoryScene.Instantiate<InventoryPanel>();
+            root.AddChild(_inventory);
         }
 
-        _inventory = scene.Instantiate<InventoryPanel>();
-        root.AddChild(_inventory);
+        // Over the satchel, because a mend opens on a click in the world and the satchel is closed by
+        // then. If they ever can overlap, this is the one that must be readable.
+        var mendScene = ResourceLoader.Load<PackedScene>("res://scenes/ui/MendPanel.tscn");
+        if (mendScene == null)
+        {
+            GD.PushError("Hud: could not load MendPanel.tscn — no blight in the game can be mended.");
+        }
+        else
+        {
+            _mend = mendScene.Instantiate<MendPanel>();
+            root.AddChild(_mend);
+        }
+
+        // Over both, because a fight is the one screen you are not free to walk away from — flight is a
+        // verb inside it (§3), not a matter of finding the window underneath.
+        //
+        // The third panel, and **the only one that loads with a fallback instead of an error.** The other
+        // two are authored and a missing scene means a mistyped path; this one has no scene yet, so
+        // `FightPanel.BuildFallback` puts up the same node contract in code and the loop is walkable
+        // today. It is not a second implementation — the panel class is the same either way, and what
+        // gets deleted when Jeremy authors `FightPanel.tscn` is the builder, not a branch here.
+        // Existence is checked before loading, unlike the two above: a `Load` of a path that is not there
+        // logs a Godot-level error, and this is the one case where absence is the expected state rather
+        // than a typo. The other two want that error.
+        const string fightScenePath = "res://scenes/ui/FightPanel.tscn";
+        var fightScene = ResourceLoader.Exists(fightScenePath)
+            ? ResourceLoader.Load<PackedScene>(fightScenePath)
+            : null;
+
+        _fight = fightScene != null ? fightScene.Instantiate<FightPanel>() : FightPanel.BuildFallback();
+        root.AddChild(_fight);
     }
 
     /// <summary>
@@ -311,6 +378,46 @@ public partial class Hud : CanvasLayer
     private void OnHeistStarted(string heistId) => RefreshPools();
 
     private void OnHeistEnded(string heistId, int outcome) => RefreshPools();
+
+    /// <summary>
+    /// Puts the mending board up. This is the whole of the HUD's involvement in mending: the panel
+    /// calls <c>MendManager.Mend</c> itself when the board is solved, so nothing about the world
+    /// travels back through here.
+    /// </summary>
+    /// <remarks>
+    /// The satchel is closed first. Both panels dim the screen, and two dims stack into something much
+    /// darker than either was drawn against — and a mend is not something you should be able to start
+    /// from inside the satchel anyway.
+    /// </remarks>
+    private void OnMendRequested(HotspotData blight)
+    {
+        if (_inventory != null) _inventory.Visible = false;
+        _mend?.Open(blight);
+    }
+
+    /// <summary>
+    /// A fight was committed to. The satchel closes for the same reason a mend closes it — a fight opens
+    /// on a click in the world, so the satchel is shut by then anyway, and this is the one that has to be
+    /// readable if they ever do overlap.
+    /// </summary>
+    /// <remarks>
+    /// <b>The panel opening is not what starts the fight</b>, which is the whole shape of unit 3a: the
+    /// manager has already committed by the time this runs, and if this screen failed to appear the fight
+    /// would still be there to be driven. That is why the gates can check the loop and the panel
+    /// separately.
+    /// </remarks>
+    private void OnFightStarted(string instanceId)
+    {
+        if (_inventory != null) _inventory.Visible = false;
+        _fight?.Open(instanceId);
+    }
+
+    /// <summary>
+    /// Won, fled or collapsed — the signal carries no outcome and this handler needs none. The last few
+    /// lines of the fight have already gone through <c>Notify</c> to the caption, so taking the screen
+    /// down loses nothing the player has not read.
+    /// </summary>
+    private void OnFightEnded(string instanceId) => _fight?.Close();
 
     private void OnPursuerProximityChanged(int roomsAway)
     {

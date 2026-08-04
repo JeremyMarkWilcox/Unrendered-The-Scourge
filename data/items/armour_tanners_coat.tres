@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://src/Data/ItemData.cs" id="1_item"]
+
+[resource]
+script = ExtResource("1_item")
+Id = "armour_tanners_coat"
+DisplayName = "Tanner's Coat"
+Description = "Three hides lapped and stitched down the seam, heavy enough that you feel it on the stairs. A blade turns on it. It has no opinion about anything else."
+Category = 6
+PlaceholderColor = Color(0.47058824, 0.34901962, 0.23529412, 1)
+Slot = 2
+WardsAgainst = 1

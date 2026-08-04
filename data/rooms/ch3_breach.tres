@@ -35,7 +35,7 @@ Id = "ch3_breach_carcass"
 Label = "Carcass"
 Kind = 3
 Region = Rect2(370, 715, 320, 140)
-ItemId = "rat_tallow"
+ItemId = "mat_tallow"
 ItemAmount = 1
 RequiredFlag = "defeated.ch3.beast_breach_thing_01"
 

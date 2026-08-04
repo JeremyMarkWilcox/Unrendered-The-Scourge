@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://src/Data/ItemData.cs" id="1_item"]
+
+[resource]
+script = ExtResource("1_item")
+Id = "mat_pitch"
+DisplayName = "Pitch"
+Description = "Boiled down from resin until it strings off the stick. Binds anything, and burns whether you meant it to or not."
+MaxStack = 20
+PlaceholderColor = Color(0.14509805, 0.11764706, 0.09803922, 1)

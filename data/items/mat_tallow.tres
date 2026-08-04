@@ -4,7 +4,7 @@
 
 [resource]
 script = ExtResource("1_4ow5h")
-Id = "rat_tallow"
+Id = "mat_tallow"
 DisplayName = "Rendered Tallow"
-Description = "Ordinary fat from an ordinary animal. It has been a long time since either of you had that."
+Description = "Off a chandler's shelf, or scraped from the pot somebody left on the fire. Ordinary, which is what makes it strange to find."
 PlaceholderColor = Color(0.84705883, 0.78039217, 0.6039216, 1)

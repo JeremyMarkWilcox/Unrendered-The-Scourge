@@ -126,12 +126,25 @@ public partial class Hotspot : Control
         _localPolygon = Array.Empty<Vector2>();
     }
 
+    /// <summary>
+    /// The word under the cursor. <c>Look</c> is the fallback rather than an omission — a kind with no
+    /// arm reads as something to examine, which is the harmless wrong answer.
+    /// </summary>
+    /// <remarks>
+    /// Both crafting venues say <b>Craft</b>: the mortar and the camp bench do the same thing when
+    /// clicked (they emit the same signal), so telling them apart in the hover text would promise the
+    /// player a distinction the mechanism does not have. <c>Mend</c> is left on the <c>Look</c> fallback
+    /// on purpose — a blight is not obviously repairable until you have opened one, and *"Look"* is what
+    /// invites the first click without naming the verb before the game has taught it.
+    /// </remarks>
     private static string VerbFor(HotspotKind kind) => kind switch
     {
         HotspotKind.Navigate => "Go",
         HotspotKind.Harvest => "Harvest",
         HotspotKind.Entity => "Approach",
         HotspotKind.Interact => "Use",
+        HotspotKind.Station => "Craft",
+        HotspotKind.Workbench => "Craft",
         _ => "Look",
     };
 

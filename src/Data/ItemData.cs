@@ -6,8 +6,21 @@ namespace Unrendered.Data;
 /// <summary>What an item is for. Drives inventory filtering and which duel slot it fits.</summary>
 public enum ItemCategory
 {
-    /// <summary>Raw material. Herbs, fungus, bone, ore.</summary>
-    Reagent = 0,
+    /// <summary>
+    /// A named station input — timber, metal, stone, hide, herb, binder. Eight of these exist in the
+    /// whole game and there will never be a ninth (`combat.md` §19: *"a ninth material wanting to exist
+    /// is a signal that a recipe wants redesigning"*).
+    ///
+    /// <para>
+    /// <b>Renamed from `Reagent` 2026-08-03, and the value stays 0 on purpose</b> so no authored
+    /// <c>.tres</c> re-writes — the four component files in <c>data/items/</c> do not even serialise the
+    /// field. The old name said *generic raw material*, which is the inventory-heavy economy §19
+    /// replaced: a component occupies no slot (see
+    /// <see cref="Managers.InventoryCraftingManager.CountsAgainstSlots"/>), is never sorted or
+    /// arbitrated, and reads as five counters in a strip rather than a bag.
+    /// </para>
+    /// </summary>
+    Component = 0,
 
     /// <summary>Apothecary output. Restores <b>Vitality</b> per combat.md §6.</summary>
     Salve = 1,
@@ -23,8 +36,17 @@ public enum ItemCategory
 
     /// <summary>
     /// A crafted trap. Rigged into a site before a fight, never "used" from the satchel — placement
-    /// is free and only acting during the fight costs a turn (docs/combat.md §18). Consumed always,
-    /// win or lose, which is why traps must be cheap and rebuildable from common materials (§13).
+    /// is free and only acting during the fight costs a turn (docs/combat.md §18).
+    ///
+    /// <para>
+    /// <b>Permanent, not consumed</b> — §19, 2026-08-01. This comment said the opposite until unit 4b
+    /// authored the six trap files and had to decide what <c>MaxStack</c> meant: *consumed always, win or
+    /// lose, which is why traps must be cheap and rebuildable from common materials (§13)*. That reading
+    /// died twice over. <see cref="Managers.InventoryCraftingManager.SurvivesDeath"/> returns true here,
+    /// and <see cref="Managers.InventoryCraftingManager.AlreadyMade"/> refuses a second one outright — so
+    /// a trap is an owned thing whose count is 0 or 1 and never more, which is why every trap file
+    /// authors <c>MaxStack = 1</c>. The *rig cap of two* is where the scarcity moved.
+    /// </para>
     /// </summary>
     Trap = 5,
 
@@ -43,8 +65,21 @@ public partial class ItemData : Resource
     [Export] public string Id { get; set; } = "";
     [Export] public string DisplayName { get; set; } = "";
     [Export(PropertyHint.MultilineText)] public string Description { get; set; } = "";
-    [Export] public ItemCategory Category { get; set; } = ItemCategory.Reagent;
+    [Export] public ItemCategory Category { get; set; } = ItemCategory.Component;
     [Export] public Texture2D Icon { get; set; }
+    /// <summary>
+    /// Authored intent for how many of these belong in one pile. <b>Nothing reads it, and wiring it up
+    /// would break §19</b> — read this before you do.
+    /// </summary>
+    /// <remarks>
+    /// A stack cap is a carry cap wearing a smaller hat, and `items.md` §1 is explicit that there is
+    /// none: *"There is no cap, so you are never maxed"*, written against Jeremy's peeve about finding
+    /// things you are full of. The arithmetic makes it concrete — 24 Tallow nodes exist and this field
+    /// says 20, so the day something clamps on it is the day four harvests silently stop paying out. The
+    /// field is kept because it is honest documentation of a pile's natural size and because deleting it
+    /// would re-open every authored <c>.tres</c>; what must not happen is a reader appearing without the
+    /// overflow question being answered first.
+    /// </remarks>
     [Export] public int MaxStack { get; set; } = 20;
 
     /// <summary>
@@ -83,9 +118,28 @@ public partial class ItemData : Resource
     [Export] public DamageType Deals { get; set; } = DamageType.None;
 
     /// <summary>
-    /// How hard it hits, or for armour how much it turns aside. Never displayed — §5's described
-    /// conditions are the only readout, and the number exists for the resolver alone.
+    /// How hard it hits. Never displayed — §5's described conditions are the only readout, and the
+    /// number exists for the resolver alone.
     /// </summary>
+    /// <remarks>
+    /// <b>The scale, fixed by unit 4b's roster so unit 3 inherits it rather than invents it:</b> a body is
+    /// <c>EntityData.Durability</c> 30, and <b>10 is one clean blow</b>. Three neutral hits, two against a
+    /// vulnerability, six against a resistance — which is the fight length a two-slot rig and alternating
+    /// turns were costed for.
+    /// <para>
+    /// <b>Both weapons are 10, and that is not laziness.</b> `items.md` §4 — *"there are no weapon
+    /// tiers (§11)"* — so the Bell Maul is the Splitting Axe with a different
+    /// <see cref="Deals"/> and nothing else. A gate asserts every weapon shares one value, because the
+    /// day two differ is the day Edge-or-Blunt stops being a read of the creature and starts being an
+    /// upgrade path, and that is invariant 5 going quietly.
+    /// </para>
+    /// <para>
+    /// <b>Armour authors 0 here.</b> The old summary said *"or for armour how much it turns aside"*, and
+    /// that field never had a job: <see cref="WardsAgainst"/> <i>halves</i>
+    /// (<see cref="Core.GameConfig.ResistantMultiplier"/>) and a multiplier needs no magnitude. Two
+    /// fields for one effect is how a coat ends up warding twice.
+    /// </para>
+    /// </remarks>
     [Export] public int Potency { get; set; }
 
     /// <summary>

@@ -45,7 +45,7 @@ Id = "ch3_pump_house_tallow"
 Label = "Tallow"
 Kind = 3
 Region = Rect2(370, 870, 220, 160)
-ItemId = "rat_tallow"
+ItemId = "mat_tallow"
 ItemAmount = 1
 RefillsAtMilestone = true
 
