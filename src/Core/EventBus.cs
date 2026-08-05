@@ -67,18 +67,43 @@ public partial class EventBus : Node
     /// </summary>
     [Signal] public delegate void VitalityDepletedEventHandler();
 
-    // ---- Dream heist -----------------------------------------------------
+    /// <summary>
+    /// The nerve gave out. The exact mirror of <see cref="VitalityDepletedEventHandler"/>, and
+    /// <c>CampManager</c> listens to both and does the same thing — ruled 2026-08-04: *"we should use the
+    /// same function if VIT or Resolve hit 0 that the player goes to the most recent camp."*
+    /// </summary>
+    /// <remarks>
+    /// <b>Two signals rather than one shared "you are down", and the reason is what each carries.</b> They
+    /// have the same consequence today, but they are raised by different managers about different pools, and
+    /// a subscriber that cares which one fired — the fight screen, a future death counter, anything that
+    /// words a line — would otherwise have to ask a manager which bar it was. Same argument that keeps
+    /// `RoomExiting` and `RoomEntered` apart.
+    /// <para>
+    /// <b>Unit 6b left this hole and unit 8 fills it.</b> Retiring the heist deleted
+    /// <c>NotifyResolveExhausted</c>, which had been the only thing that reacted to an empty nerve — so for
+    /// one unit the bar could reach zero and nothing whatsoever happened.
+    /// </para>
+    /// </remarks>
+    [Signal] public delegate void ResolveDepletedEventHandler();
 
-    [Signal] public delegate void HeistStartedEventHandler(string heistId);
+    // ---- Dream pockets (unit 6) ------------------------------------------
+    //
+    // `HeistStarted`, `HeistEnded` and `PursuerProximityChanged` stood here and were deleted 2026-08-04
+    // with unit 6b. The first two are replaced one-for-one by the pair below; the third has **no successor
+    // and should not get one** — it reported how many *rooms* away the pursuer was, and a 3D pursuer is a
+    // chase in space, so a room-hop count is the wrong shape to inherit. When it returns it brings its own
+    // readout.
 
-    /// <summary>Payload is a <see cref="HeistOutcome"/>.</summary>
-    [Signal] public delegate void HeistEndedEventHandler(string heistId, int outcome);
+    /// <summary>The player crossed into a pocket. Emitted after the state is set, so a subscriber may
+    /// trust <c>PocketManager.InPocket</c> rather than the payload (invariant 13).</summary>
+    [Signal] public delegate void PocketEnteredEventHandler(string pocketId);
 
     /// <summary>
-    /// How many rooms away the pursuer is, by shortest path. 0 means it is on top of you,
-    /// -1 means unreachable/unknown. Drives the dread cues rather than any UI number.
+    /// The player came back out. <paramref name="completed"/> distinguishes the two exits, and it is the
+    /// only thing that distinguishes them: a completed pocket has already written its flag and made its
+    /// grant by the time this fires, and an abandoned one has written nothing at all.
     /// </summary>
-    [Signal] public delegate void PursuerProximityChangedEventHandler(int roomsAway);
+    [Signal] public delegate void PocketLeftEventHandler(string pocketId, bool completed);
 
     // ---- Inventory -------------------------------------------------------
 
@@ -189,17 +214,17 @@ public partial class EventBus : Node
     public void EmitVitalityChanged(float current, float max)
         => EmitSignal(SignalName.VitalityChanged, current, max);
 
+    public void EmitResolveDepleted()
+        => EmitSignal(SignalName.ResolveDepleted);
+
     public void EmitVitalityDepleted()
         => EmitSignal(SignalName.VitalityDepleted);
 
-    public void EmitHeistStarted(string heistId)
-        => EmitSignal(SignalName.HeistStarted, heistId);
+    public void EmitPocketEntered(string pocketId)
+        => EmitSignal(SignalName.PocketEntered, pocketId);
 
-    public void EmitHeistEnded(string heistId, HeistOutcome outcome)
-        => EmitSignal(SignalName.HeistEnded, heistId, (int)outcome);
-
-    public void EmitPursuerProximityChanged(int roomsAway)
-        => EmitSignal(SignalName.PursuerProximityChanged, roomsAway);
+    public void EmitPocketLeft(string pocketId, bool completed)
+        => EmitSignal(SignalName.PocketLeft, pocketId, completed);
 
     public void EmitItemAcquired(string itemId, int amount)
         => EmitSignal(SignalName.ItemAcquired, itemId, amount);

@@ -1,7 +1,8 @@
 # The Dream probe — how to drive it
 
 A practical guide to `scenes/dream/DreamProbe.tscn`, written for a first go at Godot's 3D side.
-The design reasoning is in `handoff.md`, "The Dream in 3D"; this file is only *which button*.
+The design reasoning is in `docs/combat.md` §14 (the Dream is stealth, and its creatures are models) and
+§15 (the pockets); this file is only *which button*.
 
 **The one thing to know first: you do not need the 3D editor to tune the look.** Every value worth
 arguing about is on a key while the scene is running. The editor is for *moving things* — lights,

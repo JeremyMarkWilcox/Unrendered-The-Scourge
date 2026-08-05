@@ -499,6 +499,32 @@ which is §17's "if the player would never decline, do not ask" wearing travel b
 
 Each gates **access and nothing else**, which is invariant 5. None makes anything stronger.
 
+### One forge, and it is in chapter 2 — measured 2026-08-04
+
+**All three tools are forged at the anvil, and there is exactly one anvil in the game: `ch2_smithy`.** One
+mortar too, in `ch2_apothecary`, and that is the entire station list. So the table above is a table of
+**chapter-2 crafts**, whatever chapter the door is in — the Bill Hook's door is `ch1_bramble` and the Bill
+Hook is not makeable until the smithy.
+
+That was found while asking whether the roster was mis-scheduled, and it says the earlier diagnosis was
+wrong. The suspicion was a **shared gating material** (`mat_scrap_iron`, all sources ch2). The station is
+the stronger lock by far: putting scrap iron in `ch1_stonefield` would change nothing, because there would
+still be nowhere to work it. **Eleven of seventeen recipes name the anvil or the mortar, so every one of
+them arrives on the same footstep** — the one into the village.
+
+**Ratified as a premise rather than patched — `build-plan.md` §7 decision 9.** Chapter 1 is the chapter
+before Daniel gets his workshop back: a bench, one axe, his hands. What follows for this section:
+
+- **The chapter-1 door stays**, and the return trip is carried by a **line of narration when the Bill Hook
+  is forged** — the pocket gives the memory, the forge gives the object, the line gives the road. Jeremy:
+  *"I will add a narration when the Bill Hook is created to prompt him returning to use if the player
+  wants."* Deferred with all story work to the end of the build.
+- **Blueprint placement is the lever, not the ingredient list.** The three tool blueprints belong in
+  **ch2/ch3 pockets** so that remembering, the forge and the material land together. Nothing in `data/`
+  grants a blueprint yet.
+- **The stations stay landmarks and are not moved to the camps**, ruled the same day and against Jeremy's
+  own prior inclination — *"both being in chapter 2 makes them feel more like landmarks and meaningful."*
+
 ---
 
 ## 6. Repair — two scales, and they are different systems
@@ -580,17 +606,25 @@ into the two freed apothecaries.
 | | **ch1 woodland** | **ch2 village** | **ch3 mine** |
 |---|---|---|---|
 | **Materials added** | Bitterroot, Tallow, Heartwood, Pitch, *(Graveflower and Cairnstone, sparse)* | Scrap Iron, Cured Hide | none new — **Bitterroot and Tallow abundant**, see below *(said "everything gets abundant" until 2026-08-01; Cairnstone and the dormant commons are excluded — §1)* |
-| **Salves craftable** | Clearmind | Clearmind | **+ Deepmend** |
+| **Salves craftable** | ~~Clearmind~~ **none** | Clearmind | **+ Deepmend** |
 | **Components** | none | **+ Burning Oil, Corrosive Draught** | — |
 | **Traps** | Snare | + Spiked Pit, Deadfall, Chime, **Oil Slick, Vitriol Flask** | — |
 | **Weapon** | Splitting Axe *(starting)* | + Bell Maul | — |
 | **Armour** | none | Tanner's Coat, Padded Jack, **Limewashed Smock** | — *(the Smock is forgeable in ch2 and useful here)* |
-| **Tool** | Bill Hook | Pry Bar | Mine Pick |
+| **Tool** | ~~Bill Hook~~ — **its door is here, the tool is not** | **Bill Hook**, Pry Bar | Mine Pick |
 | **Damage types available** | Edge | Edge, Blunt, **Fire, Caustic** | all four |
 | **Blights to mend** | 2 | 4 | 6 |
 | **Dream verb gained** | *(you start with Suppress)* | **Float**, from the ch1 boss | **Flare**, from the ch2 boss |
 | **Major repair** | the bridge | the mine cart | **the exorcism engine** |
 | **Gate to the chapter's boss** | the bridge, rebuilt | the mine cart, rebuilt | **the Snarl, cut** — 3 knot pockets, `combat.md` §23 *(added 2026-08-01; ch3 previously had no gate at all)* |
+
+> **Two rows corrected 2026-08-04, both for the same reason: the only mortar and the only anvil are in
+> chapter 2** (§5, and `build-plan.md` §7 decision 9). Chapter 1 can craft **the six traps and nothing
+> else** — a blank `RequiresStation` means the camp bench, and `ch1_cottage` has one. Which makes chapter 1
+> **sleep-only for healing**: both salves are mortar recipes and no chapter-1 room hands one out, so every
+> fight in the chapter is fought on the Vitality you walked in with. Ruled intended rather than fixed —
+> Jeremy: *"This is fine just more trips back to the camp and chapter 1 is easy atm."* If it ever needs a
+> lever, the cheapest is a placed salve or two rather than a second mortar; the ladder below applies.
 
 **Chapter 2 is now the arsenal chapter and chapter 3 is the construction chapter.** That is a real change
 of shape from the previous draft, which loaded everything into the mine, and it is better: the middle

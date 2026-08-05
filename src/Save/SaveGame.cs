@@ -15,6 +15,28 @@ public sealed class SaveGame
     public float Resolve { get; set; } = 100f;
 
     /// <summary>
+    /// The Resolve <b>ceiling</b>, which rises once per Dream knowledge pocket — eight in the game. Added by
+    /// unit 6, the first unit in which it could move at all.
+    /// </summary>
+    /// <remarks>
+    /// Absent from pre-unit-6 saves, which deserialise to this default — correct for a world where the
+    /// ceiling was a <c>const</c> and no pocket existed to raise it. No version bump, for the same reason
+    /// <see cref="Vitality"/> and <see cref="ReturnCampRoomId"/> needed none.
+    /// <para>
+    /// <b>There is deliberately no Vitality twin.</b> Max Vitality never rises
+    /// (<c>spirit-light-and-resolve</c>): the body is a fixed thing you spend and mend, and only the spirit
+    /// grows. A field here would be the cheapest possible way to break that.
+    /// </para>
+    /// <para>
+    /// <b>A pocket in progress is deliberately not saved</b>, on the same ruling that kept a live heist out
+    /// of this format: a save taken inside one restores you to the Waking room named above, entrance intact
+    /// and nothing granted. It keeps 3D state out of the save file entirely, and there is no way to bank
+    /// half a pocket.
+    /// </para>
+    /// </remarks>
+    public float ResolveMax { get; set; } = 100f;
+
+    /// <summary>
     /// Absent from pre-Vitality saves, which deserialise to this default — a full bar, which is
     /// the right answer for a save taken before the body could be wounded at all. No version
     /// bump needed for that reason.

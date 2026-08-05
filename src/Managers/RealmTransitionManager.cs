@@ -10,14 +10,14 @@ namespace Unrendered.Managers;
 /// It owned which realm the player was <i>perceiving</i> until 2026-08-02, and a Tab binding that
 /// flipped it at will. The great swap deleted spectral vision, and with it the only caller that
 /// changed realm as a look rather than as a journey. What is left is a place: the realm changes
-/// when <see cref="DreamRunManager"/> takes you into a pocket and when it throws you out, and
+/// when <see cref="PocketManager"/> takes you into a pocket and when it brings you back, and
 /// nothing else moves it.
 /// </para>
 ///
 /// <para>
-/// The state is kept rather than folded into <c>DreamRunManager.IsRunning</c> because the two will
-/// come apart: unit 6's pockets have a quiet version with no run and no clock, and you are still
-/// in the Dream while you walk one.
+/// The state is kept rather than folded into <c>PocketManager.InPocket</c> because the two are not the
+/// same question: *where are you* and *are the Waking rules suspended* come apart the moment anything
+/// else can suspend them, and the boss aura will. Kept through the heist's retirement for that reason.
 /// </para>
 /// </summary>
 public partial class RealmTransitionManager : Node

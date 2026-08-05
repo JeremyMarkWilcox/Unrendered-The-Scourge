@@ -39,9 +39,34 @@ public partial class HotspotData : Resource
     [ExportGroup("Entity")]
     [Export] public string EntityId { get; set; } = "";
 
-    /// <summary>Which <see cref="DreamHeistData"/> a CrossToDream relic starts.</summary>
-    [ExportGroup("Dream heist")]
-    [Export] public string HeistId { get; set; } = "";
+    // `HeistId` stood here and was deleted 2026-08-04 with unit 6b, along with `DreamHeistData`. No
+    // authored `.tres` ever set it — the prototype's relic went with unit 3b — so the rename to `PocketId`
+    // below cost nothing, which is the whole reason it was done as a rename rather than left as two fields.
+
+    /// <summary>
+    /// Which <see cref="PocketData"/> a <see cref="HotspotKind.CrossToDream"/> entrance opens (unit 6).
+    /// </summary>
+    /// <remarks>
+    /// <b><see cref="HotspotKind.CrossToDream"/> survives the retirement of the heist and gets a new
+    /// owner</b> — unit 1.5's palette marked its colour *provisional* on the assumption that unit 6 would
+    /// delete the kind. It does not: the verb is the same one, *cross into the Dream*, and only the thing on
+    /// the other side changed. Its sibling <c>TakeAnchor</c> is the one that goes, because the objective now
+    /// lives inside the 3D scene and has no Waking-world hotspot at all.
+    /// <para>
+    /// <b>The entrance is scenery, never an item.</b> Jeremy, 2026-08-04: *"these are not objects ever
+    /// picked up… merely interactables, an environment that looks like an item, like the graveflower minigame
+    /// elements."* So there is no <c>ItemData</c>, nothing enters the satchel, and rule 15 — *nothing but
+    /// `Salve` is consumable* — is untouched.
+    /// </para>
+    /// <para>
+    /// <b>Spent state needs no field.</b> Pair this hotspot with <c>RequiredFlag = pocket.&lt;id&gt;.cleared</c>
+    /// and <see cref="RequiredFlagValue"/> <c>= false</c> so it disappears once taken, and author a second
+    /// <see cref="HotspotKind.Examine"/> on the same flag with <c>true</c> as the broken remnant. That is the
+    /// freed-NPC pattern exactly, and it is why unit 6 adds no gating field.
+    /// </para>
+    /// </remarks>
+    [ExportGroup("Dream pocket")]
+    [Export] public string PocketId { get; set; } = "";
 
     /// <summary>
     /// What a <see cref="HotspotKind.Harvest"/> node yields — and what a

@@ -47,8 +47,8 @@ public partial class InventoryCraftingManager : Node
     /// </summary>
     /// <remarks>
     /// <b>An item can be worn and still sit in the satchel.</b> Equipping moves nothing — it names a
-    /// stack you already have. That is deliberate: <see cref="SurvivesDeath"/> keeps Equipment either
-    /// way (§19), so moving it out of the satchel would create a second place a weapon can be and a
+    /// stack you already have. That is deliberate: nothing is lost on death either way (unit 8), so moving
+    /// it out of the satchel would create a second place a weapon can be and a
     /// second way for the two to disagree, in exchange for nothing. The one thing it costs is that
     /// dropping is not a mechanic — and there is no drop verb in the game.
     /// </remarks>
@@ -152,7 +152,7 @@ public partial class InventoryCraftingManager : Node
     /// <summary>
     /// Register a recipe built in code. For the gates, which need to exercise rules — the blueprint
     /// gate especially — without inventing authored content to hang them on. Same role as
-    /// <see cref="DreamRunManager.DebugSetPursuerRoom"/>. Not for gameplay.
+    /// the deleted <c>DreamRunManager.DebugSetPursuerRoom</c>. Not for gameplay.
     /// </summary>
     public void DebugRegisterRecipe(RecipeData recipe)
     {
@@ -216,64 +216,34 @@ public partial class InventoryCraftingManager : Node
         return _stash.TryGetValue(itemId, out var n) ? n : 0;
     }
 
-    /// <summary>
-    /// Whether a death leaves this kind of thing alone. **The rule is: death destroys what you can
-    /// remake and keeps what you cannot** — which is a softlock guard rather than a kindness.
-    ///
-    /// - <see cref="ItemCategory.Salve"/> — Jeremy's call, and it protects invariant 7 rather than
-    ///   undermining it. A salve's scarcity is "how many can I carry into this fight", never "how do
-    ///   I get back to full afterwards"; destroying them on death would push players to burn her
-    ///   finite, uncraftable work on topping up between fights, which is the boring use §10 is
-    ///   trying to prevent.
-    /// - <see cref="ItemCategory.Lore"/> — the carrier of a blueprint. Destroying the only copy
-    ///   would delete a recipe permanently and silently.
-    /// - <see cref="ItemCategory.Relic"/> — a story object, and what opens a Dream crossing.
-    ///   Destroying one could strand progression outright.
-    ///
-    /// Components and catalysts are farmable and craftable, so losing those is pure cost with no
-    /// permanence — which is exactly the sting the penalty is for.
-    ///
-    /// <para>
-    /// ~~<b>Traps and equipment are destroyed too</b> (docs/combat.md §18, 2026-07-30). Both are
-    /// craftable, so the rule above answers them without an exception; recrafting is what keeps the
-    /// trade relevant instead of one-and-done.~~ **Both halves reversed by §19 on 2026-07-31 and built
-    /// 2026-08-03 (unit 4a)** — *"Equipment survives death — reversing §18"* and *"Traps are permanent —
-    /// reversing §13, and reversing this section's own answer."*
-    /// </para>
-    ///
-    /// <para>
-    /// <b>The rule at the top did not change; what changed is the answer to "can you remake it".</b> A
-    /// trap is now crafted once and owned forever, so there is nothing to remake and destroying it would
-    /// delete a permanent thing — the same argument that always protected <c>Lore</c>. Equipment is the
-    /// same shape: §19 made the kit a startup cost paid in dormant commons (`items.md` §1), and burning
-    /// the coat on death would turn that one-time cost into a repeating tax on failure. What still
-    /// carries the sting is the two live commons and her salves, which is where §19 wanted the pressure.
-    /// </para>
-    ///
-    /// <para>
-    /// <b>The gate over this moved rather than being deleted.</b> A check asserting equipment burns was
-    /// the old rule's probe, but the invariant it was really protecting is the one in the remark below —
-    /// *a new category inherits the destructive default*. So it now stands on <c>Component</c> and
-    /// <c>Catalyst</c>, which still burn. Deleting it outright would have left that claim ungated
-    /// (`deleting-a-gated-mechanism`: keep the invariant, move the probe).
-    /// </para>
-    ///
-    /// <para>
-    /// Keyed on category rather than a per-item flag on purpose: a new item cannot forget to declare
-    /// itself, and a new *category* inherits the destructive default, which is the safe direction to
-    /// fail in. Adding a category that must survive means adding an arm here — and the gates in
-    /// <c>SliceVerifier</c> assert both sides so the choice is never silent.
-    /// </para>
-    /// </summary>
-    public static bool SurvivesDeath(ItemCategory category) => category switch
-    {
-        ItemCategory.Salve => true,
-        ItemCategory.Lore => true,
-        ItemCategory.Relic => true,
-        ItemCategory.Equipment => true, // §19, reversing §18
-        ItemCategory.Trap => true,      // §19, reversing §13
-        _ => false,
-    };
+    // ---- `SurvivesDeath` stood here, and unit 8 deleted it along with `LoseUnprotectedItems` ----
+    //
+    // **It was a live game-breaker, not a tidy-up.** The predicate keyed on `ItemCategory`, and
+    // `herb_graveflower` and `mat_cairnstone` do not serialise a `Category` at all — so both fell to
+    // `Component = 0`, which burned. There are **12 Graveflower and 6 Cairnstone in the whole game**, they
+    // never re-arm at any milestone (`placement.md` rule 13), and the exorcism engine costs 8 Graveflower.
+    // Dying while carrying them permanently deleted the good ending, silently.
+    //
+    // **The tell was this file's own gate comment**: *"components are gone, because you can go and get
+    // more."* True of Bitterroot and Tallow, false of exactly those two. Category-keying was chosen so a new
+    // item could not forget to opt in, and its safe-direction default was wrong for the two items where the
+    // stakes were highest — rule 13's softlock in a shape rule 13 never anticipated, because you do not
+    // trade the scarce thing away, you just die.
+    //
+    // Jeremy, 2026-08-04, ruling it out entirely rather than patching the two categories: *"the common
+    // resources are still finite so I don't like item lost ever other than consumed of course."* That is the
+    // argument the whole mechanism rested on, withdrawn — *"you can go and get more"* was never
+    // unconditionally true, because the world's total of every material is bounded.
+    //
+    // **So: items are never lost, only consumed.** A collapse costs the walk back and nothing else, which is
+    // also what makes Vitality and Resolve able to share one path (§6 as revised). What a lost fight still
+    // costs is **the salves you chose to pour into it** — spent by using them, not by dying — so invariant 7
+    // is untouched, and `combat.md` §17's *"a lost engagement costs you your consumables"* keeps the only
+    // half of itself that was ever load-bearing.
+    //
+    // The invariant this deletion *inverts* rather than removes is gated in `SliceVerifier`: the old claim
+    // was *a new category inherits the destructive default*, and the new one is **a collapse takes nothing at
+    // all**, asserted against a full satchel with both scarce nouns in it by name.
 
     /// <summary>
     /// Whether an item takes up room you have to manage. **False for
@@ -298,10 +268,11 @@ public partial class InventoryCraftingManager : Node
     /// authored against; a cap is a number to turn later, over a predicate that already exists.
     /// </para>
     /// <para>
-    /// Deliberately <i>not</i> the negation of <see cref="SurvivesDeath"/>, though four of seven
-    /// categories happen to agree. The two ask unrelated questions — *does losing this hurt* versus *is
-    /// this bookkeeping* — and Salve is where they part: it survives death and does occupy a slot. A gate
-    /// asserts they disagree somewhere, so collapsing one into the other cannot pass quietly.
+    /// It had a partner — <c>SurvivesDeath</c>, deleted with item loss in unit 8 — and this remark used to
+    /// argue that the two were not each other's negation. **The argument is gone with the other predicate, and
+    /// this one is unchanged**, which is the point worth keeping: it was never *about* death. It asks *is this
+    /// bookkeeping*, and the gate over it now names the two ends the rule separates (a `Component` is a tally
+    /// entry, an `Equipment` is a carried thing) rather than comparing it to something that no longer exists.
     /// </para>
     /// </remarks>
     public static bool CountsAgainstSlots(ItemCategory category) => category switch
@@ -348,23 +319,6 @@ public partial class InventoryCraftingManager : Node
         }
 
         if (granted) EventBus.Instance?.EmitInventoryChanged();
-    }
-
-    /// <summary>
-    /// Empty the satchel of everything death takes. One <c>InventoryChanged</c> at the end rather
-    /// than one per stack, so the grid rebuilds once instead of once per loss.
-    /// </summary>
-    public void LoseUnprotectedItems()
-    {
-        var doomed = _stacks.Keys
-            .Where(id => !SurvivesDeath(GetItem(id)?.Category ?? ItemCategory.Component))
-            .ToList();
-
-        if (doomed.Count == 0) return;
-
-        foreach (var id in doomed) _stacks.Remove(id);
-
-        EventBus.Instance?.EmitInventoryChanged();
     }
 
     /// <summary>
@@ -477,7 +431,7 @@ public partial class InventoryCraftingManager : Node
     public bool AtVenueFor(RecipeData recipe)
     {
         if (recipe == null) return false;
-        if (DreamRunManager.Instance is { IsRunning: true }) return false;
+        if (PocketManager.InsideTheDream) return false;
 
         if (CampManager.Instance?.AtCamp == true) return true;
         if (string.IsNullOrEmpty(recipe.RequiresStation)) return false;
@@ -605,7 +559,20 @@ public partial class InventoryCraftingManager : Node
     /// truth for that question: <c>UseItem</c> switches on this rather than re-testing the
     /// conditions, so the Use button in the panel and the act of using can never disagree.
     /// </summary>
-    public UseBlock InspectUse(string itemId)
+    /// <remarks>
+    /// <paramref name="asFightTurn"/> is how <see cref="EncounterManager.Treat"/> says *"the fight is
+    /// asking"*. Left false, this refuses with <see cref="UseBlock.InFight"/> while a fight is running,
+    /// which is the guard that stops the satchel being free unlimited healing — see that member for the
+    /// hole it closes.
+    /// <para>
+    /// <b>The default is the safe direction, and that is the whole reason it is a defaulted parameter
+    /// rather than a required one.</b> A new caller that forgets it gets the *refusal* — visible
+    /// immediately, one argument to fix — instead of quietly reopening a bypass of the salve cap. Same
+    /// argument as <c>HotspotData.RefillsAtMilestone</c> defaulting to false: when a field can be
+    /// forgotten, pick the direction whose failure is loud.
+    /// </para>
+    /// </remarks>
+    public UseBlock InspectUse(string itemId, bool asFightTurn = false)
     {
         var item = GetItem(itemId);
         if (item == null) return UseBlock.NoSuchItem;
@@ -617,11 +584,18 @@ public partial class InventoryCraftingManager : Node
         var vitality = VitalityManager.Instance;
         if (vitality == null) return UseBlock.NotUsable;
 
-        return vitality.Current < vitality.Max ? UseBlock.None : UseBlock.NothingToTreat;
+        // Before the fight guard, so a player at full Vitality mid-fight hears the more useful of two true
+        // answers — and one that does not imply the salve would otherwise have worked.
+        if (vitality.Current >= vitality.Max) return UseBlock.NothingToTreat;
+
+        if (!asFightTurn && EncounterManager.Instance?.InFight == true) return UseBlock.InFight;
+
+        return UseBlock.None;
     }
 
     /// <summary>Whether using this item right now would do something. See <see cref="InspectUse"/>.</summary>
-    public bool CanUse(string itemId) => InspectUse(itemId) == UseBlock.None;
+    public bool CanUse(string itemId, bool asFightTurn = false) =>
+        InspectUse(itemId, asFightTurn) == UseBlock.None;
 
     /// <summary>
     /// Spend one of an item for its effect. Returns false when the item does nothing, is not held,
@@ -635,11 +609,15 @@ public partial class InventoryCraftingManager : Node
     /// Catalysts are deliberately not usable here. They are a Dream loadout spent by crossing, not
     /// something you click in a satchel.
     /// </summary>
-    public bool UseItem(string itemId)
+    /// <remarks>
+    /// See <see cref="InspectUse"/> for <paramref name="asFightTurn"/>, and for why its default is the
+    /// refusing one. Only <see cref="EncounterManager.Treat"/> passes true.
+    /// </remarks>
+    public bool UseItem(string itemId, bool asFightTurn = false)
     {
         // Each refusal gets its own sentence. "Nothing to treat" is a different thing to learn
         // from "that isn't something you use", and telling the player neither is worse than both.
-        switch (InspectUse(itemId))
+        switch (InspectUse(itemId, asFightTurn))
         {
             case UseBlock.NoSuchItem:
             case UseBlock.NotHeld:
@@ -651,6 +629,11 @@ public partial class InventoryCraftingManager : Node
             // scale (invariant 7), so silently burning one for nothing is a real loss.
             case UseBlock.NothingToTreat:
                 EventBus.Instance?.EmitNotify("Nothing to treat. Keep it.");
+                return false;
+            // The satchel is not where a fight is fought. `EncounterManager.Treat` is the verb, and it
+            // charges a turn and counts against the per-fight slot cap; this path did neither.
+            case UseBlock.InFight:
+                EventBus.Instance?.EmitNotify("Not from the satchel — not with this on you.");
                 return false;
         }
 
@@ -795,7 +778,7 @@ public partial class InventoryCraftingManager : Node
 
             // The same three questions InspectEquip asks, in the same order, plus this one — which is
             // what makes the ordering note above a rule rather than a hope. It cannot fail on a save this
-            // build wrote (Equipment is kept by SurvivesDeath, so a worn item is always held), and that
+            // build wrote (nothing is ever lost, so a worn item is always still held), and that
             // is the point: the check exists for saves written by builds that reasoned differently.
             if (!Has(kv.Key)) continue;
 

@@ -108,18 +108,21 @@ public static class InteractionService
                     EventBus.Instance?.EmitNotify(data.ExamineText);
                 return true;
 
-            // The relic in the Waking world. Touching it puts you in the Pixel Realm with
-            // a draining clock and something already looking for you.
+            // The way into the Dream: a broken thing on a Waking screen that is scenery rather than an
+            // object — never picked up, and it stays where it is until you use it.
+            //
+            // Had a second arm for the length of 6a, reaching the heist's `Begin` — deleted in 6b with the
+            // class. The flag set here is `SetsFlag`, the author's own optional one, and **not** the pocket's
+            // `cleared` flag: that is written by `PocketManager.Complete` and by nothing else, which is what
+            // keeps an abandoned pocket's entrance intact.
             case HotspotKind.CrossToDream:
                 SetFlagIfAny(data.SetsFlag);
-                return DreamRunManager.Instance?.Begin(data.HeistId) ?? false;
+                return PocketManager.Instance?.Enter(data.PocketId) ?? false;
 
-            // The anchor, at the far end of the maze.
-            case HotspotKind.TakeAnchor:
-                if (DreamRunManager.Instance is not { IsRunning: true }) return false;
-                SetFlagIfAny(data.SetsFlag);
-                DreamRunManager.Instance.TakeAnchor();
-                return true;
+            // `case HotspotKind.TakeAnchor` stood here and went with the kind in 6b. The objective is inside
+            // the 3D scene now — a pocket calls `PocketManager.Complete()` when the player reaches it — so
+            // there is no Waking-world hotspot for taking anything, and a kind with no case is a kind that
+            // silently does nothing.
 
             // A field station: the mortar, the anvil, the trapper's stump (§19). Same rule as `Mend` —
             // it emits and returns, never touching UI, so a station click is drivable with no scene

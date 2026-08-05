@@ -283,11 +283,26 @@ not a chore.
 | Pool | Spent by | Restored by |
 |---|---|---|
 | **Vitality** | Waking-world combat | her salves (finite), crude substitutes (poor) |
-| **Resolve** | the Dream, and boss fights **while the boss's tether is unbroken** | leaving the Dream; resting at a camp |
+| **Resolve** | **the three Dream verbs, while held** (§19); creature contact; boss fights **while the boss's tether is unbroken** | resting at a camp — *and nothing else, since 2026-08-04* |
 
 **Resolve is your nerve, and an empty bar means one thing everywhere: you are removed from
-the confrontation.** In the Dream that is ejection from the realm. In a boss fight it is
-forced flight. One meaning, two venues.
+the confrontation.** ~~In the Dream that is ejection from the realm. In a boss fight it is
+forced flight. One meaning, two venues.~~
+
+> **Revised 2026-08-04, and built the same day as unit 8: one meaning, one *outcome*.** Jeremy: *"we should
+> use the same function if VIT or Resolve hit 0 that the player goes to the most recent camp. I think it keeps
+> it consistent and easy to remember / fair."* So an empty bar of **either** kind — body or nerve, Dream or
+> Waking, boss or no boss — puts you at the latest camp. `CampManager.RespawnAtCamp` is that one function, and
+> both `VitalityDepleted` and `ResolveDepleted` now reach it.
+>
+> **What makes the two genuinely identical rather than merely similar is that the same day removed item
+> loss.** Until then a Vitality collapse also burned your components, so sharing the path would have made
+> running out of nerve cost materials. With nothing lost either way, both are the same sentence: **you wake at
+> a camp, and it cost you the walk back.** Invariant 1 is untouched — the two *routes* still cost different
+> currencies, because that was always about severing versus overkill and never about the two bars.
+>
+> Inside a pocket the ejection happens first and writes nothing, so the entrance survives: an ejection costs
+> the trip and never a craft family. **A boss banishing you is the same call**, which is one fewer rule.
 
 It moves in exactly those two places. **There is still no ambient drain** — no
 corrupted-ground pressure, no bleed for standing near something anchored, nothing outside an
@@ -800,11 +815,19 @@ The cost estimate that justified deferring also turns out to have been wrong, be
 a 2D one. Both realms are first-person and that word was carrying two meanings; it is worth saying
 which each time.
 
-**Still open: whether the hostile spirits are 2D billboards or 3D models.** This section used to call
-that "2.5D versus full 3D", which was a misleading name — both readings always had 3D geometry, and
-the only difference between them was the creatures. Named correctly it blocks creature art and
-nothing else. It is answered by building both and looking at them; `docs/handoff.md`, "The Dream in
-3D", is the startup order and step 5 is that comparison.
+**Closed 2026-07-30: the hostile spirits are 3D models, and there are no billboards.** This section used
+to call the question "2.5D versus full 3D", which was a misleading name — both readings always had 3D
+geometry, and the only difference between them was the creatures. Named correctly it blocked creature art
+and nothing else, and it was answered the way it was always going to be, by building both and looking at
+them: a camera-facing quad beside two 3D capsules in the probe. Jeremy: *"It will probably be best to just
+commit to 3d models so the feel is the same."*
+
+**His axis is the one to keep, because it is not the axis the analysis was using.** Every argument here
+optimised *per creature* — image quality for this one, spatial legibility for that one — and landed on a
+hybrid. He optimised the **coherence of the space**: mixed techniques would make bosses feel imported from
+a different game, and not deliberately. **Consistency beats per-unit optimisation when the player's sense
+of place is the product**, which generalises well past this decision. What it buys: no sprite sheets, no
+multi-angle rotations, no per-pose art, one mesh per creature, and creature art stops waiting on a call.
 
 The architecture absorbs all of it: the Dream already renders through a `SubViewport` that can host a
 3D subscene, and nothing in `RealmTransitionManager`, `EntityStateManager` or the save system
@@ -1248,11 +1271,21 @@ Section 3 already polices that from the other side. Anchored enemies regenerate 
 visits, so chipping converts supplies into nothing; severed ones do not regenerate and chipping them
 across visits is explicitly legitimate. Camps need no rule about it.
 
-The through-line: with healing free, a lost engagement costs you **~~your rigging and~~ your
-consumables, not your HP bar** — which is Section 4's thesis stated in the economy. HP was never
-meant to be the scarce resource here. *(Traps left this sentence 2026-08-01 — §19, "Traps are
-permanent". The through-line survives on the half that mattered: what a lost fight takes is **her
-salves**, and only the ones you chose to pour in.)*
+The through-line: with healing free, a lost engagement costs you **~~your rigging and~~ ~~your
+consumables~~ the salves you poured into it, not your HP bar** — which is Section 4's thesis stated in the
+economy. HP was never meant to be the scarce resource here. *(Traps left this sentence 2026-08-01 — §19,
+"Traps are permanent".)*
+
+> **And "your consumables" left it on 2026-08-04, which finishes the sentence off — unit 8 removed item loss
+> entirely.** Not a preference: `SurvivesDeath` keyed on `ItemCategory`, and **`herb_graveflower` and
+> `mat_cairnstone` do not serialise a category**, so both fell to `Component` and both burned. Twelve
+> Graveflower exist in the whole game, they never re-arm, and the engine costs eight — so dying while carrying
+> them silently deleted the good ending. Jeremy: *"the common resources are still finite so I don't like item
+> lost ever other than consumed of course."*
+>
+> **What survives is the half that was always load-bearing: a lost fight costs the salves you chose to pour
+> in** — spent by *using* them, not by dying. Invariant 7 is untouched, and this is now the whole of the
+> sentence rather than the remainder of it.
 
 > **Two revisions from §19 (2026-07-31). The camp is untouched as a mechanism; two of the bullets above
 > change.**
@@ -1310,6 +1343,81 @@ impactful."*
 > knot paying no shortcut weakens by a hair but does not fall: the slot is filled with knowledge, three
 > guards hold it, and the knot doors sit on critical-path screens near the Snarl, so the walk back in
 > is short by construction.
+
+### Built as unit 5, 2026-08-04 — the verb, and the one thing it forced a ruling on
+
+**687 → 758 checks, exit 0.** `CampManager` gained `InspectDeparture` / `InspectTravel` / `TravelToCamp`
+and a `TravelBlock` enum beside `CraftBlock`; `CampPanel` is the menu, on `FightPanel`'s no-scene-yet
+arrangement; `C` opens it. Everything else in this section was already built and none of it moved.
+
+> **You choose the destination among the camps you have reached — you are not simply returned to the
+> newest one. RATIFIED 2026-08-04.** Jeremy, shown the ruling and its cost: *"I like this and there are only
+> 3 camps so the menu overhead is tiny."* Worth recording as his own argument rather than only as assent —
+> **the picker is cheap because the network is small**, which is a property of the three-camps decision and
+> not of the menu. If the camp count ever grew, the objection §17 raises against pickers would start to
+> apply and this would be worth revisiting; at three it does not.
+>
+> The two paragraphs above point in opposite directions and the work is a different size
+> either way, so it was settled rather than guessed at, and it went the larger way for one reason:
+> **§20's revised good ending is built on backtracking being nearly free.** A verb that only returns you
+> to the last camp makes a chapter-3 player's trip back to a chapter-1 blight *the whole map on foot* — so
+> the single-destination reading does not merely cost less, it contradicts a ratified section.
+>
+> **The *"no picker, no per-camp state"* line above survives untouched, because it is about something
+> else.** It was decided 2026-07-30, before this verb existed, and it governs the **collapse return
+> point** — where you wake after dying. Its stated reason is that *a picker whose answer is the newest
+> camp ~95% of the time is a confirmation step, not a choice*, and that reason does not reach a
+> destination the player genuinely declines two thirds of the time. `ReturnCampRoomId` still rebinds
+> silently on arrival and still has no picker in front of it. **One word to overrule**, and the smaller
+> version is a two-line reduction of what was built.
+>
+> **"Reached" is a world flag, so the save format did not move.** `camp.<room>.found`, written by the same
+> arrival that rebinds the return point — the trade unit 2 made when `ZonePhases` became
+> `screen.<id>.cleansed`, and for the same reason: one vocabulary means one export, one import, one
+> rebroadcast. Saves written before this unit re-derive their one destination from the return point they
+> already carry, which is checked as a real file in the pre-unit-5 shape rather than by calling the
+> method.
+
+> **The verb is refused inside a fight rather than priced as a flight, and this is the decision most worth
+> keeping.** The codebase already contained the other answer: a door clicked mid-fight *is* breaking off,
+> and `InteractionService` charges §3's parting blow for it. Copying that here would have been consistent
+> and wrong — fleeing leaves you standing where you fought, and arriving at a camp refills **both pools**,
+> so one key doing both would be escape *plus* a free heal, and the retravel cost this amendment exists to
+> charge would be gone. Nothing is taken from the player: flee, pay the blow, then travel.
+>
+> **It is gated as a pair, and the pair is the point.** `EncounterManager.OnRoomEntered` ends any fight on
+> arrival — its own comment already named *"the camp menu"* as a path it covers — so a refusal that
+> navigated first and then bailed would leave the player in a fightless room and look identical to a
+> working guard. So the suite asserts the refusal **and that the fight is still running**, and deleting the
+> guard reddens both. A break-test predicted four checks and got exactly those four.
+>
+> **The second refusal is inside a pocket, keyed on a live run and not on the realm** — `Hud.RefreshPools`'
+> reason, and the same split `AtCamp` already makes: unit 6's quiet pockets are the Dream with nothing
+> draining, and a camp reached from one must still be a camp.
+>
+> **A camp keeps its ordinary exits, and that is now a gate rather than a sentence.** Every authored camp
+> is checked for a `Navigate` hotspot: a camp with none would be the pure overlay this amendment rejected,
+> enterable only by the verb and escapable only by dying. Beside it, a census — **exactly one camp per
+> chapter**, by name, rather than a count of three, which three benches in chapter 1 would satisfy.
+
+> **Played on the day it landed, and it found a defect that was not in this section at all — 749 → 758
+> checks.** Jeremy: *"the issue I found was with the 'I' satchel opening during combat. When you pressed 'C'
+> it refused to open, with a text saying so."* **The camp verb was correct; the satchel was the thing with no
+> guard**, and `C`'s behaviour was the model he wanted `I` to copy. Both fixes are in `§18`'s territory
+> rather than this section's — recorded there — and the part that belongs here is only that **the verb this
+> unit built is what made the omission visible**, because two keys behaving differently is much easier to
+> notice than one key behaving wrongly.
+>
+> **A second, unreported defect was found while chasing the first, and it is kept.** A fight starting while
+> the camp menu was open left the menu visible behind the fight screen, because `Hud.OnFightStarted` closed
+> the satchel and not the menu. That line had been **considered during the build and declined**, on the
+> reasoning that the menu covers the whole screen so nothing underneath could be clicked. The coverage claim
+> is true and is now asserted (`CampPanel.BlocksTheRoom`); the *reasoning* was still wrong, because **"no
+> path can produce this state" is only ever as good as the paths you thought of.** Worth keeping in writing
+> because the codebase's own rule against unreachable dead-latch guards is what made declining feel
+> principled — that rule is about *guards with no reachable arm*, not about *states you failed to enumerate*,
+> and the two are easy to confuse in the direction that leaves a bug in.
+
 >
 > **The code consequence is a shrink, not a rework** — see `build-plan.md` §4, unit 5. *"A room is a
 > camp precisely when it holds a `Workbench` hotspot"* is still true, so the built derivation, the
@@ -2338,6 +2446,28 @@ resolve. It would help pathfinding around enemies be much more meaningful."*
 | **Float** | after **boss 1** | drains while held | slow rise and slight lateral drift. Vertical traversal without ladders |
 | **Flare** | after **boss 2** | drains while held | push the light *out*. Hidden geometry, the anchor and the tether lines become visible — and everything in the pocket can see you |
 
+> **Where a verb is granted — ratified 2026-08-04, and it was ambiguous until it was asked.** The table says
+> Float arrives *"after boss 1"*, which could have meant the boss pocket or the Waking-world fight that
+> follows it. Jeremy: *"you get the dream abilities after pulling the anchor for boss 1 and 2. Boss 3 ends the
+> game so you don't."*
+>
+> So **pulling the anchor teaches the verb** — `PocketData.GrantsAbility`, granted by
+> `PocketManager.Complete()` in the same act that severs the tether. One act, two consequences.
+>
+> **The budget is exactly two, which is tighter than it looks.** Suppress is held from the first frame so
+> nothing grants it — and it therefore carries **no flag**, deliberately, because a flag nothing can fail to
+> have is one every reader has to remember to ignore. Boss pocket 3 grants nothing: not a special case, just
+> no game left to spend a verb in. `--verify-content` bills it as *2*, and flags a non-boss pocket teaching a
+> verb, two pockets teaching the same one, or anything claiming to grant Suppress.
+>
+> > **One rule falls out of this that cannot be checked, so it is written down instead: every boss pocket must
+> > be completable with the verbs you already hold when you reach it.** Boss pocket 1 has to be solvable with
+> > **Suppress alone** — Jeremy: *"suppression is what is used until float, which shuts the player light off to
+> > hide from enemies"* — because Float is what is *inside* it. Boss pocket 2 without Flare, for the same
+> > reason. A boss pocket whose anchor needs the verb it grants is unwinnable, and nothing in code could catch
+> > it: it is 3D geometry, the same unfalsifiable category as `placement.md` rule 7's *"ch1 pockets are flat"*,
+> > which this generalises to all three.
+
 **Flare is the exact mirror of the first verb and that is why it is the right third one.** It is a puzzle
 tool with a price, never an escape button: it reveals and it attracts, and it arrives in chapter 3 where
 the pockets are hunted, so the price is real. Jeremy is open to more verbs later; three is the set that
@@ -2407,6 +2537,28 @@ rule — and the question worth asking was what invariant that line actually hel
 **"a new category inherits the destructive default."** So the claim re-anchored on `Component` and
 `Catalyst`, which still burn, and a live `LoseUnprotectedItems` round trip went in beside it, because a
 predicate and the runtime can disagree when an id fails to resolve.
+
+> **The per-fight slot cap was bypassable from the satchel, and it stayed that way for a unit and a half —
+> found in play 2026-08-04, fixed the same day.** Jeremy reported the satchel opening during combat. Being
+> drawn *behind* the fight screen was the cosmetic half. The real fault: `InventoryCraftingManager.UseItem`
+> had **no fight guard at all**, so the satchel's Use button healed **for free — no turn spent, and nothing
+> counted against `SalveSlotsPerFight`.** §18 makes the turn the only currency inside a fight; this was a
+> second one, sitting behind a key.
+>
+> **What made it invisible is a reasoning trap worth more than the bug.** `EncounterManager.Treat` routes
+> through `UseItem` *on purpose*, and its comment says why: so that *"nothing to treat"* refuses in the fight
+> exactly as it refuses in the satchel, and her finite salves cannot be burned for nothing in one place and
+> protected in the other. That is correct, and it reads as though the two paths are now equivalent — but
+> **joining two callers so a rule cannot drift says nothing about a rule that should apply to only one of
+> them.** The salve cap and the turn cost live on `Treat` alone, and the shared path was never asked about.
+>
+> Fixed as `UseBlock.InFight` plus an `asFightTurn` flag that only `Treat` passes, **defaulting to the
+> refusing direction** so a future caller that forgets it gets a visible refusal rather than a silently
+> reopened bypass — `RefillsAtMilestone`'s argument about which way a forgettable field should fail. The
+> satchel also now refuses to *open* mid-fight, which is what was reported: a panel whose only verb is
+> refused should not appear. **Gated as a pair in both directions** — the satchel is shut *and* `Treat` still
+> works and still costs its turn — because a guard that blocked both would have deleted the healing verb
+> rather than protecting it, and a one-sided check could not tell those apart.
 
 **One consequence of the venue rule worth stating plainly: `NotAtStation` can never dead-end anyone.**
 The camp bench satisfies every station requirement; a field station satisfies only its own. Since §17

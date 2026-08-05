@@ -11,9 +11,10 @@ namespace Unrendered.Dream;
 /// <remarks>
 /// <para>
 /// <b>This exists because the numbers are not decidable yet, and pretending otherwise is how this
-/// step goes wrong.</b> The handoff calls the ramp "a screenshot decision, not an argument", and
-/// separately notes that a creeping level count is nearly always a symptom of light placement rather
-/// than of the ramp. Neither observation is actionable unless the parameters move while you are
+/// step goes wrong.</b> The ramp is a screenshot decision rather than an argument, and a creeping
+/// level count is nearly always a symptom of light placement rather than of the ramp — both are
+/// written up in <c>docs/dream-probe.md</c>, under the grey keys and under the questions it asks for
+/// answers to. Neither observation is actionable unless the parameters move while you are
 /// standing in the room looking at them. So the deliverable of this unit is <i>knobs, not
 /// values</i> — whatever the keys settle on gets written back into <c>DreamLook.tres</c>.
 /// </para>

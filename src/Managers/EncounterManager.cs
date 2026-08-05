@@ -181,8 +181,8 @@ public partial class EncounterManager : Node
     ///
     /// <para><b>Free before the fight, a turn inside it</b> — §18's one sentence, and the only place in
     /// this class where the same call costs different things. Nothing is consumed either way: traps went
-    /// permanent on 2026-08-01 (§19), so rigging *names* a trap you own rather than spending one, and
-    /// <c>SurvivesDeath</c> keeps it through a collapse.</para>
+    /// permanent on 2026-08-01 (§19), so rigging *names* a trap you own rather than spending one — and since
+    /// unit 8 a collapse takes nothing at all, so there is no route by which one can be lost.</para>
     /// </summary>
     /// <remarks>
     /// Rigging mid-fight needed no rule of its own, which is §18's point about the turn currency: it is
@@ -470,7 +470,13 @@ public partial class EncounterManager : Node
         // Routed through UseItem rather than reimplemented, so that "nothing to treat" refuses here
         // exactly as it refuses in the satchel and her finite salves cannot be burned for nothing in
         // one place and protected in the other.
-        if (!inv.UseItem(itemId)) return false;
+        //
+        // `asFightTurn: true` is this method saying *"the fight is asking"*, and it is the only caller that
+        // says so. As of 2026-08-04 `UseItem` refuses outright while a fight is running, because the satchel
+        // reaching it directly was free unlimited healing that charged no turn and counted against no cap —
+        // see `UseBlock.InFight`. **The joining above was only ever one-directional**: sharing a path so a
+        // rule cannot drift says nothing about a rule that should apply to one caller and not the other.
+        if (!inv.UseItem(itemId, asFightTurn: true)) return false;
 
         _salvesUsed++;
         EndPlayerTurn();

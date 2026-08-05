@@ -23,8 +23,49 @@ public static class GameConfig
 
     public const float ResolveMax = 100f;
 
-    // Resolve only moves inside a Dream heist, and each heist owns its own rates.
-    // See DreamHeistData.DrainPerSecond / NearDrainPerSecond.
+    // The starting ceiling only: `ResolveManager.Max` rises one point per Dream knowledge pocket
+    // (unit 6a, `build-plan.md` §6 rule 6). It was `=> GameConfig.ResolveMax` until then, which is why
+    // the eight grants had no mechanism to land in.
+    //
+    // **Nothing drains Resolve as of unit 6b.** The per-second clock belonged to the deleted heist, and it
+    // was the wrong model anyway: Resolve is a fuel tank spent by verbs, not a timer. The boss aura
+    // (`combat.md` §6 — drain only while a boss's tether is unbroken) and the Dream's own abilities will
+    // each bring their own rate; there is deliberately no ambient drain and never was one.
+
+    /// <summary>
+    /// What each Dream verb costs per second while **held** (`combat.md` §19). One meter, three verbs, and
+    /// they are **additive** — §19 is explicit that *"floating spends the same meter suppression does, so the
+    /// climb is paid for out of the hiding."*
+    /// </summary>
+    /// <remarks>
+    /// <b>Numbers, not rules, and deliberately not gated.</b> A check on these would go red the first time
+    /// Jeremy wanted the Dream to feel different, which is the fourth blind-spot class. What *is* gated is the
+    /// shape: that the rate is a sum, that it is zero when nothing is held, and that nothing drains outside a
+    /// pocket.
+    /// <para>
+    /// Suppress is cheapest because it is the verb you hold longest — it is the one you start with and the
+    /// only way past a minor creature, so pricing it like the other two would make hiding the expensive
+    /// option. Flare is dearest: it reveals *and* attracts, and §19 wants that price real.
+    /// </para>
+    /// </remarks>
+    public const float SuppressDrainPerSecond = 2.0f;
+
+    public const float FloatDrainPerSecond = 4.0f;
+
+    public const float FlareDrainPerSecond = 6.0f;
+
+    /// <summary>
+    /// Seconds a Dream creature must wait before it can cost you again — the default a
+    /// <c>DreamCreatureData</c> may override.
+    /// </summary>
+    /// <remarks>
+    /// <b>The load-bearing number in the whole creature model.</b> Contact costs a chunk of Resolve rather
+    /// than health, and an <c>Area3D</c> reports contact every frame — so with no cooldown, standing inside a
+    /// creature empties the meter in well under a second and the player is ejected before they know what
+    /// touched them. It is the kind of fault that is invisible in code and obvious in play, which is why it
+    /// has a gate rather than a comment.
+    /// </remarks>
+    public const float CreatureTouchCooldownSeconds = 1.5f;
 
     // ---- Vitality --------------------------------------------------------
 
@@ -167,7 +208,13 @@ public static class GameConfig
     // more overhead than needed." A chapter has no data of its own until something needs to *show*
     // a chapter — a title card, a save slot label — and that is the moment to bring the class back,
     // with a loader, rather than keeping an empty one warm against the possibility.
-    public const string HeistDataDir = "res://data/heists";
+    // `HeistDataDir` and `data/heists/` were deleted 2026-08-04 with unit 6b, along with `DreamHeistData`
+    // and `DreamRunManager`. The directory had been empty since unit 3b retired the prototype heist, so the
+    // constant had been pointing at nothing for a day — which is the honest reason it is a deletion rather
+    // than a migration: nothing was moved because nothing was there.
+
+    /// <summary>Dream pockets (unit 6). The replacement for the deleted heist registry.</summary>
+    public const string PocketDataDir = "res://data/pockets";
 
     public const string SaveFilePath = "user://savegame.json";
 

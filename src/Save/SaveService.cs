@@ -21,6 +21,7 @@ public static class SaveService
             CurrentRoomId = NavigationManager.Instance?.CurrentRoomId ?? "",
             CurrentRealm = (int)(RealmTransitionManager.Instance?.CurrentRealm ?? GameRealm.Waking),
             Resolve = ResolveManager.Instance?.Current ?? GameConfig.ResolveMax,
+            ResolveMax = ResolveManager.Instance?.Max ?? GameConfig.ResolveMax,
             Vitality = VitalityManager.Instance?.Current ?? GameConfig.VitalityMax,
             Flags = WorldStateManager.Instance?.ExportFlags() ?? new(),
             EntityStates = EntityStateManager.Instance?.ExportStates() ?? new(),
@@ -74,9 +75,11 @@ public static class SaveService
 
         if (data == null) return false;
 
-        // A heist does not survive a load: whatever run was live belonged to the session we
-        // are leaving behind, and its pursuer and clock have no meaning in this one.
-        DreamRunManager.Instance?.ForceClear();
+        // **A pocket does not survive a load.** It is a 3D scene, so "where you were standing" in one is
+        // geometry this format deliberately does not carry — see `SaveGame.ResolveMax`'s remark. Clearing it
+        // here means a save taken inside one restores you to the Waking room the file names, entrance intact
+        // and nothing granted, so a reload is never a way to bank half a pocket.
+        PocketManager.Instance?.ForceClear();
 
         // Restore state before navigating, so the room renders against the loaded world.
         WorldStateManager.Instance?.ImportState(data.Flags);
@@ -100,26 +103,28 @@ public static class SaveService
         // Before the navigation below, so that if the loaded room happens to be a camp, arriving
         // there rebinds a return point that already agrees with the file rather than clobbering it.
         CampManager.Instance?.ImportReturnCamp(data.ReturnCampRoomId);
+
+        // The ceiling before the value, and the order is load-bearing: `SetTo` clamps to `Max`, so restoring
+        // a bar of 108 against a ceiling still at 100 would silently trim eight points of permanent progress
+        // on every load. Same shape as `ImportEquipped` needing `ImportStacks` first.
+        ResolveManager.Instance?.ImportMax(data.ResolveMax);
         ResolveManager.Instance?.SetTo(data.Resolve);
         VitalityManager.Instance?.Import(data.Vitality);
 
         var roomId = data.CurrentRoomId;
         var realm = (GameRealm)data.CurrentRealm;
 
-        // A save taken mid-heist has no run left to carry it out, and no Dream room has a door
-        // to the Waking world — the ejection is the only exit. Land outside instead of inside a
-        // maze that cannot be left.
-        var stranded = DreamRunManager.Instance?.HeistOwningRoom(roomId);
-        if (stranded != null)
-        {
-            roomId = string.IsNullOrEmpty(stranded.ReturnRoomId)
-                ? GameConfig.StartingRoomId
-                : stranded.ReturnRoomId;
-            realm = GameRealm.Waking;
-
-            EventBus.Instance?.EmitNotify(
-                "The way behind you closed while you slept. You are in the cold again, with nothing to show for it.");
-        }
+        // **A stranding guard stood here and is gone as of unit 6b — unnecessary rather than migrated, and
+        // the distinction is worth keeping.** It existed because a Dream room was an ordinary `RoomData` with
+        // no door back to the Waking world, so a save taken inside the maze restored a room the player could
+        // not leave: the save/load soft lock the whole guard was written for. **A pocket is a 3D scene and
+        // never appears in `NavigationManager`**, so `CurrentRoomId` cannot name one and there is nothing
+        // left to detect. The class of bug was deleted by the model changing, not fixed here.
+        //
+        // Its *probe* survives, reworded, in the `pockets` gate section: a save taken inside a pocket loads
+        // you outside it with the entrance intact and nothing granted. That is the invariant; this was only
+        // one mechanism's way of honouring it. See `deleting-a-gated-mechanism` — keep the invariant, move
+        // the probe.
 
         RealmTransitionManager.Instance?.SetRealm(realm, force: true);
 

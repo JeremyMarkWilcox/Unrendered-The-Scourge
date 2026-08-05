@@ -42,8 +42,8 @@ public enum ItemCategory
     /// <b>Permanent, not consumed</b> — §19, 2026-08-01. This comment said the opposite until unit 4b
     /// authored the six trap files and had to decide what <c>MaxStack</c> meant: *consumed always, win or
     /// lose, which is why traps must be cheap and rebuildable from common materials (§13)*. That reading
-    /// died twice over. <see cref="Managers.InventoryCraftingManager.SurvivesDeath"/> returns true here,
-    /// and <see cref="Managers.InventoryCraftingManager.AlreadyMade"/> refuses a second one outright — so
+    /// died twice over. Nothing is lost on death at all as of unit 8, and
+    /// <see cref="Managers.InventoryCraftingManager.AlreadyMade"/> refuses a second one outright — so
     /// a trap is an owned thing whose count is 0 or 1 and never more, which is why every trap file
     /// authors <c>MaxStack = 1</c>. The *rig cap of two* is where the scarcity moved.
     /// </para>

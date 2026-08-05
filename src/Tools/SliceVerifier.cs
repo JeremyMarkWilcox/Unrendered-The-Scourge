@@ -4,6 +4,7 @@ using System.Linq;
 using Godot;
 using Unrendered.Core;
 using Unrendered.Data;
+using Unrendered.Dream;
 using Unrendered.Managers;
 using Unrendered.Save;
 using Unrendered.UI;
@@ -37,12 +38,25 @@ public static class SliceVerifier
     private static RoomView _view;
     private static Hud _hud;
 
-    public static int Run(RoomView view = null, Hud hud = null)
+    /// <summary>
+    /// The live <see cref="PocketHost"/>. Added 2026-08-04, after a defect that could only live here.
+    /// </summary>
+    /// <remarks>
+    /// <b>This was the last live node the gates could not see, and it cost a play session.</b> The verb poller
+    /// shipped as a node to add to each pocket scene, nothing added one, and every check stayed green because
+    /// the suite drives <c>PocketManager</c> — which owns *being in a pocket* — and had no handle on the thing
+    /// that owns *what is in the pocket with you*. That is §3's second class exactly: a layer the gates never
+    /// question, sitting one step downstream of the manager state they assert.
+    /// </remarks>
+    private static PocketHost _host;
+
+    public static int Run(RoomView view = null, Hud hud = null, PocketHost host = null)
     {
         Failures.Clear();
         _checks = 0;
         _view = view;
         _hud = hud;
+        _host = host;
 
         // Deterministic: no ambient drain racing the assertions.
         if (ResolveManager.Instance != null) ResolveManager.Instance.Active = false;
@@ -91,7 +105,6 @@ public static class SliceVerifier
         GateM2_StatePresentationTable();
         GateM3_MicroLoop();
         GateVitalityPool();
-        GateHeistMechanics();
         GatePersistence();
 
         // Between the two on purpose. It runs its own save round trip, which would land the player
@@ -117,9 +130,25 @@ public static class SliceVerifier
         // room.
         GateEncounters();
 
+        // Straight after the fight loop, because it needs a live fight to be refused during and the arena
+        // is the only fixture with bodies on it. Running earlier would leave wounds on creatures whose
+        // damage numbers that gate reads. Everything below builds its own fixtures, so this one is free to
+        // leave the player somewhere new.
+        GateTravel();
+
+        // After travel, because it borrows that section's fixtures — a camp to come back to and a creature
+        // to be refused in front of — and because it leaves the realm and the Resolve ceiling changed, which
+        // nothing below it reads.
+        GatePockets();
+
         GateMultiFlagGating();
         GateChapterSpine();
         GateAuthoredContent();
+
+        // Touches no game state at all — it reads two kinds of file off disk — so its position is free.
+        // Here, beside the other sweeps, because what it sweeps is the same thing: authored artifacts
+        // referencing each other by name, where the crossing is the only place the mistake shows.
+        GateDocCitations();
 
         // Last, because it walks the player onto two synthetic screens and leaves them there, and
         // it toggles world flags that only its own fixture rooms read. Nothing after it to disturb.
@@ -140,6 +169,7 @@ public static class SliceVerifier
 
         Check("the live RoomView was handed to the verifier", _view != null);
         Check("the live Hud was handed to the verifier", _hud != null);
+        Check("the live PocketHost was handed to the verifier", _host != null);
 
         // The boot room, asserted here because this is the last moment before a gate moves us. It
         // looks like a tautology and is not quite one: it asserts that `Main.StartGame` *arrived*,
@@ -350,8 +380,9 @@ public static class SliceVerifier
     /// to break §6 later is to give it one.
     ///
     /// Deliberately leaves the bar at a known part-drained value on the way out, so that
-    /// <see cref="GateHeistMechanics"/> can prove a whole heist does not move it and
-    /// <see cref="GatePersistence"/> round-trips something other than the default.
+    /// <see cref="GatePersistence"/> round-trips something other than the default. It also fed
+    /// <c>GateHeistMechanics</c>'s *"a whole heist does not move the body"* until unit 6b deleted that
+    /// section; <see cref="GatePockets"/> makes the same claim about a pocket now.
     /// </summary>
     private static void GateVitalityPool()
     {
@@ -641,125 +672,33 @@ public static class SliceVerifier
         vitality.ResetAll();
     }
 
-    // ---- Inside a run ----------------------------------------------------
-
-    /// <summary>
-    /// What is left of the heist section after unit 3b, and the *reason* it is left is worth stating,
-    /// because it is the one thing §7 decision 7's rule did not have a word for. That rule says split
-    /// the gates by what they cover, not by what they touch, and delete the ones covering
-    /// <c>DreamRunManager</c> outright. It needed a third category: <b>gates that touch a dying
-    /// mechanism in order to probe a living one.</b>
-    ///
-    /// <para>
-    /// Every check below covers a file that outlives unit 6 — <c>Hud</c>'s pool order and dimming,
-    /// <c>RoomView</c>'s handling of a navigation raised from inside a <c>RoomEntered</c> handler,
-    /// <c>RealmTransitionManager</c>'s lock, <c>ResolveManager</c>'s absent ambient drain — and a live
-    /// run is simply the only place any of them can be stood in. Ten checks that covered
-    /// <c>DreamRunManager</c> and nothing else went with the prototype: the pursuer's start room and
-    /// both distance readings, the drain rate, the Resolve-exhausted ending, and the anchor. Whatever
-    /// unit 6's pocket turns out to be, it owes this file its own versions of those.
-    /// </para>
-    /// </summary>
-    /// <remarks>
-    /// The section is named for a *run* rather than a heist on purpose. The word "heist" names a
-    /// mechanism that is being deleted; "inside a run" names the condition four surviving files
-    /// actually branch on, and it is the wording unit 6 can keep.
-    /// </remarks>
-    private static void GateHeistMechanics()
-    {
-        Section("inside a run  what the Dream does to the surviving screens");
-
-        var run = DreamRunManager.Instance;
-        var resolve = ResolveManager.Instance;
-        var nav = NavigationManager.Instance;
-
-        // Invariant 2: Vitality must never appear in the Dream. Every ending in there is an
-        // ejection priced in Resolve, and if the body followed you in, the two-pool split — and
-        // with it the reason the two routes cost different currencies — collapses. Captured here
-        // rather than in the Vitality gate because this is the gate that actually goes inside.
-        var vitality = VitalityManager.Instance;
-        var vitalityOnEntry = vitality?.Current ?? 0f;
-
-        Check("the verifier's own run is registered", run.GetHeist(LoopHeistId) != null);
-
-        // Entered by clicking, not by calling `Begin`. This is the only coverage anywhere of the wiring
-        // from a Waking hotspot to a crossing — `HotspotKind.CrossToDream` is used by no `.tres` now
-        // that the prototype is gone, and a hotspot kind that nothing exercises is a hotspot kind that
-        // breaks silently. It lives here rather than in the micro-loop because this is the section that
-        // knows it is standing on a corpse.
-        nav.GoToRoom(LoopRoomId);
-        resolve.SetTo(resolve.Max);
-        Check("touching what the cairn hid begins a run",
-            InteractionService.ActivateHotspot(Hotspot(LoopRelic)) && run.IsRunning);
-        Check("and it put you inside the maze", nav.CurrentRoomId == DreamEntryRoomId);
-        Check("realm is locked for the duration", RealmTransitionManager.Instance.TransitionsLocked);
-
-        // Inside a run the nerve is the pool at risk, so it takes the top slot and the body dims.
-        Check("the nerve becomes the top bar inside a run",
-            _hud == null || _hud.TopPoolLabel == "RESOLVE");
-        Check("and the body dims to say it is not in play",
-            _hud == null || _hud.VitalityOpacity < 1f);
-        // Dimmed, never hidden: invariant 2 promises nothing in the Dream can kill you, and a
-        // readable bar states that promise where an absent one would leave it to be guessed.
-        Check("but stays readable rather than vanishing",
-            _hud == null || _hud.VitalityOpacity > 0.2f);
-        Check("and the nerve is never dimmed",
-            _hud == null || Mathf.IsEqualApprox(_hud.ResolveOpacity, 1f));
-
-        // An ordinary door, to prove the view tracks the player at all before we ask it to
-        // survive the hard case. Without this, "the view never renders the wrong room" could
-        // be passed by a view that renders nothing.
-        Walk(DreamInnerRoomId);
-        Check("the view follows an ordinary door",
-            _view == null || _view.DisplayedRoomId == DreamInnerRoomId);
-
-        // Then the hard case, which the plan for this unit had down as deleted and which is kept because
-        // the fixture pays for it either way: the three-room chain and the parked pursuer exist for the
-        // stranding check, so walking one more door is free, and what it probes is `RoomView` rather
-        // than the pursuer.
-        //
-        // Being caught navigates *from inside* the RoomEntered handler that reported the step
-        // into the pursuer's room. The ejection's RoomEntered therefore reaches every later
-        // subscriber first, and the stale one lands last — so a view that trusts the payload
-        // finishes by drawing the Dream room the player was just yanked out of. Managers stay
-        // correct throughout, which is why the gates above pass and the game still looked
-        // broken: no drain, no exits, the Dream still on screen. Written up in handoff.md,
-        // "Closed post-mortem: the ejection failure." **Unit 6 must keep a probe of this shape**
-        // whatever ends a pocket run, because the defect is in the subscriber and not in the ending.
-        Walk(DreamDeepRoomId);
-        Check("walking into the pursuer ends the run", !run.IsRunning);
-        Check("and throws you back out to the Waking world",
-            nav.CurrentRoomId == LoopRoomId &&
-            RealmTransitionManager.Instance.CurrentRealm == GameRealm.Waking);
-        Check("and leaves the realm unlocked", !RealmTransitionManager.Instance.TransitionsLocked);
-        Check("the view shows where you were ejected to, not where you were caught",
-            _view == null || _view.DisplayedRoomId == LoopRoomId);
-        Check("and the HUD names that room too",
-            _hud == null || _hud.DisplayedRoomName == "The Road, Barred");
-
-        // -- Nothing outside a run touches the bar, as built --
-        // True today only because boss fights do not exist. combat.md §6 has Resolve draining in
-        // a Waking boss fight too — though only while that boss's tether is unbroken — so when
-        // auras land these two widen to "no drain outside a run, or a boss fight against a
-        // Corrupted entity" rather than being deleted. The rule that survives unchanged is that
-        // there is no *ambient* drain, which is what these two actually pin down.
-        var held = resolve.Current;
-        Check("no drain outside a run", Mathf.IsZeroApprox(resolve.CurrentRatePerSecond()));
-        Check("the bar holds still in the Waking world",
-            Mathf.IsEqualApprox(resolve.Current, held));
-
-        // -- Invariant 2, measured across everything above --
-        Check("Vitality never moved in the Dream",
-            vitality == null || Mathf.IsEqualApprox(vitality.Current, vitalityOnEntry));
-
-        // And the emphasis came back with us, through the ending above.
-        Check("the body is the top bar again once the run is over",
-            _hud == null || _hud.TopPoolLabel == "VITALITY");
-        Check("and is undimmed again, because it can be hurt out here",
-            _hud == null || Mathf.IsEqualApprox(_hud.VitalityOpacity, 1f));
-
-        run.ForceClear();
-    }
+    // ---- Inside a run (retired) -------------------------------------------
+    //
+    // **`GateHeistMechanics` stood here, and unit 6b deleted it after moving every check it carried.** Its
+    // own doc comment named the reason it had survived unit 3b: it was the third category of gate — one that
+    // *touches a dying mechanism in order to probe a living one*. A live heist was simply the only place four
+    // surviving files could be stood in.
+    //
+    // Nineteen checks, and the split on the way out is worth recording because getting it wrong would have
+    // been silent:
+    //
+    //   • **Thirteen moved to the `pockets` section**, where they now stand inside a real pocket: the realm
+    //     lock going on and off, the HUD's dim trio, the pool-order swap and its restore, Vitality never
+    //     moving in the Dream, the crossing from a `CrossToDream` hotspot, the return to the screen you left,
+    //     and both views being asked what they are drawing.
+    //   • **Four died with the mechanism they were about**: the heist registry, the maze's start room, the
+    //     pursuer ending a run, and the anchor.
+    //   • **Two were deleted rather than moved, deliberately** — *"no drain outside a run"* and *"the bar
+    //     holds still in the Waking world"*. With the heist gone nothing in the game can drain Resolve at
+    //     all, so both became universals over an empty set. The rule survives in prose on
+    //     `ResolveManager.CurrentRatePerSecond`, and the checks come back with the boss aura, which is the
+    //     first mechanism that could violate them.
+    //
+    // The one that mattered most was **`RoomView.DisplayedRoomId`** — the whole regression cover for the
+    // ejection post-mortem, and every assertion of it lived in here. Its replacement is *better*: the old
+    // version reproduced one situation that happened to trigger the bug (walking into the pursuer nested a
+    // navigation inside a `RoomEntered` handler), while the new one raises a stale payload by hand and
+    // asserts the guard directly, so it cannot stop working because the Dream changed shape again.
 
     // ---- Persistence -----------------------------------------------------
 
@@ -816,40 +755,13 @@ public static class SliceVerifier
 
         SaveService.DeleteSave(path);
 
-        // -- A save taken inside a run must not strand you there --
-        // No Dream room has a door back to the Waking world, so a load that restores a Dream
-        // room without a run is a soft lock with no drain, no exit and a dead anchor. This covers
-        // `SaveService`, which outlives unit 6 — the run is the condition, not the subject.
-        //
-        // The walk is what forced the fixture to be **three rooms rather than two**: the save has to be
-        // taken one door in, so that "does not strand you" is about a Dream room the player reached
-        // rather than the one `Begin` put them in, and with two rooms that second door is the pursuer's.
-        const string dreamPath = "user://verify_slice_dream.json";
-        var run = DreamRunManager.Instance;
-
-        Check("a run begins for the stranding check", run.Begin(LoopHeistId));
-        Walk(DreamInnerRoomId);
-
-        Check("a save can be taken from inside the maze",
-            NavigationManager.Instance.CurrentRoomId == DreamInnerRoomId &&
-            SaveService.Save(dreamPath));
-
-        // Simulate a fresh session: the run is gone, only the file remains.
-        run.ForceClear();
-
-        Check("loading a mid-run save reads", SaveService.Load(dreamPath));
-        Check("and does not strand you inside the Dream maze",
-            !run.IsDreamRoom(NavigationManager.Instance.CurrentRoomId));
-        Check("and returns you to the run's exit",
-            NavigationManager.Instance.CurrentRoomId == LoopRoomId);
-        Check("and puts you back in the Waking world",
-            RealmTransitionManager.Instance.CurrentRealm == GameRealm.Waking);
-        Check("and leaves the realm unlocked",
-            !RealmTransitionManager.Instance.TransitionsLocked);
-        Check("and leaves no run running", !run.IsRunning);
-        Check("and shows you the outside", _view == null || _view.DisplayedRoomId == LoopRoomId);
-
-        SaveService.DeleteSave(dreamPath);
+        // **A mid-run stranding block stood here and went with unit 6b.** It saved one door into the Dream
+        // maze, cleared the run, loaded, and asserted the player was not left in a room with no exit — the
+        // save/load soft lock `SaveService` was written for. **A pocket cannot reproduce it**: it is a 3D
+        // scene and never enters `NavigationManager`, so `CurrentRoomId` can never name one and the guard was
+        // deleted as unnecessary rather than migrated. The invariant it served — *a save taken inside the
+        // Dream loads you outside it, with nothing granted* — is asserted in the `pockets` section against a
+        // real pocket, which is where it belongs now.
 
         // -- A save from before the format lost a field --
         // `SaveGame.ZonePhases` was deleted today (unit 2), and the claim in the comment standing where
@@ -1251,32 +1163,13 @@ public static class SliceVerifier
         Check("the realm alone does not close the bench", camp.AtCamp);
         SetRealm(GameRealm.Waking);
 
-        var run = DreamRunManager.Instance;
-        resolve.SetTo(resolve.Max);
-        Check("a run begins for the invariant-2 check", run.Begin(LoopHeistId));
-        vitality.SetTo(vitality.Max - 25f);
-        nav.GoToRoom("verify_camp");
-        Check("a workbench inside a live run is not a camp", !camp.AtCamp);
-        Check("so arriving at one cannot refill the body in there",
-            Mathf.IsEqualApprox(vitality.Current, vitality.Max - 25f));
-
-        // -- Invariant 2's other arm: a field station with no bench under it --
-        // Everything above is the bench, and the bench proves nothing about the guard in
-        // `AtVenueFor`: `AtCamp` already refuses inside a run, so that arm passes whether the guard
-        // is there or not. The station arm is the only one the guard is load-bearing on, and until
-        // unit 3b's third break-test came back with the camp checks red and no crafting check moved,
-        // it had no probe at all. `verify_station` exists for these two lines.
-        //
-        // They are a pair on purpose, in one room with one satchel, so the only thing that differs
-        // between them is the run. Assert the refusal and stop and it would still pass with the venue
-        // permanently broken; assert only that it works and it says nothing about the Dream.
+        // The other half of that pair — *the bench and the station are shut inside a **pocket*** — used a live
+        // heist until 6b and now lives in the `pockets` section, where it is driven against a real pocket and
+        // each arm has a control on the same ground. Only the realm-versus-run distinction stays here,
+        // because it is about `AtCamp` rather than about the Dream.
         nav.GoToRoom(StationRoomId);
         Check("a room can be a venue without being a camp", !camp.AtCamp);
-        Check("and a field station is shut inside a live run",
-            inv.Inspect(StationRecipeId) == CraftBlock.NotAtStation);
-        run.ForceClear();
-        Check("and open again the moment the run ends, same room, same satchel",
-            inv.Inspect(StationRecipeId) == CraftBlock.None);
+        Check("and its recipe is makeable there", inv.Inspect(StationRecipeId) == CraftBlock.None);
         SetRealm(GameRealm.Waking);
 
         // -- One box, reachable from every bench --
@@ -1308,9 +1201,15 @@ public static class SliceVerifier
 
         // -- What a collapse costs: what you can remake, and nothing else --
         inv.ResetAll();
-        inv.AddItem("herb_bitterroot", 3);     // Component — farmable
-        inv.AddItem("catalyst_ashincense", 1); // Catalyst — craftable, so never a softlock
-        inv.AddItem("salve_clearmind", 2);     // Salve    — hers, finite, uncraftable
+        inv.AddItem("herb_bitterroot", 3);     // a farmable common
+        inv.AddItem("catalyst_ashincense", 1); // a craftable catalyst
+        inv.AddItem("salve_clearmind", 2);     // hers, finite, uncraftable
+        // **The two the deleted mechanism destroyed.** Named here rather than left to the common above,
+        // because they are the reason it was deleted: both default to `Component`, the world holds 12 and 6,
+        // and neither ever comes back. If item loss is ever reintroduced, these two lines are what should
+        // stop it.
+        inv.AddItem("herb_graveflower", 2);
+        inv.AddItem("mat_cairnstone", 1);
         // Something the collapse must *not* touch, and it has to be a fourth id rather than more of the
         // three above, so that "the cache was not reached into" cannot be satisfied by a satchel stack.
         // Was `herb_gravecap` until unit 3b deleted that item; safe to reuse graveflower because
@@ -1327,54 +1226,32 @@ public static class SliceVerifier
             nav.CurrentRoomId == "verify_camp_two");
         Check("with the body back", Mathf.IsEqualApprox(vitality.Current, vitality.Max));
         Check("and the nerve back", Mathf.IsEqualApprox(resolve.Current, resolve.Max));
-        Check("components are gone, because you can go and get more",
-            inv.GetCount("herb_bitterroot") == 0);
-        Check("catalysts too, because you can make more",
-            inv.GetCount("catalyst_ashincense") == 0);
-        Check("but her salves come back with you", inv.GetCount("salve_clearmind") == 2);
-        Check("and dying does not reach into the cache",
+        // -- What a collapse costs, and as of unit 8 the answer is *the walk back and nothing else* --
+        //
+        // **Eight checks stood here asserting what burned, and they went with the mechanism.** They read
+        // *"components are gone, because you can go and get more"* and its siblings over `SurvivesDeath` —
+        // and that comment was the tell: it is true of Bitterroot and **false of `herb_graveflower` and
+        // `mat_cairnstone`**, neither of which serialises a `Category`, so both fell to `Component` and both
+        // burned. Twelve Graveflower exist, they never re-arm, and the engine costs eight. Dying deleted the
+        // good ending.
+        //
+        // **The invariant did not move, it inverted** — which is the interesting case for
+        // `deleting-a-gated-mechanism`'s rule. The old claim was *a new category inherits the destructive
+        // default*; there is no destructive default now, so the claim has nothing to protect. What replaces
+        // it is stronger and needs one check instead of eight: **a collapse takes nothing at all.**
+        //
+        // Driven live rather than against a predicate, because a predicate is what lied last time: the
+        // category was read off the *registry*, so an id that resolved to nothing defaulted to Component
+        // whatever it was authored as. Every category that exists is in the satchel here, and the two scarce
+        // nouns are named individually so the softlock cannot come back under a different default.
+        Check("nothing in the satchel was taken by the collapse",
+            inv.GetCount("herb_bitterroot") == 3 &&
+            inv.GetCount("catalyst_ashincense") == 1 &&
+            inv.GetCount("salve_clearmind") == 2);
+        Check("least of all the two the world holds a fixed number of",
+            inv.GetCount("herb_graveflower") == 2 && inv.GetCount("mat_cairnstone") == 1);
+        Check("and dying does not reach into the cache either",
             inv.GetStashCount("herb_graveflower") == 4);
-
-        // The rule behind those, stated where it cannot drift: **death destroys what you can remake
-        // and keeps what you cannot.** Lore and Relic have no authored item yet, so they are asserted
-        // against the rule directly — a blueprint page or a crossing relic is the only copy, and
-        // destroying one would delete progress permanently and in silence.
-        Check("a blueprint page would survive a collapse",
-            InventoryCraftingManager.SurvivesDeath(ItemCategory.Lore));
-        Check("so would a relic", InventoryCraftingManager.SurvivesDeath(ItemCategory.Relic));
-        // The destructive side, and this pair is the *moved probe* rather than two new checks. It used
-        // to read "a trap does not survive a collapse" / "nor does the gear you were wearing" — §18's
-        // rule, reversed by §19 on 2026-07-31 and built 2026-08-03. Deleting those two lines would have
-        // been the obvious move and would have quietly retired the claim underneath them, which was
-        // never "equipment burns": it is **a new category inherits the destructive default**, the
-        // safe-direction-to-fail property the switch's `_ => false` arm is chosen for. So the claim
-        // stands here on the two categories that still burn (`deleting-a-gated-mechanism`).
-        Check("a component would not",
-            !InventoryCraftingManager.SurvivesDeath(ItemCategory.Component));
-        Check("nor a catalyst", !InventoryCraftingManager.SurvivesDeath(ItemCategory.Catalyst));
-
-        // And the reversal itself, asserted rather than assumed. §19: "Equipment survives death —
-        // reversing §18" and "Traps are permanent". The reason the old argument does not survive: it was
-        // that recrafting keeps the trade relevant instead of one-and-done, which only holds while there
-        // is something to remake. §19 made a trap a thing you own once, so destroying one would delete a
-        // permanent object outright — and it made the kit a startup cost in dormant commons, so burning
-        // the coat would turn a one-time price into a tax that compounds on failure.
-        Check("a trap is permanent, so a collapse cannot take it",
-            InventoryCraftingManager.SurvivesDeath(ItemCategory.Trap));
-        Check("and the gear you were wearing comes back with you",
-            InventoryCraftingManager.SurvivesDeath(ItemCategory.Equipment));
-
-        // Live rather than predicate-only, because the two can disagree: `LoseUnprotectedItems` reads a
-        // category off the *registry*, so an item whose id resolves to nothing defaults to Component and
-        // burns regardless of what it was authored as. That is exactly the 33-node defect this unit
-        // fixes, and this is the check that would have caught it here.
-        inv.ResetAll();
-        inv.AddItem("salve_clearmind", 1);
-        inv.AddItem("herb_bitterroot", 2);
-        vitality.SetTo(vitality.Max);
-        inv.LoseUnprotectedItems();
-        Check("a real collapse keeps what the predicate says it keeps",
-            inv.GetCount("salve_clearmind") == 1 && inv.GetCount("herb_bitterroot") == 0);
 
         // -- Collapsing before you have ever found a camp --
         // Driven through the public method rather than the signal, so both entry points are covered.
@@ -1456,17 +1333,22 @@ public static class SliceVerifier
         nav.DebugRegisterRoom(BlightRoom("verify_held", withCreature: true));
 
         nav.DebugRegisterRoom(ArenaRoom());
+        nav.DebugRegisterRoom(PocketDoorRoom());
 
         // The retired prototype's replacement: two Waking screens and the closed three-room Dream
         // chain the surviving heist-shaped probes run inside.
         nav.DebugRegisterRoom(LoopRoom());
         nav.DebugRegisterRoom(LoopInnerRoom());
 
-        nav.DebugRegisterRoom(DreamRoom(DreamEntryRoomId, "A Way In", DreamInnerRoomId));
-        nav.DebugRegisterRoom(DreamRoom(DreamInnerRoomId, "Further In", DreamEntryRoomId, DreamDeepRoomId));
-        nav.DebugRegisterRoom(DreamRoom(DreamDeepRoomId, "The Far End", DreamInnerRoomId));
-
-        DreamRunManager.Instance?.DebugRegisterHeist(LoopHeist());
+        // One pocket registered up front, for `GateTravel`'s *"the camp verb refuses inside a pocket"* pair.
+        // `GatePockets` registers its own three when it runs; this one is here because the travel section
+        // runs first and must not depend on a later section's fixtures.
+        PocketManager.Instance?.DebugRegisterPocket(new PocketData
+        {
+            Id = TravelPocketId,
+            DisplayName = "Somewhere Else",
+            Kind = PocketKind.Knowledge,
+        });
     }
 
     /// <summary>
@@ -1655,16 +1537,16 @@ public static class SliceVerifier
             SetsFlag = LoopRelicFlag,
         });
 
-        // `yard_relic`: hidden until the cairn is searched. Still a `CrossToDream` even though the
-        // Dream half is retiring, because it is the only thing anywhere that covers the *wiring* from a
-        // Waking click to `DreamRunManager.Begin` — clicked from `GateHeistMechanics`, which is the
-        // section that already knows it is standing on a corpse, and not from the micro-loop.
+        // `yard_relic`: hidden until the cairn is searched. **An `Interact` since unit 6b, and the change of
+        // kind costs nothing** — it was a `CrossToDream` because it covered the wiring from a Waking click to
+        // the heist's `Begin`, and `verify_pocket_door` covers that wiring against a real pocket now. What
+        // M3 asks of this hotspot has nothing to do with the Dream: it is the *flag-gated hotspot appears
+        // once the cairn is searched* half of the micro-loop, and `IsAvailable` is all either check reads.
         room.Hotspots.Add(new HotspotData
         {
             Id = LoopRelic,
             Label = "The Thing Under It",
-            Kind = HotspotKind.CrossToDream,
-            HeistId = LoopHeistId,
+            Kind = HotspotKind.Interact,
             RequiredFlag = LoopRelicFlag,
         });
 
@@ -1742,64 +1624,16 @@ public static class SliceVerifier
         Damage = 0,
     };
 
-    /// <summary>
-    /// One link in the synthetic Dream maze. <b>Three rooms, not two</b>, and the third is not
-    /// decoration: <see cref="DreamRunManager.Begin"/> puts the player in the start room, so the
-    /// pursuer has to stand somewhere else, and <see cref="GatePersistence"/>'s stranding check has to
-    /// walk one door in before it takes its save — which with two rooms would walk it straight into the
-    /// pursuer and end the run it is trying to save from.
-    ///
-    /// <para>
-    /// The chain is closed on purpose. <see cref="DreamRunManager.HeistOwningRoom"/> derives the maze by
-    /// walking Navigate hotspots out of the start room, so a single door from any of these to a Waking
-    /// room would put the entire registry inside the heist and make
-    /// <see cref="DreamRunManager.IsDreamRoom"/> true everywhere.
-    /// </para>
-    /// </summary>
-    private static RoomData DreamRoom(string id, string displayName, params string[] doors)
-    {
-        var room = new RoomData { Id = id, DisplayName = displayName, ChapterId = "verify" };
-
-        foreach (var target in doors)
-        {
-            room.Hotspots.Add(new HotspotData
-            {
-                Id = $"{id}_to_{target}",
-                Label = "Onward",
-                Kind = HotspotKind.Navigate,
-                TargetRoomId = target,
-            });
-        }
-
-        return room;
-    }
-
-    /// <summary>
-    /// The run that five surviving files are probed from. <c>data/heists/</c> is empty since unit 3b, so
-    /// there is no authored heist left to borrow — but <c>Hud</c>, <c>CampManager</c>,
-    /// <c>InventoryCraftingManager</c> and <c>SaveService</c> each carry a guard spelled
-    /// <c>IsRunning</c>, and the only way to stand inside that guard is to be inside a run.
-    ///
-    /// <para>
-    /// The pursuer is parked in the deep room and its move interval is set past any plausible run
-    /// length. Belt and braces: <c>SliceVerifier.Run</c> is called synchronously from
-    /// <c>Main.StartGame</c>, so no frame is drawn and <c>_Process</c> never ticks while the gates
-    /// execute — but a gate that depends on the frame loop not running is a gate that changes meaning
-    /// the day someone awaits something, and this costs one field.
-    /// </para>
-    /// </summary>
-    private static DreamHeistData LoopHeist() => new()
-    {
-        Id = LoopHeistId,
-        DisplayName = "verify: a run",
-        TargetEntityId = LoopBeast,
-        ReturnRoomId = LoopRoomId,
-        StartRoomId = DreamEntryRoomId,
-        PursuerStartRoomId = DreamDeepRoomId,
-        PursuerName = "verify: something following",
-        PursuerMoveSeconds = 9999f,
-        PursuerWanderChance = 0f,
-    };
+    // **`DreamRoom` and `LoopHeist` stood here and went with unit 6b.** They built a three-room synthetic
+    // maze and a code-authored heist so that five surviving files could be probed from inside a run — the
+    // fixture unit 3b kept alive on purpose when it deleted the authored prototype. `PocketManager` needs
+    // none of it: a pocket is a manager fact, so a gate enters one with no rooms, no doors and no geometry,
+    // which is the property that made this deletion a deletion rather than another migration.
+    //
+    // The three rooms had a subtlety worth remembering if a graph-shaped fixture is ever needed again: the
+    // chain had to be **closed**, because `HeistOwningRoom` derived the maze by walking Navigate hotspots out
+    // of the start room, so one door from a Dream room to a Waking one would have put the entire registry
+    // inside the heist. Deriving reachability is cheap and its blast radius is the whole graph.
 
     private const string LoopRoomId = "verify_loop";
     private const string LoopInnerRoomId = "verify_loop_inner";
@@ -1824,10 +1658,6 @@ public static class SliceVerifier
     private const string LoopCorruptedName = "Something In The Road";
     private const string LoopPurifiedName = "A Plain Animal";
 
-    private const string DreamEntryRoomId = "verify_dream_entry";
-    private const string DreamInnerRoomId = "verify_dream_inner";
-    private const string DreamDeepRoomId = "verify_dream_deep";
-    private const string LoopHeistId = "verify_heist";
 
     /// <summary>
     /// A fixture for <see cref="GateMending"/>: one blight, and optionally one creature still standing
@@ -2846,13 +2676,17 @@ public static class SliceVerifier
         Check("and the fight is over rather than following you out of the room", !encounters.InFight);
         Check("you wake at a camp", CampManager.IsCamp(nav.CurrentRoom));
 
-        // §19, reversing §18: a fight can take nothing permanent from you. Equipment and traps survive,
-        // loose components do not — so the run costs you supplies and never the axe you walked in with.
+        // §19, reversing §18: a fight can take nothing permanent from you. **And as of unit 8 it can take
+        // nothing at all** — the last clause of this block read *"but the loose reagents stayed on the floor
+        // where you fell"* and asserted the item loss that turned out to destroy Graveflower. Reversed rather
+        // than deleted, because the claim underneath is what the section is for: **a fight costs the salves
+        // you poured into it and nothing else.** Losing the axe you walked in with was never the design;
+        // losing the materials turned out not to be either.
         Check("still wearing what you were wearing",
             inv.EquippedWeapon?.Id == Maul && inv.EquippedArmour?.Id == Coat);
         Check("and still carrying it, because worn is not spent", inv.Has(Maul) && inv.Has(Coat));
         Check("and still carrying the traps you set", traps.All(id => inv.Has(id)));
-        Check("but the loose reagents stayed on the floor where you fell", !inv.Has(Reagent));
+        Check("and the loose reagents too, because a collapse takes nothing", inv.Has(Reagent));
 
         // -- Leave nothing behind ------------------------------------------
         inv.Unequip(EquipSlot.Weapon);
@@ -2869,6 +2703,1130 @@ public static class SliceVerifier
         }
 
         world.SetFlag(Flags.Cleansed(ArenaRoomId), false);
+    }
+
+    // ---- Travel (unit 5) -------------------------------------------------
+
+    /// <summary>
+    /// The return-to-camp verb: reachable from any screen with no run live, refused inside a fight and
+    /// inside a pocket, and pointing at the camps you have stood in. `docs/combat.md` §17 as amended
+    /// 2026-08-01 is the authority.
+    ///
+    /// <para><b>Immediately after <see cref="GateEncounters"/>, and that is a dependency rather than a
+    /// preference.</b> This section needs a live fight to be refused during, and the arena is the only
+    /// fixture with bodies on it — running before that gate would leave wounds on creatures whose damage
+    /// numbers it reads. Everything below it is room-independent (the Snarl, the spine and the sweeps all
+    /// build their own fixtures), which is what makes it safe to leave the player somewhere new.</para>
+    ///
+    /// <para><b>Membership, never a count of the whole list.</b> Three <c>verify_</c> rooms hold a bench —
+    /// <c>verify_camp</c>, <c>verify_camp_two</c> and <c>verify_loop_inner</c> — and the authored map holds
+    /// three more, so any check phrased as <i>"two camps are known"</i> would be a check on how many
+    /// fixtures happen to exist. The claims here are about named rooms being in or out of the list.</para>
+    /// </summary>
+    private static void GateTravel()
+    {
+        Section("travel  getting to a camp from anywhere");
+
+        var camp = CampManager.Instance;
+        var nav = NavigationManager.Instance;
+        var world = WorldStateManager.Instance;
+        var vitality = VitalityManager.Instance;
+        var resolve = ResolveManager.Instance;
+        var encounters = EncounterManager.Instance;
+        var pockets = PocketManager.Instance;
+        var states = EntityStateManager.Instance;
+
+        Check("the verb has a manager to live on", camp != null);
+        if (camp == null) return;
+
+        // The one thing in this section a headless run cannot exercise, and the one that makes all of it
+        // reachable. `IsActionPressed` on a name that is not in the map returns false rather than throwing,
+        // so a typo in `project.godot` is a key that silently does nothing — and unlike the F-keys above,
+        // nobody would suspect scaffolding, because this is a shipping control. Same guard as
+        // `debug_wound`, for the reason that one records: a hand-edited input map fails quietly.
+        Check("the key that opens the menu is bound", InputMap.HasAction("camp"));
+
+        SetRealm(GameRealm.Waking);
+        pockets.ForceClear();
+        encounters.ResetAll();
+
+        // -- A camp becomes a destination by being stood in, and by nothing else --
+        // Cleared rather than assumed unset: GateCamps walked into both of these long before this ran, so
+        // without this the first three checks would be testing that gate's route instead of this rule.
+        world.SetFlag(Flags.CampFound("verify_camp"), false);
+        world.SetFlag(Flags.CampFound("verify_camp_two"), false);
+
+        nav.GoToRoom("verify_wilds");
+        Check("open ground never becomes somewhere you can travel to",
+            !CampManager.KnownCamps.Contains("verify_wilds"));
+        Check("and a camp nobody has stood in is not offered either",
+            !CampManager.KnownCamps.Contains("verify_camp"));
+        Check("so the verb refuses it for not being found",
+            camp.InspectTravel("verify_camp") == TravelBlock.NotFound);
+        Check("and attempting it anyway moves nobody",
+            !camp.TravelToCamp("verify_camp") && nav.CurrentRoomId == "verify_wilds");
+
+        nav.GoToRoom("verify_camp");
+        Check("standing in one is what makes it a destination",
+            CampManager.KnownCamps.Contains("verify_camp"));
+
+        // The check that keeps the verb from being a map. Without it a fresh game could travel to the
+        // chapter-3 store from the cottage doorstep, which is the one way fast travel could break the
+        // pacing it exists to protect.
+        Check("and finding one camp does not find the others",
+            !CampManager.KnownCamps.Contains("verify_camp_two"));
+
+        // -- The verb itself, from open ground --
+        nav.GoToRoom("verify_camp_two");
+        nav.GoToRoom("verify_wilds");
+        vitality.SetTo(vitality.Max - 40f);
+        resolve.SetTo(resolve.Max * 0.4f);
+
+        Check("the verb carries you there from open ground", camp.TravelToCamp("verify_camp"));
+        Check("and you are standing in it", nav.CurrentRoomId == "verify_camp");
+
+        // The four below are one claim: **there is exactly one arrival path**. `TravelToCamp` navigates and
+        // stops, so the refill, the rebind and the line are the same code that runs when you walk in. An
+        // implementation that set the current room directly would pass the two checks above and fail all
+        // four of these, which is precisely the split worth having.
+        Check("arriving by menu refills the body, exactly as walking in does",
+            Mathf.IsEqualApprox(vitality.Current, vitality.Max));
+        Check("and the nerve", Mathf.IsEqualApprox(resolve.Current, resolve.Max));
+        Check("and rebinds where you would wake", camp.ReturnCampRoomId == "verify_camp");
+        Check("and the camp you came from is still a destination",
+            CampManager.KnownCamps.Contains("verify_camp_two"));
+
+        // -- The refusals that are about the destination rather than the route --
+        Check("the camp you are standing in is refused, and not as a failure",
+            camp.InspectTravel("verify_camp") == TravelBlock.AlreadyHere);
+        Check("a room with no bench is not somewhere to travel to",
+            camp.InspectTravel("verify_wilds") == TravelBlock.NotACamp);
+        Check("and neither is a room that does not exist",
+            camp.InspectTravel("no_such_room_anywhere") == TravelBlock.NotACamp);
+
+        // -- §17's first refusal: not out of a fight --
+        // Refused rather than priced as a flight: a door clicked mid-fight flees and pays a parting blow,
+        // and a camp refills both pools, so one key doing both would be escape plus a free heal.
+        nav.GoToRoom(ArenaRoomId);
+        states.SetState(ArenaTough, EntityState.Corrupted);
+        Check("a fight is running for the refusal to be about", encounters.Engage(ArenaTough));
+        Check("the verb refuses inside a fight",
+            camp.InspectTravel("verify_camp") == TravelBlock.InFight);
+        Check("attempting it anyway leaves you in the room",
+            !camp.TravelToCamp("verify_camp") && nav.CurrentRoomId == ArenaRoomId);
+
+        // **The half a one-sided check cannot see, and the reason this is a pair.**
+        // `EncounterManager.OnRoomEntered` ends any fight on arrival — its own comment names "the camp
+        // menu" as a path it covers — so a refusal that navigated *first* and then bailed would still
+        // leave the player in a room with no fight and look identical to a working guard from the three
+        // checks above. This is the one that goes red when the guard is deleted.
+        Check("and the fight you were in is still running", encounters.InFight);
+        encounters.Flee();
+        Check("and the ordinary way out of a fight still works", !encounters.InFight);
+
+        // -- §17's second refusal: not out of a pocket --
+        nav.GoToRoom("verify_camp");
+        SetRealm(GameRealm.Dream);
+        Check("the realm alone does not close the road out",
+            camp.InspectTravel("verify_camp_two") == TravelBlock.None);
+        SetRealm(GameRealm.Waking);
+
+        // Keyed on being in a pocket, not on the realm, so the pair above and below have to disagree for the
+        // right reason — a quiet pocket is the Dream with nothing draining, and a camp reached from one must
+        // still be a camp (`GateCamps` asserts the same split about the bench).
+        //
+        // Driven with a real pocket since unit 6b; it borrowed a live heist until then. The room is captured
+        // *after* entering even though a pocket does not navigate, because the claim being made is
+        // "wherever you were, you are still there" and reading it from the manager would assume that.
+        resolve.SetTo(resolve.Max);
+        Check("a pocket is entered for the refusal", pockets.Enter(TravelPocketId));
+        var insidePocket = nav.CurrentRoomId;
+        Check("the verb refuses inside a pocket",
+            camp.InspectTravel("verify_camp_two") == TravelBlock.InPocket);
+        Check("and attempting it leaves you in the pocket",
+            !camp.TravelToCamp("verify_camp_two") && nav.CurrentRoomId == insidePocket);
+
+        // **A fourth check stood here and was deleted by its own break-test.** It read *"and the run is
+        // still live, so the refusal was not an ejection"* — `run.IsRunning` — and it stayed green with the
+        // pocket guard removed, because a `DreamRunManager` run survives ordinary navigation to a Waking
+        // room. So it passed for a reason other than the thing it was aimed at, which is the seventh
+        // blind-spot class, and it was found the way that class is always found: by predicting which checks
+        // would go red together and then reading the one that did not move.
+        //
+        // Nothing replaced it, and that is the right outcome rather than a gap. The harm the guard prevents
+        // is *standing at a bench with a run live* — invariant 2's exact shape, a workbench that is not a
+        // camp — and the check above already asserts the player never got there. A check that still passes
+        // while measuring nothing is worse than one check fewer; `ZoneCorruptionScalar`'s probe was retired
+        // on the same reasoning in unit 2.
+        pockets.Leave();
+        Check("the road opens the moment you are out, from the same room",
+            camp.TravelToCamp("verify_camp_two") && nav.CurrentRoomId == "verify_camp_two");
+        SetRealm(GameRealm.Waking);
+
+        // -- The menu, and the only honest way to check a `Pressed` connected from C# --
+        // A C#-side signal connection is not introspectable from C# (unit 3a's re-read established that
+        // over the satchel's repaint), so the wiring is asserted by firing it and reading where the player
+        // ended up rather than by asking whether anything is subscribed.
+        nav.GoToRoom("verify_wilds");
+        var panel = _hud?.Camp;
+        Check("the camp menu is in the tree, whether or not a scene authored it", panel != null);
+
+        if (panel != null)
+        {
+            Check("it opens out on open ground", panel.Open());
+            Check("and offers exactly the camps that are found",
+                panel.RowCount == CampManager.KnownCamps.Count);
+            Check("it tints the room it is drawn over", panel.DimsTheRoom);
+            Check("and the tint is behind the rows rather than over them", panel.DimDrawsBehindTheRows);
+
+            Check("pressing a row is the verb", panel.DebugPressRowNamed("A Bench Under Canvas"));
+            Check("so the menu is down and you are in that camp",
+                !panel.IsOpen && nav.CurrentRoomId == "verify_camp");
+
+            // The camp you are standing in draws dimmed rather than absent — the same *locked, not spent*
+            // distinction unit 1.5 drew for hotspots. A list that hid your own camp would change length as
+            // you walked, and `AlreadyHere` is a statement rather than something withheld.
+            Check("reopened at a bench, that bench is still listed", panel.Open());
+
+            var here = -1;
+            for (var i = 0; i < panel.RowCount; i++)
+                if (panel.RowLabelAt(i).Contains("A Bench Under Canvas")) here = i;
+
+            Check("the camp you are standing in has a row of its own", here >= 0);
+            Check("it cannot be pressed, and it says why in the manager's own words",
+                here >= 0 && !panel.RowEnabledAt(here) &&
+                panel.RowLabelAt(here).Contains(CampManager.Words(TravelBlock.AlreadyHere)));
+            Check("and pressing it moves nobody",
+                !panel.DebugPressRowNamed("A Bench Under Canvas") &&
+                nav.CurrentRoomId == "verify_camp");
+
+            // -- Two dims do not stack, in both directions --
+            // Both panels tint the room at 55% black, which is the stated reason a mend and a fight shut the
+            // satchel. Those two could rely on the world being unclickable by the time they open; these are
+            // opened by keys, so the exclusion has to be enforced rather than inherited. Driven through
+            // `Hud`'s two toggles rather than the panels' own, because that is what the keys call — asserting
+            // it on `CampPanel.Open` would test a method no keypress reaches.
+            panel.Close();
+            _hud.ToggleSatchel();
+            Check("the satchel opens", _hud.Inventory?.IsOpen == true);
+            Check("and opening the camp menu shuts it", _hud.ToggleCampMenu() && panel.IsOpen);
+            Check("so only one dim is ever drawn", _hud.Inventory?.IsOpen != true);
+            _hud.ToggleSatchel();
+            Check("and opening the satchel again shuts the menu",
+                !panel.IsOpen && _hud.Inventory?.IsOpen == true);
+            _hud.ToggleSatchel();
+
+            // -- Reported in play 2026-08-04: the menu was up behind the fight screen --
+            //
+            // Two candidate causes, and they are checked separately because the fix differs. **One**: the
+            // root does not actually cover the screen, so a creature beside the centred frame stays
+            // clickable and a fight can start from inside the menu — the eighth blind-spot class again.
+            // **Two**: the menu is open when a fight starts by some other route, and nothing takes it down.
+            //
+            // The second guard was **considered and declined** while building this unit, on the reasoning
+            // that no path could produce it. The report falsifies that, and the lesson is the one this
+            // project keeps relearning: *a dead-latch argument is only as good as the paths you thought of.*
+            // `Hud` closes the satchel on `FightStarted` for exactly this reason and the camp menu was left
+            // out of it.
+            Check("the menu covers the screen, so nothing under it can be clicked", panel.BlocksTheRoom);
+
+            panel.Close();
+            nav.GoToRoom(ArenaRoomId);
+            states.SetState(ArenaCut, EntityState.Corrupted);
+            Check("the menu opens in a room with a creature in it, before any fight", panel.Open());
+            Check("and a fight starting takes it down rather than leaving it behind the fight screen",
+                encounters.Engage(ArenaCut) && !panel.IsOpen);
+            encounters.Flee();
+
+            // Mid-fight the menu refuses to *open* rather than drawing a screenful of dead rows —
+            // `FightPanel.Open`'s argument. The manager's refusal above is the enforcement; this is the
+            // courtesy, and it is checked separately because the two can be broken independently.
+            panel.Close();
+            nav.GoToRoom(ArenaRoomId);
+            states.SetState(ArenaCut, EntityState.Corrupted);
+            Check("a second fight, to open the menu against", encounters.Engage(ArenaCut));
+            Check("the menu will not even open inside a fight", !panel.Open() && !panel.IsOpen);
+            Check("and that fight is still running too", encounters.InFight);
+
+            // -- And the satchel obeys the same rule, reported in play 2026-08-04 --
+            //
+            // `I` opened the satchel behind the fight screen where `C` refused with a line. **The draw order
+            // was the smaller half.** `InventoryCraftingManager.UseItem` had no fight guard at all, so the
+            // Use button healed for free — no turn spent, nothing counted against `SalveSlotsPerFight` —
+            // which is a hole in the combat economy rather than a cosmetic fault. §18 makes the turn the only
+            // currency inside a fight, and this was a second one.
+            //
+            // Three checks because three things can break independently: the screen, the manager rule, and
+            // the fight's own verb still working through the guard that blocks the satchel.
+            // Emptied first rather than added to. The satchel arrives here carrying whatever
+            // `GateEncounters` left in it, and the two count checks below would then be measuring that
+            // gate's leftovers — the fourth blind-spot class in miniature, a check that depends on state it
+            // did not set. Both were red on the first run for exactly this reason.
+            var inv = InventoryCraftingManager.Instance;
+            inv.ResetAll();
+            inv.AddItem("salve_clearmind", 2);
+            VitalityManager.Instance.SetTo(VitalityManager.Instance.Max - 20f);
+
+            Check("the satchel will not open inside a fight either",
+                !_hud.ToggleSatchel() && _hud.Inventory?.IsOpen != true);
+            Check("and a salve cannot be spent from it, turn-free, while a fight is running",
+                inv.InspectUse("salve_clearmind") == UseBlock.InFight);
+            Check("attempting it anyway keeps the salve",
+                !inv.UseItem("salve_clearmind") && inv.GetCount("salve_clearmind") == 2);
+
+            // The other side of the same guard, and the pair is the point: block the satchel and the fight's
+            // own verb must still work, or the fix has deleted `Treat` instead of protecting it. One salve
+            // leaves the satchel, and it costs the turn the satchel path did not.
+            var turnBefore = encounters.TurnNumber;
+            Check("but the fight's own verb still treats", encounters.Treat("salve_clearmind"));
+            Check("and that one cost a turn, which the satchel never did",
+                encounters.TurnNumber == turnBefore + 1 && inv.GetCount("salve_clearmind") == 1);
+
+            Check("and the fight survived all of that", encounters.InFight);
+            encounters.Flee();
+            inv.ResetAll();
+            VitalityManager.Instance.ResetAll();
+        }
+
+        // -- Destinations survive a save, because they are flags and not a new field --
+        const string path = "user://verify_travel.json";
+
+        encounters.ResetAll();
+        nav.GoToRoom("verify_wilds");
+        Check("the travel save writes", SaveService.Save(path));
+
+        world.SetFlag(Flags.CampFound("verify_camp"), false);
+        world.SetFlag(Flags.CampFound("verify_camp_two"), false);
+        Check("both destinations were actually cleared",
+            !CampManager.KnownCamps.Contains("verify_camp") &&
+            !CampManager.KnownCamps.Contains("verify_camp_two"));
+
+        Check("the travel save loads", SaveService.Load(path));
+        Check("and it puts you back on open ground, where nothing can rebind",
+            nav.CurrentRoomId == "verify_wilds");
+        Check("so both destinations came out of the file",
+            CampManager.KnownCamps.Contains("verify_camp") &&
+            CampManager.KnownCamps.Contains("verify_camp_two"));
+
+        SaveService.DeleteSave(path);
+
+        // -- A save written before this unit: a return point and no destinations --
+        //
+        // **Built as a file rather than by calling `ImportReturnCamp` directly, and the difference is the
+        // whole check.** Driving the method proves only that it sets a flag, which is one line staring at
+        // itself. What has to hold is an *ordering*: `SaveService` runs `ImportState` first and
+        // `ImportReturnCamp` after, so the re-derived flag is written on top of the file's flag dictionary
+        // rather than under it. Reverse those two lines and this pair is the only thing in 700 checks that
+        // notices.
+        //
+        // The old format's exact shape is reachable without hand-writing JSON: stand in the camp so the
+        // return point binds, walk out, clear the flag, and save. That file has a return point naming a
+        // camp and no `camp.*.found` in it — which is every save written before today.
+        const string oldPath = "user://verify_travel_old.json";
+
+        nav.GoToRoom("verify_camp");
+        nav.GoToRoom("verify_wilds");
+        world.SetFlag(Flags.CampFound("verify_camp"), false);
+        Check("a save in the pre-unit-5 shape is written",
+            camp.ReturnCampRoomId == "verify_camp" &&
+            !CampManager.KnownCamps.Contains("verify_camp") &&
+            SaveService.Save(oldPath));
+
+        camp.ResetAll();
+        Check("the travel save loads", SaveService.Load(oldPath));
+        Check("and an old file's return point is a destination again",
+            CampManager.KnownCamps.Contains("verify_camp"));
+        Check("so the menu it loads into is not empty",
+            camp.InspectTravel("verify_camp") == TravelBlock.None);
+
+        SaveService.DeleteSave(oldPath);
+    }
+
+    /// <summary>
+    /// A Waking screen with a pocket entrance on it, authored the way §5's contract says one should be:
+    /// <b>two hotspots on one flag with opposite <c>RequiredFlagValue</c>s.</b> The entrance while the pocket
+    /// is unspent, the broken remnant afterwards.
+    /// </summary>
+    /// <remarks>
+    /// It exists because unit 6's *"the artifact breaks"* is otherwise a claim about authoring that no code
+    /// enforces and no check reads. There is no field for it and there should not be — the freed-NPC pattern
+    /// already does the job — so the only way to prove the pattern works is to build a room that uses it.
+    /// <b>This is also the fixture that keeps the authored sweep from being a wish</b>: with no pocket
+    /// entrance authored anywhere in <c>data/rooms/</c> yet, a sweep saying *"every entrance names a
+    /// registered pocket"* would be a universal over an empty set, which unit 4b established is a wish
+    /// rather than a check.
+    /// </remarks>
+    private static RoomData PocketDoorRoom()
+    {
+        var room = new RoomData
+        {
+            Id = PocketDoorRoomId,
+            DisplayName = "A Broken Thing On The Ground",
+            ChapterId = "verify",
+        };
+
+        var taken = Flags.PocketCleared(PocketKnot);
+
+        room.Hotspots.Add(new HotspotData
+        {
+            Id = PocketDoorId,
+            Label = "Something Half-Remembered",
+            Kind = HotspotKind.CrossToDream,
+            PocketId = PocketKnot,
+            RequiredFlag = taken,
+            RequiredFlagValue = false,
+        });
+
+        room.Hotspots.Add(new HotspotData
+        {
+            Id = PocketRemnantId,
+            Label = "Broken, Now",
+            Kind = HotspotKind.Examine,
+            ExamineText = "Whatever it was holding is out of it.",
+            RequiredFlag = taken,
+            RequiredFlagValue = true,
+        });
+
+        return room;
+    }
+
+    // ---- Dream pockets (unit 6a) -----------------------------------------
+
+    private const string PocketKnowledge = "verify_pocket_knowledge";
+    private const string PocketKnot = "verify_pocket_knot";
+    private const string PocketBoss = "verify_pocket_boss";
+    private const string PocketBlueprint = "lore_verify_pocket";
+
+    /// <summary>
+    /// A pocket for <see cref="GateTravel"/> to be refused inside of. Its own rather than borrowed from
+    /// <see cref="GatePockets"/>, because that section completes and re-opens its fixtures repeatedly and a
+    /// shared one would make each section's setup depend on the other's leftovers — which has already cost
+    /// two red checks once in this file.
+    /// </summary>
+    private const string TravelPocketId = "verify_pocket_travel";
+
+    private const string PocketDoorRoomId = "verify_pocket_door";
+    private const string PocketDoorId = "verify_pocket_entrance";
+    private const string PocketRemnantId = "verify_pocket_remnant";
+
+    /// <summary>Points of max Resolve the synthetic knowledge pocket pays, so the check reads a relationship.</summary>
+    private const int PocketResolveGrant = 7;
+
+    /// <summary>
+    /// The way into the Dream and back out: what a pocket grants, what it writes, and what it must not write
+    /// when you leave without finishing. Unit 6a, built to the discussion of 2026-08-04.
+    ///
+    /// <para><b>Every fixture here has a blank <c>ScenePath</c>, and that is the design rather than a
+    /// shortcut.</b> <c>PocketManager</c> owns being-in-a-pocket and <c>PocketHost</c> owns geometry, so a
+    /// headless run enters, grants and leaves with no 3D anywhere. That separation is the only reason the
+    /// Waking-side guards below can be probed at all once <c>DreamRunManager</c> is gone — and it is why the
+    /// checks say <i>inside a pocket</i> rather than <i>inside a scene</i>.</para>
+    ///
+    /// <para><b>The one thing this section cannot test is the 3D half.</b> Whether a pocket draws, walks or
+    /// reads as a place is Jeremy's playtest and always was.</para>
+    /// </summary>
+    private static void GatePockets()
+    {
+        Section("pockets  the way into the Dream, and the way back");
+
+        var pockets = PocketManager.Instance;
+        var nav = NavigationManager.Instance;
+        var world = WorldStateManager.Instance;
+        var inv = InventoryCraftingManager.Instance;
+        var resolve = ResolveManager.Instance;
+        var camp = CampManager.Instance;
+        var encounters = EncounterManager.Instance;
+        var states = EntityStateManager.Instance;
+        var vitality = VitalityManager.Instance;
+
+        Check("the manager is registered", pockets != null);
+        if (pockets == null) return;
+
+        // The one thing a headless run cannot press, and the only way in until pass 2 authors an entrance.
+        // `IsActionPressed` on an unbound name returns false rather than throwing, so a typo is a key that
+        // silently does nothing — and this one is bound to **F10 and not F4**, because the probe scene it
+        // loads already binds F4 to its own readout toggle.
+        Check("the debug key that reaches the seam is bound", InputMap.HasAction("debug_pocket"));
+
+        pockets.ForceClear();
+        encounters.ResetAll();
+        SetRealm(GameRealm.Waking);
+
+        // -- The authored files on disk, counted without consulting the registry --
+        //
+        // The fifth blind-spot class, closed in the sitting that created the directory rather than after the
+        // first silent parse failure. `data/pockets/` holds exactly the reference pocket today.
+        //
+        // **Synthetic pockets are excluded by key prefix, exactly as `GateAuthoredContent` excludes
+        // `verify_` rooms — and 6b is what forced it.** Retiring the heist meant `GateTravel` needed a real
+        // pocket to be refused inside of, and registering one turned both of these red: *2 of 1*, and a
+        // dangling scene path belonging to a fixture that never wanted a scene. A gate must stand on ground
+        // the verifier owns, and a *count* of authored things is the one shape where a synthetic fixture is
+        // indistinguishable from content unless it is filtered out by name.
+        var authoredPockets = pockets.Pockets
+            .Where(kv => !kv.Key.StartsWith("verify_"))
+            .Select(kv => kv.Value)
+            .ToList();
+
+        Check($"every pocket file on disk registered a pocket "
+            + $"({authoredPockets.Count} of {FilesIn(GameConfig.PocketDataDir)})",
+            FilesIn(GameConfig.PocketDataDir) > 0 &&
+            authoredPockets.Count == FilesIn(GameConfig.PocketDataDir));
+
+        // -- The crossing that will not appear on its own --
+        // A `ScenePath` is one authored collection naming something in another, which is the shape that hid
+        // 33 dangling harvest nodes behind 439 green gates. Non-vacuous today: there is one authored pocket
+        // and it names a scene that exists.
+        var badScene = authoredPockets
+            .Where(p => string.IsNullOrEmpty(p.ScenePath) || !ResourceLoader.Exists(p.ScenePath))
+            .Select(p => $"{p.Id}: {p.ScenePath}")
+            .ToList();
+        Check($"and every authored pocket names a scene that is really there{Listing(badScene)}",
+            badScene.Count == 0);
+
+        // -- Fixtures. Synthetic, so a gate never grants something the ending's bill would count --
+        var knowledge = new PocketData
+        {
+            Id = PocketKnowledge,
+            DisplayName = "Somewhere Remembered",
+            Kind = PocketKind.Knowledge,
+            GrantsBlueprintId = PocketBlueprint,
+            GrantsMaxResolve = PocketResolveGrant,
+        };
+        var knot = new PocketData { Id = PocketKnot, DisplayName = "A Knot", Kind = PocketKind.Knot };
+        var boss = new PocketData
+        {
+            Id = PocketBoss,
+            DisplayName = "A Tether",
+            Kind = PocketKind.Boss,
+            TargetEntityId = ArenaTough,
+            GrantsAbility = DreamVerb.Float,
+        };
+
+        pockets.DebugRegisterPocket(knowledge);
+        pockets.DebugRegisterPocket(knot);
+        pockets.DebugRegisterPocket(boss);
+
+        foreach (var id in new[] { PocketKnowledge, PocketKnot, PocketBoss })
+            world.SetFlag(Flags.PocketCleared(id), false);
+
+        world.SetFlag(Flags.KnotCut(PocketKnot), false);
+        inv.ResetAll();
+        resolve.ResetAll();
+
+        // -- Going in --
+        nav.GoToRoom("verify_wilds");
+        Check("out here you are not in a pocket", !pockets.InPocket);
+        Check("and the shared predicate agrees", !PocketManager.InsideTheDream);
+
+        // Sampled before the crossing, so invariant 2 is measured *across* it rather than at a moment
+        // inside it — a body that moved and moved back would pass a snapshot taken in the middle.
+        var vitalityOnEntry = vitality?.Current ?? 0f;
+
+        Check("the way in is open", pockets.CanEnter(PocketKnowledge));
+        Check("crossing puts you inside", pockets.Enter(PocketKnowledge) && pockets.InPocket);
+        Check("and names which pocket", pockets.CurrentPocketId == PocketKnowledge);
+        Check("the realm follows you in, because you are there rather than looking",
+            RealmTransitionManager.Instance.CurrentRealm == GameRealm.Dream);
+        Check("and it remembers the screen to put you back on", pockets.ReturnRoomId == "verify_wilds");
+
+        // -- The five invariants that had **no** probe outside a live heist --
+        //
+        // **Found while planning 6b, and it corrects a claim I made out loud: 6b was not "pure deletion."**
+        // `GateHeistMechanics`'s own doc comment predicted this — *"unit 6 must keep a probe of this shape
+        // whatever ends a pocket run, because the defect is in the subscriber and not in the ending"* — and
+        // a grep confirmed every assertion of the realm lock, the HUD's dim trio, the pool-order restore and
+        // **`RoomView.DisplayedRoomId`** lived inside a heist-driven block. Deleting that section first would
+        // have removed 100% of the regression cover for the ejection post-mortem's fix.
+        Check("the realm is locked while you are inside", RealmTransitionManager.Instance.TransitionsLocked);
+        Check("the body dims to say it is not in play",
+            _hud == null || _hud.VitalityOpacity < 1f);
+        Check("but stays readable rather than vanishing, because it is a promise not an absence",
+            _hud == null || _hud.VitalityOpacity > 0.2f);
+        Check("and the nerve is never dimmed",
+            _hud == null || Mathf.IsEqualApprox(_hud.ResolveOpacity, 1f));
+
+        // **A pocket is not a room.** The most load-bearing structural claim in the unit: every room-graph
+        // derivation the old model had — the maze, the pursuer's path, "is this room in the Dream" — has
+        // nothing to derive, and `CurrentRoomId` cannot name a pocket. `SaveService`'s stranding guard
+        // becomes unnecessary rather than migrated because of this line.
+        Check("a pocket id is not a room, so navigation never learns about it",
+            nav.GetRoom(PocketKnowledge) == null && nav.CurrentRoomId == "verify_wilds");
+
+        // -- The Waking-side guards, probed from inside a *pocket* --
+        //
+        // Added here rather than in 6b, which makes that unit pure deletion. Each has a twin elsewhere that
+        // probes the same guard from inside a live heist; the twin is what dies.
+        //
+        // **Two of these were written standing on `verify_wilds` and passed for the wrong reason.** Open
+        // ground holds no bench and no station, so *"the bench is shut"* and *"the station is shut"* were
+        // true whether the pocket guard existed or not — the seventh blind-spot class, found by a break-test
+        // that predicted three reds and produced one. Each now stands on ground where the guard is the
+        // **only** thing that could refuse, with a control on the same ground proving it is otherwise open.
+        Check("the camp verb refuses, and says which refusal",
+            camp.InspectTravel("verify_camp") == TravelBlock.InPocket);
+        Check("and the HUD puts the nerve above the body, because the body cannot move in here",
+            _hud == null || _hud.TopPoolLabel == "RESOLVE");
+
+        pockets.Leave();
+        inv.AddItem("herb_bitterroot", 5);
+        inv.AddItem("mat_tallow", 5);
+
+        // The bench, from a room that *is* a camp.
+        nav.GoToRoom("verify_camp");
+        Check("standing at a bench out of a pocket is being at camp", camp.AtCamp);
+        Check("the same bench is shut from inside one",
+            pockets.Enter(PocketKnowledge) && !camp.AtCamp);
+        pockets.Leave();
+        Check("and open again the moment you are back", camp.AtCamp);
+
+        // The station, from a room that holds one and no bench — the fixture unit 3b built for exactly this
+        // shape of question, reused because the question is the same one.
+        nav.GoToRoom(StationRoomId);
+        Check("a field station works out of a pocket", inv.Inspect(StationRecipeId) == CraftBlock.None);
+        Check("and is shut from inside one",
+            pockets.Enter(PocketKnowledge) &&
+            inv.Inspect(StationRecipeId) == CraftBlock.NotAtStation);
+        pockets.Leave();
+        Check("and open again on the way out", inv.Inspect(StationRecipeId) == CraftBlock.None);
+
+        inv.ResetAll();
+        nav.GoToRoom("verify_wilds");
+        Check("back on open ground for the rest of the section",
+            pockets.Enter(PocketKnowledge) && pockets.ReturnRoomId == "verify_wilds");
+
+        // -- One at a time --
+        Check("you cannot cross into a second pocket from inside one",
+            pockets.InspectEnter(PocketKnot) == PocketBlock.AlreadyInside);
+
+        // -- Completing: the grant, the flag, the return --
+        var maxBefore = resolve.Max;
+        Check("the blueprint is not known yet", !inv.IsDiscovered(PocketBlueprint));
+
+        Check("finishing the pocket reports that it did", pockets.Complete());
+        Check("and it grants the craft family — the only thing in the game that ever will",
+            inv.IsDiscovered(PocketBlueprint));
+        Check("and raises the ceiling by exactly what it was authored to give",
+            Mathf.IsEqualApprox(resolve.Max, maxBefore + PocketResolveGrant));
+        Check("with the new headroom arriving full, so the reward is visible in the frame it lands",
+            Mathf.IsEqualApprox(resolve.Current, resolve.Max));
+        Check("it writes the pocket's flag", world.GetFlag(Flags.PocketCleared(PocketKnowledge)));
+        Check("you are out, and on the screen you left",
+            !pockets.InPocket && nav.CurrentRoomId == "verify_wilds");
+        Check("and the realm came back with you",
+            RealmTransitionManager.Instance.CurrentRealm == GameRealm.Waking);
+        Check("and unlocked behind you", !RealmTransitionManager.Instance.TransitionsLocked);
+        Check("the camp verb works again out here",
+            camp.InspectTravel("verify_camp") == TravelBlock.None);
+
+        // -- The emphasis comes back, and Vitality never moved --
+        Check("the body is the top bar again once you are out",
+            _hud == null || _hud.TopPoolLabel == "VITALITY");
+        Check("and undimmed, because it can be hurt out here",
+            _hud == null || Mathf.IsEqualApprox(_hud.VitalityOpacity, 1f));
+
+        // Invariant 2, measured across the whole crossing rather than at a moment inside it. Nothing in the
+        // Dream may cost the body, and a pocket is the only place that promise can be broken.
+        Check("Vitality never moved while you were in there",
+            vitality == null || Mathf.IsEqualApprox(vitality.Current, vitalityOnEntry));
+
+        // -- What the *view* was drawing, which is the ejection post-mortem's regression cover --
+        //
+        // The defect that made this necessary is in the subscriber, not the ending: a nested navigation
+        // delivers its `RoomEntered` first and leaves the stale one to land last, so a view that trusts the
+        // payload finishes by painting the room you were just pulled out of. Managers stayed correct
+        // throughout, which is why every other check passed while the game was visibly broken.
+        //
+        // A pocket cannot reproduce the nesting — `Complete` is called by a scene, not from inside a
+        // `RoomEntered` handler — but the **guard** in `RoomView.OnRoomEntered` and `Hud.OnRoomEntered` is
+        // what must stay covered, and this is now the only place asking either view what it is drawing.
+        Check("the view shows the screen you came back to",
+            _view == null || _view.DisplayedRoomId == "verify_wilds");
+        Check("and the HUD names it, rather than the pocket you left",
+            _hud == null || _hud.DisplayedRoomName == "Open Ground");
+
+        // The control the post-mortem insists on: without it, *"the view never shows the wrong room"* would
+        // also be satisfied by a view that draws nothing at all. An ordinary navigation, no Dream involved —
+        // which is a better home for it than the Dream room it used to live in.
+        nav.GoToRoom("verify_camp");
+        Check("and it tracks an ordinary navigation too, so it is not simply blank",
+            _view == null || _view.DisplayedRoomId == "verify_camp");
+        nav.GoToRoom("verify_wilds");
+
+        // **And the guard itself, which the two checks above do not reach.** They prove the views follow
+        // navigation; the post-mortem's actual fix is that they *refuse a payload that is no longer current*,
+        // and only a nested emit produced that in the old model. A pocket cannot nest — `Complete` is called
+        // by a scene rather than from inside a `RoomEntered` handler — so rather than lose the cover, the
+        // stale payload is raised by hand, the way `GateCamps` fakes a stale arrival at a bench.
+        //
+        // **This is a better probe than the one it replaces**, and worth saying so: the heist version
+        // reproduced *one situation* that happened to trigger the bug (walking into the pursuer), while this
+        // asserts the guard directly. It cannot stop working because the Dream changed shape.
+        EventBus.Instance.EmitRoomEntered(PocketDoorRoomId);
+        Check("a stale RoomEntered does not repaint the view over where you actually are",
+            _view == null || _view.DisplayedRoomId == "verify_wilds");
+        Check("nor rename the room in the HUD",
+            _hud == null || _hud.DisplayedRoomName == "Open Ground");
+
+        // -- The artifact is broken: the entrance is spent --
+        Check("a finished pocket cannot be entered again",
+            pockets.InspectEnter(PocketKnowledge) == PocketBlock.AlreadyTaken);
+        Check("and attempting it does nothing", !pockets.Enter(PocketKnowledge) && !pockets.InPocket);
+
+        // -- And the grant cannot land twice --
+        // Reachable on purpose. `Enter` already refuses a taken pocket, so `Complete`'s own guard would be a
+        // dead latch with no probe — the mistake this codebase removed once already. The gate reaches it the
+        // way a buggy pocket scene would: be inside, with the flag set, and call `Complete` again.
+        var maxAfterOne = resolve.Max;
+        world.SetFlag(Flags.PocketCleared(PocketKnowledge), false);
+        Check("re-opened for the double-grant probe", pockets.Enter(PocketKnowledge));
+        world.SetFlag(Flags.PocketCleared(PocketKnowledge));
+        Check("completing a pocket whose flag is already set still returns you", pockets.Complete());
+        Check("but grants nothing a second time — eight points is the whole budget",
+            Mathf.IsEqualApprox(resolve.Max, maxAfterOne));
+
+        // -- Leaving early writes nothing, which is the softlock rule --
+        Check("a fresh pocket is enterable", pockets.Enter(PocketKnot));
+        Check("leaving reports that it did", pockets.Leave());
+        Check("and you are back outside",
+            !pockets.InPocket && nav.CurrentRoomId == "verify_wilds");
+
+        // The three claims that keep an ejection survivable. Nothing in the Dream can kill you, so leaving
+        // early is a pocket's *only* failure — and if it broke the entrance, a bad night would permanently
+        // delete a craft family and a point of max Resolve. A dead save reached by playing badly.
+        Check("it wrote no flag", !world.GetFlag(Flags.PocketCleared(PocketKnot)));
+        Check("it cut no knot", !world.GetFlag(Flags.KnotCut(PocketKnot)));
+        Check("and the way in is still open, so an ejection costs only the trip",
+            pockets.InspectEnter(PocketKnot) == PocketBlock.None);
+
+        // -- The knot pocket's whole mechanical job --
+        Check("crossing the knot pocket again", pockets.Enter(PocketKnot));
+        Check("and finishing it cuts the knot",
+            pockets.Complete() && world.GetFlag(Flags.KnotCut(PocketKnot)));
+
+        // -- The boss pocket: the only way a tether is ever cut (invariant 4) --
+        nav.GoToRoom(ArenaRoomId);
+        states.SetState(ArenaTough, EntityState.Corrupted);
+        Check("the body is anchored before the pocket",
+            states.GetState(ArenaTough) == EntityState.Corrupted);
+        Check("crossing into the boss pocket", pockets.Enter(PocketBoss));
+
+        // The verb before the sever, because it is the half that had no field until 2026-08-04 and the half a
+        // reader would assume rather than check. Both come from one act — pulling the anchor.
+        Check("the verb is not held before the anchor is pulled", !PocketManager.Holds(DreamVerb.Float));
+        Check("and finishing it severs the tether",
+            pockets.Complete() && states.GetState(ArenaTough) == EntityState.Severed);
+        Check("and teaches the verb the anchor was holding",
+            PocketManager.Holds(DreamVerb.Float) &&
+            world.GetFlag(Flags.VerbLearned(DreamVerb.Float)));
+        Check("from the room the entrance was on", nav.CurrentRoomId == ArenaRoomId);
+
+        // **Suppress is held from the first frame and carries no flag**, which is the one thing about the
+        // verb model that a reader would get wrong. A flag nothing can fail to have is a flag every caller
+        // has to remember to ignore, so geometry gated on Suppress is geometry gated on nothing.
+        Check("Suppress is held from the start, with no flag behind it",
+            PocketManager.Holds(DreamVerb.Suppress) &&
+            !world.GetFlag(Flags.VerbLearned(DreamVerb.Suppress)));
+        Check("and a verb nobody has been taught is not held",
+            !PocketManager.Holds(DreamVerb.Flare));
+
+        world.SetFlag(Flags.VerbLearned(DreamVerb.Float), false);
+
+        // -- The three nodes a cloned pocket is built from --
+        //
+        // They exist so that fourteen cloned scenes carry no copies of the seam logic — cloning is precisely
+        // how fourteen copies would drift, silently and identically, which the 59 generated rooms already
+        // paid for. What is asserted here is the *logic*: the collision wiring and whether a scene actually
+        // contains an exit are 3D authoring, in rule 7's unfalsifiable category.
+        //
+        // Built loose rather than added to the tree, deliberately. `Pull` and `Apply` are the whole
+        // behaviour and neither needs `_Ready`, so a gate that parented them would be testing Godot's
+        // signal plumbing instead of this code.
+        world.SetFlag(Flags.PocketCleared(PocketKnot), false);
+        Check("a pocket to reach an anchor in", pockets.Enter(PocketKnot));
+
+        // Freed explicitly at the end of the block rather than queued: `QueueFree` defers to a frame that a
+        // synchronous gate run never reaches, so these would be reported as leaked RIDs at exit — an error
+        // line under a green run, which trains people to ignore the log.
+        var anchor = new PocketAnchor();
+        Check("pulling the anchor finishes the pocket", anchor.Pull() && !pockets.InPocket);
+        Check("and it writes the flag the entrance reads",
+            world.GetFlag(Flags.PocketCleared(PocketKnot)));
+
+        // Once and once only. A body can re-enter an `Area3D` in the frame it left, and the second call
+        // would print a second grant line — which reads as a bug even when nothing is wrong.
+        Check("and it cannot be pulled twice", !anchor.Pull());
+
+        world.SetFlag(Flags.PocketCleared(PocketKnot), false);
+        Check("a pocket to walk out of", pockets.Enter(PocketKnot));
+        var exit = new PocketExit();
+        Check("the exit leaves without finishing", exit.Leave() && !pockets.InPocket);
+        Check("and it wrote nothing, so the entrance survives",
+            !world.GetFlag(Flags.PocketCleared(PocketKnot)) &&
+            pockets.InspectEnter(PocketKnot) == PocketBlock.None);
+
+        // The verb gate, both ways round. `Suppress` is the case a scene would get wrong — held from the
+        // first frame with no flag behind it — so it is checked as the always-open one.
+        var gated = new Node3D();
+        var gate = new PocketGate { Requires = DreamVerb.Float };
+        gated.AddChild(gate);
+
+        gate.Apply();
+        Check("a Float gate is shut before the verb is learned", !gate.IsOpen && !gated.Visible);
+
+        world.SetFlag(Flags.VerbLearned(DreamVerb.Float));
+        gate.Apply();
+        Check("and open once it is", gate.IsOpen && gated.Visible);
+
+        gate.Inverted = true;
+        gate.Apply();
+        Check("inverted, it is the piece the verb takes away", !gate.IsOpen);
+
+        gate.Inverted = false;
+        gate.Requires = DreamVerb.Suppress;
+        gate.Apply();
+        Check("a Suppress gate is always open, because that verb needs no flag", gate.IsOpen);
+
+        gate.Requires = DreamVerb.None;
+        gate.Apply();
+        Check("and an unset gate lets the player through rather than walling off a pocket", gate.IsOpen);
+
+        anchor.Free();
+        exit.Free();
+        gated.Free();
+        world.SetFlag(Flags.VerbLearned(DreamVerb.Float), false);
+
+        // -- Refused inside a fight, and the fight survives the refusal --
+        // Not tidiness: a pocket is not a room, so entering does **not** navigate, so
+        // `EncounterManager.OnRoomEntered` — the backstop that stops a fight outliving its screen — never
+        // fires. Without this guard you could tour a 3D scene and come back still committed. Unit 3a's
+        // defect in a new costume, and the pair is what proves the guard rather than the backstop.
+        world.SetFlag(Flags.PocketCleared(PocketKnot), false);
+        states.SetState(ArenaCut, EntityState.Corrupted);
+        Check("a fight is running for the refusal to be about", encounters.Engage(ArenaCut));
+        Check("a pocket refuses to open inside a fight",
+            pockets.InspectEnter(PocketKnot) == PocketBlock.InFight);
+        Check("attempting it leaves you in the room",
+            !pockets.Enter(PocketKnot) && !pockets.InPocket && nav.CurrentRoomId == ArenaRoomId);
+
+        // **A check reading *"and the fight you were in is still running"* stood here and was deleted by its
+        // own break-test — the second dud in two units, and this one has a sharper lesson than the first.**
+        // It was copied from the camp verb, where it is genuinely load-bearing: travel *navigates*, so a
+        // broken guard would trip `EncounterManager.OnRoomEntered` and end the fight, making a one-sided
+        // check pass over a real defect. Entering a pocket does **not** navigate — which is the whole reason
+        // the guard exists — so the fight survives whether the guard is there or not, and the sentence that
+        // was a probe over there measures nothing here.
+        //
+        // The general form is worth more than the deletion: **a check is not portable just because its words
+        // are true in both places.** What made it a probe was the navigation, not the phrasing. The harm this
+        // guard actually prevents — being in a 3D scene still committed to a creature — is caught by the
+        // *"leaves you in the room"* line above, which asserts you never got in.
+        encounters.Flee();
+
+        // -- A pocket that does not exist --
+        Check("an unregistered id is a content error, not a player state",
+            pockets.InspectEnter("no_such_pocket_anywhere") == PocketBlock.NoSuchPocket);
+        Check("and entering it does nothing", !pockets.Enter("no_such_pocket_anywhere"));
+
+        // -- Running out of nerve: one path for both bars (unit 8) --
+        //
+        // Ruled 2026-08-04: *"we should use the same function if VIT or Resolve hit 0 that the player goes to
+        // the most recent camp."* This is the Resolve half, and it **revises `combat.md` §6**, which had an
+        // empty bar in a boss fight mean forced flight instead.
+        //
+        // Driven by emptying the bar rather than by calling `Eject` directly, because the whole point is the
+        // chain: `ResolveManager.Deplete` → `ResolveDepleted` → `CampManager` → eject, then respawn. Unit 6b
+        // deleted the only listener there was, so for one unit an empty nerve did nothing at all.
+        world.SetFlag(Flags.PocketCleared(PocketKnot), false);
+        nav.GoToRoom("verify_camp");     // so the return point is bound and known
+        nav.GoToRoom("verify_wilds");
+        inv.ResetAll();
+        inv.AddItem("herb_graveflower", 3);
+
+        Check("a pocket to run out of nerve in", pockets.Enter(PocketKnot));
+        resolve.SetTo(1f);
+        resolve.SetTo(0f);
+
+        Check("emptying the nerve throws you out of the pocket", !pockets.InPocket);
+        Check("and puts you at the last camp, exactly as an empty body does",
+            nav.CurrentRoomId == "verify_camp");
+        Check("with the nerve back, because arriving at a camp refills both",
+            Mathf.IsEqualApprox(resolve.Current, resolve.Max));
+
+        // The softlock rule, on the path most likely to break it. A banish and running out are the same
+        // call, so this covers both.
+        Check("the pocket was not spent by being thrown out of",
+            !world.GetFlag(Flags.PocketCleared(PocketKnot)) &&
+            pockets.InspectEnter(PocketKnot) == PocketBlock.None);
+        Check("and it took nothing off you on the way",
+            inv.GetCount("herb_graveflower") == 3);
+
+        // Invariant 2 from the other side, and it is why `RespawnAtCamp`'s guard had to change *meaning*
+        // rather than be deleted: the guard reads `InsideTheDream`, and an ejection is inside the Dream by
+        // definition. It works because the eject happens first — so if this ever goes red, the order slipped.
+        Check("and the realm came back with you rather than stranding you in the Dream",
+            RealmTransitionManager.Instance.CurrentRealm == GameRealm.Waking);
+
+        inv.ResetAll();
+
+        // -- The hotspot, which is the only thing the player actually touches --
+        //
+        // Everything above drives `PocketManager` directly, and none of it would notice if
+        // `InteractionService`'s `CrossToDream` arm were wired to the wrong manager or to nothing. That gap
+        // was found by reading this section's own output rather than by a failing check, which is the
+        // recurring shape: a section built around one seam tests the seam and not the door into it.
+        world.SetFlag(Flags.PocketCleared(PocketKnot), false);
+        nav.GoToRoom(PocketDoorRoomId);
+
+        var entrance = Hotspot(PocketDoorId);
+        var remnant = Hotspot(PocketRemnantId);
+
+        Check("the entrance is there before it is used",
+            entrance != null && InteractionService.IsAvailable(entrance));
+        Check("and the broken remnant is not, because nothing is broken yet",
+            remnant != null && !InteractionService.IsAvailable(remnant));
+
+        Check("clicking the entrance crosses you over",
+            InteractionService.ActivateHotspot(entrance) && pockets.InPocket &&
+            pockets.CurrentPocketId == PocketKnot);
+        Check("and finishing puts you back on the screen the door was on",
+            pockets.Complete() && nav.CurrentRoomId == PocketDoorRoomId);
+
+        // **The artifact breaks, proved where the player would see it.** Two authored hotspots on one flag
+        // with opposite `RequiredFlagValue`s — the freed-NPC pattern — so the entrance becomes the remnant
+        // with no new field and no code that knows about either.
+        Check("the entrance is gone once the pocket is taken",
+            !InteractionService.IsAvailable(entrance));
+        Check("and the broken thing it left behind is what is there instead",
+            InteractionService.IsAvailable(remnant));
+        Check("clicking the spent entrance crosses nobody over",
+            !InteractionService.ActivateHotspot(entrance) && !pockets.InPocket);
+
+        // -- What the verbs cost, and what a creature takes (unit 8) --
+        //
+        // §19: all three verbs drain **while held**, and they share one meter, so the rate is a **sum**. Taking
+        // the maximum instead would delete the section's own sentence — *"floating spends the same meter
+        // suppression does, so the climb is paid for out of the hiding"* — by letting you hide for free while
+        // climbing.
+        world.SetFlag(Flags.PocketCleared(PocketKnot), false);
+        DreamVerbs.ReleaseAll();
+
+        // Fills the bar without touching the ceiling, for the reason spelled out at the end of this block: a
+        // knowledge pocket raised `Max` earlier in the section and the save round trip below reads it.
+        resolve.SetTo(resolve.Max);
+
+        Check("nothing drains while you are awake",
+            Mathf.IsZeroApprox(resolve.CurrentRatePerSecond()));
+        Check("and a verb cannot be held out here at all", !DreamVerbs.BeginHold(DreamVerb.Suppress));
+
+        Check("a pocket to spend a verb in", pockets.Enter(PocketKnot));
+        Check("Suppress can be held, because you have it from the first frame",
+            DreamVerbs.BeginHold(DreamVerb.Suppress));
+        Check("and it costs what it is priced at",
+            Mathf.IsEqualApprox(resolve.CurrentRatePerSecond(), GameConfig.SuppressDrainPerSecond));
+
+        Check("a verb you have not been taught cannot be held", !DreamVerbs.BeginHold(DreamVerb.Float));
+
+        world.SetFlag(Flags.VerbLearned(DreamVerb.Float));
+        Check("and can be the moment it is learned", DreamVerbs.BeginHold(DreamVerb.Float));
+        Check("two verbs held cost the sum, not the larger",
+            Mathf.IsEqualApprox(resolve.CurrentRatePerSecond(),
+                GameConfig.SuppressDrainPerSecond + GameConfig.FloatDrainPerSecond));
+
+        Check("letting one go stops paying for it",
+            DreamVerbs.EndHold(DreamVerb.Float) &&
+            Mathf.IsEqualApprox(resolve.CurrentRatePerSecond(), GameConfig.SuppressDrainPerSecond));
+
+        // Every exit drops every hold. Without it a verb held as you are thrown out would keep draining in the
+        // Waking world, which §6 rules out permanently — and `RatePerSecond` does not ask where you are.
+        pockets.Leave();
+        Check("leaving a pocket releases whatever was held",
+            DreamVerbs.HeldVerbs.Count == 0 && Mathf.IsZeroApprox(resolve.CurrentRatePerSecond()));
+
+        // -- The keys behind the verbs (`DreamVerbHold`) --
+        //
+        // Driven through `Poll()` rather than a frame, because `_Process` never ticks meaningfully in a headless
+        // run — the seam `DebugRepaintNow` exists for.
+        var verbInput = new DreamVerbHold();
+
+        // Totality, and this pair is the shape that goes red on its own: add a fourth verb and forget its
+        // action, or rename an action in `project.godot`, and one of these names the offender. The second is a
+        // **crossing** — the node's table and the input map are two collections naming each other, which is the
+        // check that never appears on its own.
+        var keyless = System.Enum.GetValues<DreamVerb>()
+            .Where(v => v != DreamVerb.None && !DreamVerbHold.Actions.ContainsKey(v))
+            .Select(v => v.ToString()).ToList();
+        Check($"every Dream verb has a key behind it{Listing(keyless)}", keyless.Count == 0);
+
+        var unbound = DreamVerbHold.Actions.Values.Where(a => !InputMap.HasAction(a)).ToList();
+        Check($"and the project binds every action the node reads{Listing(unbound)}", unbound.Count == 0);
+
+        world.SetFlag(Flags.PocketCleared(PocketKnot), false);
+        Check("a pocket to press a key in", pockets.Enter(PocketKnot));
+        resolve.SetTo(resolve.Max);
+
+        // **The check that would have caught the defect this block was written after.** The poller comes from
+        // `PocketHost`, not from the pocket scene, so a pocket nobody remembered to wire still has verbs — and
+        // this fixture proves it on a pocket with no scene at all. Note the two halves are *composed* rather
+        // than end-to-end: this says a poller is attached, and the checks below say a poller does the right
+        // thing. Nothing here drives the attached one, because `_Process` does not tick headlessly.
+        Check("and the host gave it a verb poller, with no scene authoring one",
+            _host == null || _host.VerbInputLive);
+
+        Input.ActionPress("dream_suppress");
+        verbInput.Poll();
+        Check("holding the key holds the verb", DreamVerbs.IsHolding(DreamVerb.Suppress));
+        Check("and the meter is spent for it",
+            Mathf.IsEqualApprox(resolve.CurrentRatePerSecond(), GameConfig.SuppressDrainPerSecond));
+
+        Input.ActionRelease("dream_suppress");
+        verbInput.Poll();
+        Check("letting the key go ends the hold and the cost",
+            !DreamVerbs.IsHolding(DreamVerb.Suppress) && Mathf.IsZeroApprox(resolve.CurrentRatePerSecond()));
+
+        // Flare rather than Float, because Float was learned twenty lines above.
+        Input.ActionPress("dream_flare");
+        verbInput.Poll();
+        Check("a key for a verb you have not been taught spends nothing",
+            !DreamVerbs.IsHolding(DreamVerb.Flare) && Mathf.IsZeroApprox(resolve.CurrentRatePerSecond()));
+        Input.ActionRelease("dream_flare");
+
+        // The control for the check below, and the reason this is a pair: a refusal asserted where the thing
+        // was never available is not a check (unit 6a's lesson). Same key, same verb, one realm apart.
+        pockets.Leave();
+        Check("and the poller goes away with the pocket", _host == null || !_host.VerbInputLive);
+
+        Input.ActionPress("dream_suppress");
+        verbInput.Poll();
+        Check("and out here that same key on that same verb does nothing",
+            !DreamVerbs.IsHolding(DreamVerb.Suppress) && Mathf.IsZeroApprox(resolve.CurrentRatePerSecond()));
+        Input.ActionRelease("dream_suppress");
+
+        // **Why the node keeps no set of its own, asserted by the one sequence that can tell the difference.**
+        // `PocketManager.Return` calls `ReleaseAll` on the way out, so a private record of what was held would
+        // survive that release still believing Suppress was down — and the key would be dead on the next
+        // crossing until the player let go of a button they were already holding.
+        //
+        // **The key has to go down *inside* and never come up**, which is the whole content of this fixture: a
+        // press that begins out here never enters a cached set either, so the obvious shorter version passes
+        // against both implementations. Written the short way first and caught by planning its break-test.
+        world.SetFlag(Flags.PocketCleared(PocketKnot), false);
+        Check("a pocket to be holding a key inside of", pockets.Enter(PocketKnot));
+        Input.ActionPress("dream_suppress");
+        verbInput.Poll();
+        Check("the key is down and the verb is held", DreamVerbs.IsHolding(DreamVerb.Suppress));
+
+        pockets.Leave();
+        Check("leaving drops the hold even with the key still down",
+            !DreamVerbs.IsHolding(DreamVerb.Suppress));
+
+        world.SetFlag(Flags.PocketCleared(PocketKnot), false);
+        Check("crossing back in, the key never having been released", pockets.Enter(PocketKnot));
+        verbInput.Poll();
+        Check("picks the hold up again rather than waiting for a release",
+            DreamVerbs.IsHolding(DreamVerb.Suppress));
+
+        Input.ActionRelease("dream_suppress");
+        verbInput.Poll();
+        pockets.Leave();
+        verbInput.Free();
+
+        // -- A minor creature takes a chunk, and the cooldown is what makes that survivable --
+        var minor = new DreamCreatureData { Id = "verify_minor", ResolveCost = 9, TouchCooldownSeconds = 5f };
+        var creature = new DreamCreature { Data = minor };
+
+        world.SetFlag(Flags.PocketCleared(PocketKnot), false);
+        Check("a pocket to be touched in", pockets.Enter(PocketKnot));
+        resolve.SetTo(resolve.Max);
+
+        var before = resolve.Current;
+        Check("a touch costs a chunk of nerve rather than health",
+            creature.Touch() && Mathf.IsEqualApprox(resolve.Current, before - minor.ResolveCost));
+        Check("and the body is untouched, because nothing in the Dream may cost it",
+            Mathf.IsEqualApprox(vitality.Current, vitality.Max));
+
+        // **The load-bearing one.** `BodyEntered` can fire every frame while a player is pinned, so without a
+        // cooldown a single contact empties the meter in well under a second and the ejection reads as
+        // arbitrary. This is the only check that would catch that, and it is invisible in code.
+        var afterFirst = resolve.Current;
+        Check("a second touch inside the cooldown costs nothing",
+            !creature.Touch() && Mathf.IsEqualApprox(resolve.Current, afterFirst));
+        Check("and it landed exactly once", creature.Touches == 1);
+
+        // -- A boss banishes, which is the same call as running out --
+        var bossCreature = new DreamCreature
+        {
+            Data = new DreamCreatureData { Id = "verify_boss_thing", Banishes = true },
+        };
+
+        Check("still inside for the banish", pockets.InPocket);
+        Check("a banish throws you out", bossCreature.Touch() && !pockets.InPocket);
+        Check("and lands you at a camp, exactly as an empty bar does",
+            CampManager.IsCamp(nav.CurrentRoom));
+        Check("having taken the pocket from nobody",
+            !world.GetFlag(Flags.PocketCleared(PocketKnot)) &&
+            pockets.InspectEnter(PocketKnot) == PocketBlock.None);
+
+        creature.Free();
+        bossCreature.Free();
+        world.SetFlag(Flags.VerbLearned(DreamVerb.Float), false);
+        DreamVerbs.ReleaseAll();
+
+        // `SetTo(Max)` and **not** `ResetAll()`: that also resets the *ceiling*, which the save round trip
+        // below needs raised to mean anything — it asserts a bar above the starting 100 to prove `ImportMax`
+        // ran before `SetTo`. Both of those checks went red the first time this block cleaned up after itself,
+        // which is the same slip twice in this file now: a tidy-up that clobbers a later block's premise.
+        resolve.SetTo(resolve.Max);
+        nav.GoToRoom("verify_wilds");
+
+        // -- The ceiling survives a save, and a pocket does not --
+        const string pocketPath = "user://verify_pockets.json";
+
+        nav.GoToRoom("verify_wilds");
+        var savedMax = resolve.Max;
+        Check("the ceiling is above the starting one, so the round trip means something",
+            savedMax > GameConfig.ResolveMax);
+        Check("the pocket save writes", SaveService.Save(pocketPath));
+
+        resolve.ResetAll();
+        Check("the ceiling was actually reset", Mathf.IsEqualApprox(resolve.Max, GameConfig.ResolveMax));
+
+        Check("the pocket save loads", SaveService.Load(pocketPath));
+        Check("and the raised ceiling came out of the file", Mathf.IsEqualApprox(resolve.Max, savedMax));
+
+        // The ordering claim inside `SaveService`: `ImportMax` runs before `SetTo`, because `SetTo` clamps to
+        // `Max` — so a bar above the starting ceiling proves the ceiling was restored first. Reverse the two
+        // lines and the bar comes back trimmed to 100 while the ceiling still reads high.
+        Check("and the bar with it, rather than trimmed to the old ceiling",
+            resolve.Current > GameConfig.ResolveMax);
+
+        // A save taken inside a pocket is not a thing: 3D position is not in this format, so loading lands
+        // you in the Waking room the file names with the entrance intact and nothing granted.
+        //
+        // The flag is cleared rather than assumed clear: the hotspot block above *completed* this pocket, so
+        // without this line these two checks would be measuring that block's leftovers and both went red the
+        // first time. Second instance in two units of the same slip — a check reading state it did not set —
+        // so the habit worth keeping is to set the fixture in the block that reads it, every time.
+        world.SetFlag(Flags.PocketCleared(PocketKnot), false);
+        Check("re-entered for the mid-pocket save", pockets.Enter(PocketKnot));
+        Check("the save still writes from in there", SaveService.Save(pocketPath));
+        Check("and loading it puts you outside, with no pocket live",
+            SaveService.Load(pocketPath) && !pockets.InPocket);
+        Check("on an ordinary Waking screen", nav.CurrentRoomId == "verify_wilds");
+        Check("and the entrance was not spent by the round trip",
+            pockets.InspectEnter(PocketKnot) == PocketBlock.None);
+
+        SaveService.DeleteSave(pocketPath);
+
+        // -- Leave the world as it was found --
+        pockets.ForceClear();
+        world.SetFlag(Flags.PocketCleared(PocketKnot), false);
+        world.SetFlag(Flags.KnotCut(PocketKnot), false);
+        states.SetState(ArenaTough, EntityState.Corrupted);
+        resolve.ResetAll();
+        inv.ResetAll();
+        SetRealm(GameRealm.Waking);
+        nav.GoToRoom("verify_wilds");
     }
 
     /// <summary>
@@ -2917,13 +3875,11 @@ public static class SliceVerifier
             .Where(id => id.StartsWith("herb_gravecap")).OrderBy(k => k).ToList();
         Check($"and so is the item only it paid out{Listing(gravecap)}", gravecap.Count == 0);
 
-        // `data/heists/` is empty and stays empty. `DreamRunManager` retires in unit 6 along with the
-        // loader, and until then this goes red the moment anyone authors a run into a mechanism that is
-        // scheduled for deletion — which is the whole value of it, and why it counts files rather than
-        // registry entries: the loader is what would silently make a file real.
-        Check($"and no heist is authored into a mechanism that retires in unit 6 "
-            + $"({FilesIn(GameConfig.HeistDataDir)} files)",
-            FilesIn(GameConfig.HeistDataDir) == 0);
+        // A check that `data/heists/` stayed empty stood here until unit 6b deleted the directory, the loader
+        // and the constant. It had done its job: it existed to go red the moment anyone authored content into
+        // a mechanism already scheduled for deletion, and nobody ever did. **Nothing replaced it, because
+        // there is no directory left to count** — the pocket registry has its own files-on-disk check in the
+        // `pockets` section, which is the same guard aimed at the collection that now exists.
 
         // Two checks stood here until 2026-08-01 — that a hazard was authored somewhere, and that at
         // least one was reachable in the Waking world rather than stranded behind spectral vision.
@@ -2956,6 +3912,61 @@ public static class SliceVerifier
 
         Check("and you can walk to one from where the game starts",
             camps.Any(reached.Contains));
+
+        // -- Unit 6: a pocket entrance must name a pocket that exists --
+        //
+        // The crossing rule in its usual form: one authored collection naming an id in another, which nobody
+        // writing either sweep is prompted to check. A mistyped `PocketId` is otherwise a door that swallows
+        // the click and does nothing, and `PocketManager.Enter` is deliberately silent about it *because*
+        // this check exists — the diagnostic belongs to a sweep, not to a click.
+        //
+        // **Zero entrances are authored today, so the count is printed.** A universal over an empty set is a
+        // wish (unit 4b), and the honest mitigation is that the mechanism is proved on `verify_pocket_door`
+        // instead — this line is the one that starts working the day pass 2 places a real one.
+        var entrances = rooms
+            .SelectMany(kv => kv.Value.Hotspots
+                .Where(h => h is { Kind: HotspotKind.CrossToDream })
+                .Select(h => (Room: kv.Key, Hotspot: h)))
+            .ToList();
+
+        var danglingPockets = entrances
+            .Where(e => PocketManager.Instance?.GetPocket(e.Hotspot.PocketId) == null)
+            .Select(e => $"{e.Room}/{e.Hotspot.Id}: {e.Hotspot.PocketId}")
+            .ToList();
+
+        Check($"every authored pocket entrance names a registered pocket "
+            + $"({entrances.Count} authored){Listing(danglingPockets)}",
+            danglingPockets.Count == 0);
+
+        // -- Unit 5: the three camps the verb points at, and the walk out of each --
+        //
+        // **A census by chapter rather than a count of three**, on unit 4b's lesson: a bare `== 3` is
+        // satisfied by three benches in chapter 1 and says nothing, while *one per chapter* is the promise
+        // §17 actually makes — one camp per chapter, and they are the fast-travel network. It also fails
+        // usefully: the offender list names the chapter that has none or the chapter that has two.
+        var campChapters = camps
+            .Select(id => rooms[id].ChapterId ?? "")
+            .GroupBy(c => c)
+            .ToDictionary(g => g.Key, g => g.Count());
+
+        var campCensus = new List<string>();
+        foreach (var chapter in new[] { "ch1", "ch2", "ch3" })
+        {
+            var count = campChapters.GetValueOrDefault(chapter);
+            if (count != 1) campCensus.Add($"{chapter}: {count}");
+        }
+        Check($"every chapter has exactly one camp{Listing(campCensus)}", campCensus.Count == 0);
+
+        // **The walk out is the price the amendment exists to charge**, so it has to be authored. §17 as
+        // amended is explicit that a camp is an ordinary screen with ordinary exits and the menu is a
+        // shortcut *in* — a camp with no `Navigate` on it would be the pure overlay the amendment rejected,
+        // and it would be reachable only by the verb and escapable only by dying. Until this check that
+        // sentence lived in a document and nowhere else.
+        var noWayOut = camps
+            .Where(id => !rooms[id].Hotspots.Any(h => h is { Kind: HotspotKind.Navigate } &&
+                                                     !string.IsNullOrEmpty(h.TargetRoomId)))
+            .ToList();
+        Check($"and every camp keeps a door you can walk out of{Listing(noWayOut)}", noWayOut.Count == 0);
 
         // -- Fields that look set but do nothing --
         var blank = new List<string>();
@@ -3156,23 +4167,29 @@ public static class SliceVerifier
         Check($"and no authored node pays out anything off the roster{Listing(offRoster)}",
             offRoster.Count == 0);
 
-        // -- 5. The two predicates, paired --
-        // Totality first: a `switch` over an enum with a `_` arm can never throw, so "is it total" has
-        // to be asked as "does every member get an answer at all", which for a bool-returning predicate
-        // means calling it on all of them and asserting it does not fault. What makes that non-empty is
-        // the second half — the two must disagree *somewhere*, or one has silently become a copy of the
-        // other and the tally would be following the death rule instead of the slot rule.
+        // -- 5. The slot predicate, on its own since unit 8 --
+        //
+        // **It was a pair, and the partner is gone.** The second check read *"and is not the negation of
+        // `SurvivesDeath`"*, which is how unit 4b proved the tally rule had not silently become a copy of the
+        // death rule. `SurvivesDeath` was deleted with item loss, so that comparison has nothing to make —
+        // and re-aiming it rather than deleting it is the point: what it was really protecting is that
+        // **`CountsAgainstSlots` answers a question of its own**, which is still assertable by naming the two
+        // ends the rule exists to separate.
+        //
+        // Totality first, and for a bool-returning `switch` with a `_` arm that can only be asked as *does
+        // every member get an answer at all* — the predicate cannot throw, so the check is that it is total
+        // rather than that it is correct.
         var categories = System.Enum.GetValues<ItemCategory>();
-        var disagreements = categories
-            .Where(c => InventoryCraftingManager.CountsAgainstSlots(c) !=
-                        !InventoryCraftingManager.SurvivesDeath(c))
-            .ToList();
 
         Check($"CountsAgainstSlots answers for all {categories.Length} categories",
             categories.All(c => InventoryCraftingManager.CountsAgainstSlots(c) ||
                                 !InventoryCraftingManager.CountsAgainstSlots(c)));
-        Check($"and is not the negation of SurvivesDeath{Listing(disagreements.Select(c => c.ToString()).ToList())}",
-            disagreements.Count > 0);
+
+        // And it discriminates, which is what stops it being a constant wearing a switch. A tally entry and a
+        // carried thing are the two ends `combat.md` §19 draws, so if these ever agree the rule has collapsed.
+        Check("and it separates a tally entry from a carried thing",
+            !InventoryCraftingManager.CountsAgainstSlots(ItemCategory.Component) &&
+            InventoryCraftingManager.CountsAgainstSlots(ItemCategory.Equipment));
         Check("a component is a tally entry, not a carried thing",
             !InventoryCraftingManager.CountsAgainstSlots(ItemCategory.Component));
         Check("but a salve you carry occupies something",
@@ -4098,6 +5115,23 @@ public static class SliceVerifier
         Check($"no two creatures answer to the same pair of types{Listing(repeated)}",
             repeated.Count == 0);
 
+        // -- The last collection that could hide behind a green run (handoff §3, fifth class) --
+        //
+        // Rooms, items and recipes are each counted against the files on disk; heists are asserted at zero.
+        // **Creatures were the hole**, and a different-shaped one: there is no entity registry at all, so an
+        // `EntityData` reaches the game only by being referenced from a placement. A creature authored and
+        // never placed is therefore invisible to every check in this section — they all begin by walking
+        // `rooms` — and the symptom in play is simply a screen that is empty, which looks exactly like a
+        // screen nobody has authored yet.
+        //
+        // Distinct ids rather than placements: nine humans stand three times each and the Beast has three
+        // files, so the count that can equal the file count is the set of *types* actually reachable.
+        var placedTypes = PlacedEntities(rooms).Select(e => e.Id).Distinct().Count();
+        Check($"every entity file on disk is placed somewhere "
+            + $"({placedTypes} of {FilesIn(GameConfig.EntityDataDir)})",
+            FilesIn(GameConfig.EntityDataDir) > 0 &&
+            placedTypes == FilesIn(GameConfig.EntityDataDir));
+
         // -- placement.md rule 2: never the same creature on two adjacent screens --
         // Newly checkable, because this is the first pass where placements and the door graph both
         // exist. It is the one rule in §5 that is a property of the *map* rather than of a file, so it
@@ -4752,7 +5786,7 @@ public static class SliceVerifier
     /// <see cref="HotspotKind"/>, forget its colour, the suite fails — and <b>unit 4 adds
     /// <c>Station</c></b>, so it fires for real within two units. That is only true because the
     /// palette is a dictionary; a <c>switch</c> would need a default arm, and a default arm makes
-    /// the same check unfalsifiable (handoff.md's "guards that cannot fail").
+    /// the same check unfalsifiable — <c>handoff.md</c> §3's third class, "a check that cannot fail".
     /// </para>
     ///
     /// <para>
@@ -4892,6 +5926,187 @@ public static class SliceVerifier
     /// </para>
     /// </summary>
     private static bool Blind => _view == null;
+
+    // ---- The docs, as an interface ---------------------------------------
+
+    /// <summary>
+    /// Every reference in <c>src/</c> to a section of <c>docs/handoff.md</c> still resolves.
+    ///
+    /// <para><b>Agreed 2026-08-04, after a doc pass broke two of them and finding that out by hand cost a
+    /// write-then-revert.</b> The handoff was cut from 44k words to 6.5k and two <c>§</c>-citations were left
+    /// pointing at nothing. That is worth a gate rather than care, because the failure is silent in both
+    /// directions: nothing in a build reads a comment, and nobody re-reads fourteen comments after editing a
+    /// document. <b>A doc section with citations in code is an interface, whatever it reads like</b> — which
+    /// is the argument that put §3's essay back after it was cut as a duplicate.</para>
+    ///
+    /// <para><b>Both spellings, because the project uses both and only one of them is policy.</b> §6 of the
+    /// handoff says comments cite section <i>names</i>, not numbers, since the numbers have churned three
+    /// times — so every <c>§N</c> in <c>src/</c> is already a small violation, and they are exactly the ones
+    /// that broke. Named citations are matched as a <i>prefix</i> of a heading, because
+    /// <c>"Placeholders and traps"</c> is how the code cites a section actually titled <c>"Placeholders and
+    /// traps for the unwary"</c>, and demanding the full title would fail on a correct citation.</para>
+    ///
+    /// <para><b>The guard that makes the rest mean anything is the count.</b> A walker that found nothing
+    /// would report every citation resolving and go green — the fifth blind-spot class exactly, a universal
+    /// over an empty set. So the number found is asserted to be plausible before any of it is believed.</para>
+    /// </summary>
+    private static void GateDocCitations()
+    {
+        Section("docs  the citations in code still resolve");
+
+        // -- The document, and the headings it actually has --
+        var doc = ReadTextFile("res://docs/handoff.md");
+        Check("docs/handoff.md is readable from the running game", !string.IsNullOrEmpty(doc));
+        if (string.IsNullOrEmpty(doc)) return;
+
+        var numbered = new Dictionary<int, string>();
+        var titles = new List<string>();
+
+        foreach (var raw in doc.Split('\n'))
+        {
+            var line = raw.Trim();
+            if (!line.StartsWith("## ")) continue; // `###` are sub-headings; nothing cites one by number
+
+            var title = line[3..].Trim();
+
+            // `## 3. Placeholders and traps for the unwary` — the number is what a §N citation names, and
+            // the remainder is what a named citation names. Both come off the same line, so they cannot
+            // disagree about which section they belong to.
+            var dot = title.IndexOf(". ", StringComparison.Ordinal);
+            if (dot > 0 && int.TryParse(title[..dot], out var n))
+            {
+                numbered[n] = title[(dot + 2)..].Trim();
+                titles.Add(title[(dot + 2)..].Trim());
+            }
+            else
+            {
+                titles.Add(title);
+            }
+        }
+
+        Check($"it has numbered sections to cite ({numbered.Count})", numbered.Count > 0);
+        Check($"and headings to cite by name ({titles.Count})", titles.Count > 0);
+
+        // -- Every citation in src/ --
+        var numberCites = new List<string>();   // "file:§N"
+        var nameCites = new List<string>();     // "file:Name"
+        var unresolved = new List<string>();
+
+        foreach (var path in SourceFiles("res://src"))
+        {
+            var text = ReadTextFile(path);
+            if (string.IsNullOrEmpty(text)) continue;
+
+            var file = path[(path.LastIndexOf('/') + 1)..];
+
+            // The numbered form: the token, optionally with its extension and optionally with a closing
+            // `</c>` tag, then a section sign and a number. The tag is optional because half of these sit in
+            // doc comments and half in line comments. Spelled as a pattern rather than as examples, for the
+            // reason given over the named form below — this method's own comment is one of the files it
+            // reads, and break-test 5 caught it citing an example section as though it meant it.
+            foreach (System.Text.RegularExpressions.Match m in
+                     System.Text.RegularExpressions.Regex.Matches(
+                         text, @"handoff(?:\.md)?(?:</c>)?\s*§\s*(\d+)"))
+            {
+                var n = int.Parse(m.Groups[1].Value);
+                numberCites.Add($"{file} §{n}");
+                if (!numbered.ContainsKey(n)) unresolved.Add($"{file} cites §{n}, which does not exist");
+            }
+
+            // The named form: the token, a comma, then a quoted section title. In one citation that title
+            // wraps across two comment lines, so the span is taken out of the file as a whole and then
+            // un-commented rather than being matched inside a single line.
+            //
+            // **The examples that used to sit here were deleted, and that is worth recording rather than
+            // tidying away.** Spelling them out literally made this method's own doc comment a citation,
+            // and the gate correctly failed on it the first time it ran: a wrapped example carries a
+            // literal `\n`, which is not the real thing an un-commenter has to survive. A gate that reads
+            // source is a gate that reads its own source, so its explanation has to describe the pattern
+            // instead of instantiating it.
+            foreach (System.Text.RegularExpressions.Match m in
+                     System.Text.RegularExpressions.Regex.Matches(
+                         text, @"handoff(?:\.md)?(?:</c>)?,\s*""",
+                         System.Text.RegularExpressions.RegexOptions.None))
+            {
+                var from = m.Index + m.Length;
+                var to = text.IndexOf('"', from);
+                if (to < 0) continue;
+
+                var cited = NormaliseCitation(text[from..to]);
+                if (cited.Length == 0) continue;
+
+                nameCites.Add($"{file} \"{cited}\"");
+
+                // A prefix match, both ways round: the code may cite a shortened title, and it may also
+                // wrap mid-title so that what survives is shorter than the heading.
+                if (!titles.Any(t => t.StartsWith(cited, StringComparison.OrdinalIgnoreCase)))
+                    unresolved.Add($"{file} cites \"{cited}\", which names no section");
+            }
+        }
+
+        // **Before believing any of the above.** A regex that matched nothing, or a walker that opened no
+        // files, produces an empty offender list and a green run — the fifth blind-spot class, and this gate
+        // would be its purest instance. The numbers are lower bounds rather than exact counts, so the check
+        // does not go red the day someone adds a fourteenth comment.
+        Check($"the walk actually found citations ({numberCites.Count} numbered, {nameCites.Count} named)",
+            numberCites.Count >= 4 && nameCites.Count >= 3);
+
+        Check($"and every one of them resolves{Listing(unresolved)}", unresolved.Count == 0);
+    }
+
+    /// <summary>Read a text file under <c>res://</c>, or "" if it is not there.</summary>
+    /// <remarks>
+    /// <c>.cs</c> and <c>.md</c> files are not imported resources, so <c>FileAccess</c> is the only way to
+    /// see them and <c>res://</c> is the project directory itself. That holds for a run from source, which
+    /// is the only way <c>--verify-slice</c> is ever invoked; in an exported build these files are absent and
+    /// the first check in <see cref="GateDocCitations"/> would say so rather than passing quietly.
+    /// </remarks>
+    private static string ReadTextFile(string path)
+    {
+        using var file = FileAccess.Open(path, FileAccess.ModeFlags.Read);
+        return file == null ? "" : file.GetAsText();
+    }
+
+    /// <summary>Every <c>.cs</c> file under a directory, recursively.</summary>
+    private static List<string> SourceFiles(string root)
+    {
+        var found = new List<string>();
+        var pending = new Queue<string>();
+        pending.Enqueue(root);
+
+        while (pending.Count > 0)
+        {
+            var dirPath = pending.Dequeue();
+            using var dir = DirAccess.Open(dirPath);
+            if (dir == null) continue;
+
+            dir.ListDirBegin();
+            for (var entry = dir.GetNext(); entry != ""; entry = dir.GetNext())
+            {
+                if (dir.CurrentIsDir()) pending.Enqueue($"{dirPath}/{entry}");
+                else if (entry.EndsWith(".cs")) found.Add($"{dirPath}/{entry}");
+            }
+            dir.ListDirEnd();
+        }
+
+        return found;
+    }
+
+    /// <summary>
+    /// Turn a quoted section name as it appears in source — possibly wrapped across lines, with comment
+    /// markers in the middle — into the bare title.
+    /// </summary>
+    private static string NormaliseCitation(string raw)
+    {
+        // Comment markers first, then all whitespace to single spaces, so a title split over two lines comes
+        // back as one. The trailing comma in `"…ejection failure,"` is inside the quotes in the one citation
+        // that has it, so punctuation comes off the end as well.
+        var text = System.Text.RegularExpressions.Regex.Replace(raw, @"^\s*///?/?", "",
+            System.Text.RegularExpressions.RegexOptions.Multiline);
+        text = System.Text.RegularExpressions.Regex.Replace(text, @"\s+", " ").Trim();
+
+        return text.TrimEnd(',', '.', ';', ':');
+    }
 
     // ---- Plumbing --------------------------------------------------------
 

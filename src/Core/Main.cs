@@ -19,11 +19,24 @@ public partial class Main : Node
 {
     private RoomView _roomView;
     private Hud _hud;
+    private PocketHost _pockets;
+
+    /// <summary>The 2D→3D seam. Exposed so the gates can ask what it has loaded.</summary>
+    public PocketHost Pockets => _pockets;
 
     public override void _Ready()
     {
         _roomView = GetNode<RoomView>("RoomView");
         _hud = GetNode<Hud>("Hud");
+
+        // Unit 6's seam, built here rather than authored into `Main.tscn` for the reason the HUD is built in
+        // code: it has no layout worth looking at. It goes **between** the room view and the HUD — over the
+        // Waking world, which it replaces, and under the HUD, which stays in colour on top of the Dream's
+        // greyscale. Added before `StartGame` so a pocket entered on the first frame has somewhere to land.
+        _pockets = new PocketHost();
+        AddChild(_pockets);
+        MoveChild(_pockets, _hud.GetIndex());
+        _pockets.Bind(_roomView);
 
         // Deferred so every autoload's _Ready (notably the room registry scan) has run.
         CallDeferred(nameof(StartGame));
@@ -51,7 +64,16 @@ public partial class Main : Node
 
         if (Boot.VerifySlice)
         {
-            GetTree().Quit(SliceVerifier.Run(_roomView, _hud));
+            GetTree().Quit(SliceVerifier.Run(_roomView, _hud, _pockets));
+            return;
+        }
+
+        // Before `--shots` and after the gates, which is only a reading order — it shares nothing with
+        // either. It reads authored content and exits 0 unconditionally: a bill is a to-do list while a
+        // chapter is being built, so it must never be able to fail a build (`build-plan.md` §6).
+        if (Boot.VerifyContent)
+        {
+            GetTree().Quit(ContentReport.Run());
             return;
         }
 
@@ -70,9 +92,20 @@ public partial class Main : Node
     {
         if (@event.IsEcho() || !@event.IsPressed()) return;
 
+        // Both go through `Hud` rather than reaching into the panel, because which panels may be up at once
+        // is the HUD's policy and both of these draw a dim that stacks with the other's.
         if (@event.IsActionPressed("inventory"))
         {
-            _hud?.Inventory?.Toggle();
+            _hud?.ToggleSatchel();
+            GetViewport().SetInputAsHandled();
+        }
+        else if (@event.IsActionPressed("camp"))
+        {
+            // Unit 5's return-to-camp verb. A real key rather than a debug one — it is the amendment in
+            // §17, not scaffolding — so it is absent from the F6–F8 demolition list and stays when the
+            // journal lands. It refuses with a line when there is no leaving from here, which is why this
+            // branch has no guard of its own.
+            _hud?.ToggleCampMenu();
             GetViewport().SetInputAsHandled();
         }
         // Only swallowed when there is something open to close, so cancel stays available to
@@ -80,6 +113,11 @@ public partial class Main : Node
         else if (@event.IsActionPressed("cancel") && _hud?.Inventory?.IsOpen == true)
         {
             _hud.Inventory.Close();
+            GetViewport().SetInputAsHandled();
+        }
+        else if (@event.IsActionPressed("cancel") && _hud?.Camp?.IsOpen == true)
+        {
+            _hud.Camp.Close();
             GetViewport().SetInputAsHandled();
         }
         else if (@event.IsActionPressed("debug_panel"))
@@ -90,6 +128,11 @@ public partial class Main : Node
         else if (@event.IsActionPressed("debug_cycle_entity"))
         {
             CycleEntityStates();
+            GetViewport().SetInputAsHandled();
+        }
+        else if (@event.IsActionPressed("debug_pocket"))
+        {
+            TogglePocket();
             GetViewport().SetInputAsHandled();
         }
         else if (@event.IsActionPressed("debug_wound"))
@@ -104,6 +147,11 @@ public partial class Main : Node
         else if (@event.IsActionPressed("debug_learn_all"))
         {
             LearnEveryCraftFamily();
+            GetViewport().SetInputAsHandled();
+        }
+        else if (@event.IsActionPressed("debug_learn_verbs"))
+        {
+            LearnGrantableDreamVerbs();
             GetViewport().SetInputAsHandled();
         }
         else if (@event.IsActionPressed("debug_craft_here"))
@@ -126,6 +174,60 @@ public partial class Main : Node
             if (SaveService.Load()) EventBus.Instance?.EmitNotify("Loaded.");
             GetViewport().SetInputAsHandled();
         }
+    }
+
+    /// <summary>
+    /// Cross into the first registered Dream pocket, or come back out. Unit 6's seam, made reachable.
+    /// </summary>
+    /// <remarks>
+    /// <b>Bound to F10 rather than F4</b>, because the probe scene binds F4 to its own readout toggle — and
+    /// the probe is the scene this key loads, so the two would fight the moment it worked. Found by reading
+    /// the README's own list of probe keys rather than by pressing anything.
+    /// <para>
+    /// <b>The fourth debug key in this family, and it exists because the mechanism has no authored
+    /// entrance.</b> A pocket is entered from a <c>CrossToDream</c> hotspot, and placing those is pass-2
+    /// content on rooms Jeremy owns — so without a key the whole seam would be reachable only from
+    /// <c>--verify-slice</c>, which is the state <c>EncounterManager.Rig</c> shipped in and the reason F8
+    /// exists. Retires when the first real entrance is authored.
+    /// <para>
+    /// <b>It toggles enter/leave and deliberately cannot <c>Complete</c> a pocket.</b> Completing writes
+    /// <c>pocket.&lt;id&gt;.cleared</c>, which breaks the entrance permanently — so a key that completed would
+    /// be *destructive* scaffolding: one press and the pocket cannot be entered again for the rest of that
+    /// save, which is the opposite of what a test key is for. <c>Leave</c> grants nothing and writes nothing,
+    /// so this is repeatable as many times as you like. The completion path is driven by the gates, and by a
+    /// real pocket scene calling <c>PocketManager.Complete()</c> when the player reaches its objective —
+    /// which is where that call belongs anyway (*"going back will be written in the 3D world"*).
+    /// </para>
+    /// </para>
+    /// </remarks>
+    private static void TogglePocket()
+    {
+        var pockets = PocketManager.Instance;
+        if (pockets == null) return;
+
+        if (pockets.InPocket)
+        {
+            var left = pockets.CurrentPocketId;
+            pockets.Leave();
+            EventBus.Instance?.EmitNotify($"[debug] left {left} — nothing taken, the way in is still there");
+            return;
+        }
+
+        // First registered rather than a hardcoded id, on `LearnEveryCraftFamily`'s reasoning: a name in
+        // code goes quietly out of date the day the content is renamed, and the symptom is a key that does
+        // nothing, which looks exactly like a broken seam.
+        foreach (var id in pockets.Pockets.Keys)
+        {
+            var verdict = pockets.InspectEnter(id);
+            GD.Print($"[debug] pocket {id}: {verdict}");
+
+            if (verdict != PocketBlock.None) continue;
+            if (pockets.Enter(id)) return;
+        }
+
+        EventBus.Instance?.EmitNotify(pockets.Pockets.Count == 0
+            ? "[debug] no pockets are registered"
+            : "[debug] nothing to cross into — every pocket is taken, or you are mid-fight");
     }
 
     /// <summary>
@@ -189,6 +291,44 @@ public partial class Main : Node
         EventBus.Instance?.EmitNotify(learned == 0
             ? "[debug] every craft family was already known"
             : $"[debug] learned {learned} craft " + (learned == 1 ? "family" : "families"));
+    }
+
+    /// <summary>
+    /// Grants every Dream verb that a pocket is allowed to teach, so <c>PocketGate</c>s can be walked through
+    /// before any boss pocket exists.
+    /// </summary>
+    /// <remarks>
+    /// <b>The fifth key in the F6–F10 family, and it exists for the reason the other four do: a mechanism with
+    /// no authored source.</b> <c>DreamVerbs.BeginHold</c> refuses a verb you have not been taught, and the only
+    /// thing that teaches one is a boss pocket's <c>Complete()</c> — of which there are zero. So without this,
+    /// a <c>PocketGate</c> with <c>Requires = Float</c> reads as permanently shut, which is indistinguishable
+    /// from a broken gate. Retires with the second boss pocket.
+    /// <para>
+    /// <b>It reads the enum rather than naming Float and Flare</b>, on <see cref="LearnEveryCraftFamily"/>'s
+    /// reasoning: a hardcoded pair goes quietly out of date the day a fourth verb is added, and the symptom is
+    /// a key that half works. <b>Suppress is deliberately included and deliberately harmless</b> — it carries no
+    /// flag at all, so setting one changes nothing, and skipping it here would encode the exception in a second
+    /// place that has to agree with <c>PocketManager.Holds</c>.
+    /// </para>
+    /// </remarks>
+    private static void LearnGrantableDreamVerbs()
+    {
+        var world = WorldStateManager.Instance;
+        if (world == null) return;
+
+        var learned = 0;
+        foreach (DreamVerb verb in System.Enum.GetValues<DreamVerb>())
+        {
+            if (verb == DreamVerb.None) continue;
+            if (PocketManager.Holds(verb)) continue;
+
+            world.SetFlag(Flags.VerbLearned(verb), true);
+            learned++;
+        }
+
+        EventBus.Instance?.EmitNotify(learned == 0
+            ? "[debug] every Dream verb was already held"
+            : $"[debug] learned {learned} Dream " + (learned == 1 ? "verb" : "verbs"));
     }
 
     /// <summary>

@@ -18,6 +18,19 @@ public partial class Boot : Node
     /// <summary>Set from the command line; Main walks the slice capturing frames, then exits.</summary>
     public static bool CaptureShots { get; private set; }
 
+    /// <summary>
+    /// Set from the command line; Main prints the content bill and exits. **Always exits 0** — it is a
+    /// report, not a gate (docs/build-plan.md §6).
+    /// </summary>
+    /// <remarks>
+    /// A separate command rather than a section of <c>--verify-slice</c>, and the separation is the whole
+    /// design. The gates assert what <b>must</b> be true and are run unconditionally; this measures how much
+    /// of the bill has been <b>authored yet</b>, which is a to-do list while a chapter is being built and an
+    /// invariant only once it is declared finished. Folding it into the suite would make the suite red for
+    /// months, and *"a red gate that turns out to be nobody's fault is how a suite gets ignored."*
+    /// </remarks>
+    public static bool VerifyContent { get; private set; }
+
     public override void _Ready()
     {
         var args = OS.GetCmdlineUserArgs();
@@ -35,6 +48,9 @@ public partial class Boot : Node
 
         // godot --path . -- --shots   (needs a real window; headless renders nothing)
         CaptureShots = args.Contains("--shots");
+
+        // godot --headless --path . -- --verify-content
+        VerifyContent = args.Contains("--verify-content");
 
         CallDeferred(nameof(EnterMain));
     }

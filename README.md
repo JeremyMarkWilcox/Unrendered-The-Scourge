@@ -6,10 +6,14 @@ physical host in reality.
 
 **Both realms are first-person, and that is the only thing they share.** The Waking world is
 first-person in a **2D** world — Myst-style, painted screen nodes, click to move. The Dream is
-first-person in a **3D** world, walked rather than clicked. Settled 2026-07-30; what is still open is
-whether the creatures in the Dream are 2D billboards or 3D models. The Waking half is built and
-playable; the Dream's 3D half is **walkable but not wired in** (`scenes/dream/DreamProbe.tscn`). The
-graph of 2D Dream rooms still in `data/rooms/` is the old prototype and is going away.
+first-person in a **3D** world, walked rather than clicked. Settled 2026-07-30, and so is what used to be
+the open half of it: the creatures in the Dream are **3D models, with no billboards** — Jeremy's axis was
+the coherence of the space, not per-creature image quality. The Waking half is built and playable; the
+Dream's 3D half is **wired in as of unit 6, and empty**: a `CrossToDream` hotspot crosses you into a pocket
+scene and back, `data/pockets/` holds one reference pocket pointing at `scenes/dream/DreamProbe.tscn`, and the
+pockets themselves are Jeremy's to build. The 2D Dream rooms that used to sit in `data/rooms/` went with the
+prototype on 2026-08-03 and the heist that drove them went in unit 6b, so there is exactly one Dream model
+now rather than two.
 
 ## Running
 
@@ -18,12 +22,19 @@ GODOT="C:/Users/Owner/Desktop/Game Dev/Godot/Godot_v4.7.1-stable_mono_win64/Godo
 
 dotnet build                                    # C# assembly
 "$GODOT" --path .                               # play
-"$GODOT" --headless --path . -- --verify-slice  # assert every milestone gate (exit 0 = pass)
+"$GODOT" --headless --path . -- --verify-slice   # assert every milestone gate (exit 0 = pass)
+"$GODOT" --headless --path . -- --verify-content # the content bill: what is authored vs. what is owed
 "$GODOT" --path . -- --shots                    # capture the slice to .shots/
 
 "$GODOT" --path . scenes/dream/DreamProbe.tscn                  # the 3D Dream probe (or F6 in the editor)
 "$GODOT" --path . scenes/dream/DreamProbe.tscn -- --probe-shot  # one labelled frame to .shots/, then exit
 ```
+
+**`--verify-content` never fails, and that is deliberate.** It prints the bill from `placement.md` §1 against
+what is on disk and always exits 0 — a bill is a to-do list while a chapter is being built and an invariant
+only once it is sealed, so folding it into `--verify-slice` would leave the suite red for months, and a red
+result that is nobody's fault is how a suite gets ignored (`docs/build-plan.md` §6). It also names the rules
+it *cannot* check and the ones already gated elsewhere, so nothing reads as unchecked by omission.
 
 **`data/` is authored, and nothing overwrites it.** `--seed-content` and `ContentSeeder` wrote the
 starting content and were deleted on 2026-08-01, at the start of the content pass — a tool that
@@ -44,8 +55,10 @@ byte-exactly.
 |---|---|
 | Left click | Interact with a hotspot, or select a slot in the satchel |
 | `I` | Satchel — held stacks, what a thing is, and using it |
+| `C` | Return to camp — the camps you have stood in, one row each; pressing a row travels. Refused inside a fight and inside a Dream pocket |
 | `Esc` | Close the open panel |
 | `F3` | Debug panel (pools, entities, inventory, flags, what this screen still has unfinished) + hotspot outlines |
+| `F10` | Cross into the reference Dream pocket, or leave it — the 2D→3D seam, since no pocket entrance is authored yet. It deliberately cannot *complete* one: completing breaks the entrance for that save, so a key that did it would be destructive scaffolding. **`F10` and not `F4`, because the probe scene binds `F4` to its own readout toggle** and hosting it in-game would double-bind the key |
 | `F1` | Cycle every entity in the room through its states |
 | `F2` | Take a debug wound (15 Vitality) |
 | `F5` / `F9` | Save / load |
@@ -53,9 +66,15 @@ byte-exactly.
 | `F7` | Craft everything craftable where you stand, and name the block reason for everything else |
 | `F8` | Set every trap you are carrying against the creature on this screen |
 
-`F6`–`F8` are **scaffolding for UI that is not built**, listed because a debug key nobody knows about is
-not an unblock. They come off separately: F6 and F7 retire with the journal (which *is* the crafting
-screen), F8 the day the satchel grows a **Set** button beside Use and Equip.
+`F6`–`F8` and `F10` are **scaffolding for things not yet reachable in play**, listed because a debug key
+nobody knows about is not an unblock. They come off separately: F6 and F7 retire with the journal (which
+*is* the crafting screen), F8 the day the satchel grows a **Set** button beside Use and Equip, and F10 the
+day a `CrossToDream` hotspot is authored onto a real screen.
+
+**`C` is not one of them** — it is `docs/combat.md` §17's return-to-camp verb and it ships. The panel behind
+it has no authored scene yet, so `CampPanel.BuildFallback` puts the published node contract up in code; when
+`scenes/ui/CampPanel.tscn` lands against the same node names it is a drop-in, and what gets deleted is the
+builder rather than a branch. Same arrangement as the fight screen, for the same reason.
 
 The **Dream probe** is a separate scene with its own keys: `WASD` walks, click captures the mouse and
 `Esc` releases it; `[ ]` greys, `; '` white clamp, `- =` dither, `, .` light radius; `5 6` creature
@@ -73,14 +92,17 @@ scene, no new code.
 ```
 src/
   Core/       Enums, EventBus, GameConfig, EntityPresentation, Boot, Main
-  Managers/   10 autoloads (see below) + MendManager, which is static and deliberately not one
+  Managers/   12 autoloads (see below) + MendManager, which is static and deliberately not one
   Data/       [GlobalClass] resources authored as .tres
-  World/      RoomView, Hotspot, EntityOverlay, PlaceholderBackdrop, InteractionService
-  UI/         Hud, ResolveMeter, VitalityMeter, DebugPanel, InventoryPanel, MendPanel
-  Dream/      the 3D probe's walker and look tuner   <- wired into nothing; see the handoff
+  World/      RoomView, Hotspot, EntityOverlay, PlaceholderBackdrop, InteractionService,
+              PlaceholderCues, RoomCard, PocketHost   <- PocketHost is the 2D->3D seam
+  UI/         Hud, ResolveMeter, VitalityMeter, DebugPanel, InventoryPanel, MendPanel,
+              FightPanel, CampPanel   <- the last two have no .tscn yet and build their own
+  Dream/      the probe's walker and look tuner, plus PocketAnchor / PocketExit / PocketGate
+              <- the three nodes a cloned pocket scene is built from; no scripting needed
   Save/       JSON round-trip of the manager state
-  Tools/      SliceVerifier, ScreenshotTool
-data/         rooms/ entities/ items/ recipes/ heists/   <- the game's content
+  Tools/      SliceVerifier, ContentReport, ScreenshotTool
+data/         rooms/ entities/ items/ recipes/ pockets/   <- the game's content
 scenes/       Boot, Main, RoomView
 scenes/ui/    InventoryPanel, MendPanel + the shared PanelTheme.tres
 scenes/dream/ DreamProbe.tscn + the look shader and its material
@@ -95,9 +117,13 @@ script only knows `%UniqueName`s — so a panel can be restyled freely without t
 
 `EventBus` · `WorldStateManager` · `EntityStateManager` · `RealmTransitionManager` ·
 `InventoryCraftingManager` · `ResolveManager` · `VitalityManager` · `NavigationManager` ·
-`DreamRunManager` · `CampManager`
+`PocketManager` · `CampManager` · `CombatManager` · `EncounterManager`
 
-`CampManager` is registered last because it asks the others questions rather than answering them.
+**Order is load-bearing at both ends.** `EncounterManager` is last because it asks every other manager
+questions and answers none of theirs, and `CampManager` sits after `PocketManager` for the same reason it
+always sat late — it asks rather than answers. `DreamRunManager` sat between them until unit 6b deleted it;
+`PocketManager` is its replacement, and the two overlapped for exactly one unit so that the gates probing a
+Waking-side guard from inside a live run could move across before the class went.
 
 Managers publish to the `EventBus`; views subscribe. Nothing holds a hard reference to
 anything else, so one state change ripples to every backdrop, overlay and HUD element.

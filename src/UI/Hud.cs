@@ -19,7 +19,6 @@ public partial class Hud : CanvasLayer
     private Label _realmLabel;
     private Label _hoverLabel;
     private Label _notifyLabel;
-    private Label _dreadLabel;
     private ResolveMeter _resolve;
     private VitalityMeter _vitality;
     private VBoxContainer _poolColumn;
@@ -29,6 +28,7 @@ public partial class Hud : CanvasLayer
     private InventoryPanel _inventory;
     private MendPanel _mend;
     private FightPanel _fight;
+    private CampPanel _camp;
 
     private float _notifyTimer;
     private const float NotifyHoldSeconds = 5f;
@@ -64,6 +64,13 @@ public partial class Hud : CanvasLayer
     /// </summary>
     public FightPanel Fight => _fight;
 
+    /// <summary>
+    /// The camp menu — unit 5's return-to-camp verb. <b>Never null</b>, for
+    /// <see cref="Fight"/>'s reason: it has no authored scene yet and falls back to a code-built tree, so
+    /// there is no version of this game in which the verb has nowhere to appear.
+    /// </summary>
+    public CampPanel Camp => _camp;
+
     /// <summary>Opacity of the Vitality caption and bar as drawn. For the gates.</summary>
     public float VitalityOpacity => _vitalityGroup?.Modulate.A ?? 1f;
 
@@ -95,9 +102,8 @@ public partial class Hud : CanvasLayer
         bus.HoverTargetChanged += OnHoverTargetChanged;
         bus.Notify += OnNotify;
         bus.ItemAcquired += OnItemAcquired;
-        bus.PursuerProximityChanged += OnPursuerProximityChanged;
-        bus.HeistStarted += OnHeistStarted;
-        bus.HeistEnded += OnHeistEnded;
+        bus.PocketEntered += OnPocketEntered;
+        bus.PocketLeft += OnPocketLeft;
         bus.MendRequested += OnMendRequested;
         bus.FightStarted += OnFightStarted;
         bus.FightEnded += OnFightEnded;
@@ -116,9 +122,8 @@ public partial class Hud : CanvasLayer
         bus.HoverTargetChanged -= OnHoverTargetChanged;
         bus.Notify -= OnNotify;
         bus.ItemAcquired -= OnItemAcquired;
-        bus.PursuerProximityChanged -= OnPursuerProximityChanged;
-        bus.HeistStarted -= OnHeistStarted;
-        bus.HeistEnded -= OnHeistEnded;
+        bus.PocketEntered -= OnPocketEntered;
+        bus.PocketLeft -= OnPocketLeft;
         bus.MendRequested -= OnMendRequested;
         bus.FightStarted -= OnFightStarted;
         bus.FightEnded -= OnFightEnded;
@@ -188,20 +193,22 @@ public partial class Hud : CanvasLayer
         // **F8 joined them on 2026-08-03 for the same reason and comes off separately** — it reaches
         // `EncounterManager.Rig`, which shipped in 3a with no verb anywhere, and it retires when the
         // satchel grows a *Set* button beside Use and Equip rather than when the journal lands.
+        //
+        // `[C] camp` is **not** on the demolition list — it is §17's return-to-camp verb, a shipping
+        // control, and it sits first with the satchel rather than with the F-keys for that reason.
         var hint = MakeLabel(
-            "[I] satchel   [F3] debug   [F5] save   [F9] load   [F6] learn   [F7] craft   [F8] rig",
+            "[I] satchel   [C] camp   [F3] debug   [F5] save   [F9] load   "
+            + "[F6] learn   [F7] craft   [F8] rig   [F10] pocket",
                              16, new Color(0.62f, 0.62f, 0.66f, 0.65f));
         hint.SetAnchorsPreset(Control.LayoutPreset.BottomLeft);
         hint.Position = new Vector2(40, -44);
         root.AddChild(hint);
 
-        _dreadLabel = MakeLabel("", 28, new Color("#8a93a0"));
-        _dreadLabel.HorizontalAlignment = HorizontalAlignment.Center;
-        _dreadLabel.SetAnchorsPreset(Control.LayoutPreset.CenterTop);
-        // Top centre: clear of the room name on the left and the meter on the right.
-        _dreadLabel.Position = new Vector2(-400, 30);
-        _dreadLabel.CustomMinimumSize = new Vector2(800, 0);
-        root.AddChild(_dreadLabel);
+        // A `_dreadLabel` sat top-centre here and went with unit 6b. It was the pursuer's only readout —
+        // *"footsteps, not far"* keyed to how many **rooms** away it was — and a 3D pursuer is a chase in
+        // space, so a room-hop count is the wrong shape to inherit. The 3D pass brings its own, and the one
+        // thing worth carrying over is the rule it was built on: **distance as language, never a number and
+        // never a minimap**, because being unsure where it is doing the work.
 
         _debug = new DebugPanel { Name = "DebugPanel", Visible = false };
         root.AddChild(_debug);
@@ -253,6 +260,19 @@ public partial class Hud : CanvasLayer
             ? ResourceLoader.Load<PackedScene>(fightScenePath)
             : null;
 
+        // Before the fight screen, so the fight draws over it. The order is the rule rather than a
+        // preference: the camp menu refuses to open inside a fight (§17), so the two can never both be up —
+        // and on the day that guard is wrong, the fight is the one that must stay readable, because it is
+        // the screen you are not free to walk away from. Same fallback arrangement as the panel below and
+        // for the same reason: no `.tscn` yet, so `BuildFallback` puts up the contract in code.
+        const string campScenePath = "res://scenes/ui/CampPanel.tscn";
+        var campScene = ResourceLoader.Exists(campScenePath)
+            ? ResourceLoader.Load<PackedScene>(campScenePath)
+            : null;
+
+        _camp = campScene != null ? campScene.Instantiate<CampPanel>() : CampPanel.BuildFallback();
+        root.AddChild(_camp);
+
         _fight = fightScene != null ? fightScene.Instantiate<FightPanel>() : FightPanel.BuildFallback();
         root.AddChild(_fight);
     }
@@ -302,7 +322,7 @@ public partial class Hud : CanvasLayer
     {
         if (_poolColumn == null) return;
 
-        var inDreamRun = DreamRunManager.Instance?.IsRunning == true;
+        var inDreamRun = PocketManager.InsideTheDream;
 
         _poolColumn.MoveChild(inDreamRun ? _resolveGroup : _vitalityGroup, 0);
 
@@ -380,6 +400,33 @@ public partial class Hud : CanvasLayer
     private void OnHeistEnded(string heistId, int outcome) => RefreshPools();
 
     /// <summary>
+    /// Crossed into a pocket (unit 6). Reorders the pools like the heist pair, and <b>names the pocket where
+    /// the room name goes</b> — a pocket is not a <c>RoomData</c>, so the label has nothing else to show and
+    /// would otherwise sit there naming the screen you are no longer looking at.
+    /// </summary>
+    /// <remarks>
+    /// The hover caption is cleared for the same reason: hovering is a Waking-world affordance over authored
+    /// hotspots, and nothing in a 3D pocket produces one. A stale *"Take — Bitterroot"* under a Dream
+    /// landscape is the kind of leftover that reads as a bug.
+    /// </remarks>
+    private void OnPocketEntered(string pocketId)
+    {
+        var pocket = PocketManager.Instance?.GetPocket(pocketId);
+
+        _roomLabel.Text = string.IsNullOrEmpty(pocket?.DisplayName) ? pocketId : pocket.DisplayName;
+        _hoverLabel.Text = "";
+
+        RefreshPools();
+    }
+
+    /// <summary>
+    /// Came back out. The room label is left to <c>RoomEntered</c>, which
+    /// <c>PocketManager.Return</c> triggers by navigating — so this does not set it, and must not: writing
+    /// it here would race the arrival and could name the pocket you just left.
+    /// </summary>
+    private void OnPocketLeft(string pocketId, bool completed) => RefreshPools();
+
+    /// <summary>
     /// Puts the mending board up. This is the whole of the HUD's involvement in mending: the panel
     /// calls <c>MendManager.Mend</c> itself when the board is solved, so nothing about the world
     /// travels back through here.
@@ -405,10 +452,21 @@ public partial class Hud : CanvasLayer
     /// manager has already committed by the time this runs, and if this screen failed to appear the fight
     /// would still be there to be driven. That is why the gates can check the loop and the panel
     /// separately.
+    /// <para>
+    /// <b>The camp menu is closed here too, added 2026-08-04 after Jeremy found it up behind the fight
+    /// screen in play.</b> Unit 5 considered this line and declined it, reasoning that the menu blocks the
+    /// whole screen so no click could start a fight from underneath it — and the menu really does cover the
+    /// screen (<c>CampPanel.BlocksTheRoom</c> is asserted). The reasoning was still wrong, because *"no path
+    /// can produce this state"* is only ever as good as the paths that were thought of, and a panel left
+    /// visible behind another one costs nothing to prevent. **The verb's own refusal is untouched and is
+    /// still the rule** — you cannot open the menu inside a fight; this is the other direction, which had no
+    /// guard at all.
+    /// </para>
     /// </remarks>
     private void OnFightStarted(string instanceId)
     {
         if (_inventory != null) _inventory.Visible = false;
+        _camp?.Close();
         _fight?.Open(instanceId);
     }
 
@@ -419,27 +477,71 @@ public partial class Hud : CanvasLayer
     /// </summary>
     private void OnFightEnded(string instanceId) => _fight?.Close();
 
-    private void OnPursuerProximityChanged(int roomsAway)
+    // ---- The two panels a key opens -------------------------------------
+    //
+    // Both live here rather than in `Main` because the HUD is already the thing that decides which panels
+    // may be up at once — `OnMendRequested` and `OnFightStarted` close the satchel for the same reason
+    // these do. Leaving it in the input handler would put that policy in two places and make the second
+    // one easy to forget, which is exactly how the satchel and the camp menu came to be openable together
+    // in the first place.
+
+    /// <summary>
+    /// Open or shut the satchel. Takes the camp menu down first, and <b>refuses inside a fight</b>. Returns
+    /// whether it is now open.
+    /// </summary>
+    /// <remarks>
+    /// <b>Both panels draw a 55% black dim, and two dims stack.</b> That is the stated reason
+    /// <see cref="OnMendRequested"/> shuts the satchel before the mending board, and it applies here in both
+    /// directions: pressing <c>I</c> with the camp menu up, or <c>C</c> with the satchel up, produced a
+    /// screen much darker than either panel was drawn against. The mend and fight cases could rely on the
+    /// world being unclickable by then; these two are opened by keys, so neither can.
+    ///
+    /// <para><b>The fight refusal is the bug Jeremy reported on 2026-08-04</b> — <c>I</c> opened the satchel
+    /// behind the fight screen, where <c>C</c> had correctly refused with a line. Being *behind* the fight
+    /// screen was the smaller half: the satchel's Use button reached <c>UseItem</c> directly, healing for
+    /// free with no turn spent and nothing counted against <c>GameConfig.SalveSlotsPerFight</c>. The
+    /// manager-side guard (<see cref="UseBlock.InFight"/>) is what actually closes that; this is the half
+    /// that stops the screen appearing at all, which is what he asked for and is also the honest one — a
+    /// panel whose only verb is refused should not open. <see cref="FightPanel"/>'s own argument, and the
+    /// same shape as <c>CampPanel.Open</c>.</para>
+    /// </remarks>
+    public bool ToggleSatchel()
     {
-        _hoverLabel.Text = "";
+        if (_inventory == null) return false;
 
-        _dreadLabel.Text = roomsAway switch
+        if (_inventory.IsOpen)
         {
-            0 => "IT IS HERE",
-            1 => "something is moving in the next room",
-            2 => "footsteps, not far",
-            3 => "you can hear it somewhere",
-            < 0 => "",
-            _ => "the colonnade is quiet",
-        };
+            _inventory.Close();
+            return false;
+        }
 
-        _dreadLabel.AddThemeColorOverride("font_color", roomsAway switch
+        if (EncounterManager.Instance?.InFight == true)
         {
-            0 => new Color("#d94f3c"),
-            1 => new Color("#d9873c"),
-            2 => new Color("#c9a94e"),
-            _ => new Color("#8a93a0"),
-        });
+            EventBus.Instance?.EmitNotify("No time to be rummaging. Deal with this first.");
+            return false;
+        }
+
+        _camp?.Close();
+        _inventory.Open();
+        return true;
+    }
+
+    /// <summary>
+    /// Open or shut the camp menu, and take the satchel down first. Returns whether it is now open — it
+    /// refuses with a line inside a fight or a pocket, so *pressed* and *opened* are different answers.
+    /// </summary>
+    public bool ToggleCampMenu()
+    {
+        if (_camp == null) return false;
+
+        if (_camp.IsOpen)
+        {
+            _camp.Close();
+            return false;
+        }
+
+        if (_inventory != null) _inventory.Visible = false;
+        return _camp.Open();
     }
 
     public override void _Process(double delta)

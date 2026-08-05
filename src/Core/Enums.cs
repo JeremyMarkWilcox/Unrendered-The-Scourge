@@ -1,5 +1,42 @@
 namespace Unrendered.Core;
 
+/// <summary>
+/// The three things you can do in the Dream, all drawing on one Resolve meter and all draining
+/// <b>while held</b> (docs/combat.md §19). Jeremy is open to more later; three is the set that exists.
+/// </summary>
+/// <remarks>
+/// <b>The eight max-Resolve increments exist because of these</b> (`items.md` §7): the meter is a fuel tank
+/// for verbs, never a clock, which is why the per-second heist drain was the wrong model and retired with it.
+/// <para>
+/// <b>Only two are ever granted.</b> <see cref="Suppress"/> is yours from the first frame, so nothing hands
+/// it over and no geometry gates on holding it. <see cref="Float"/> and <see cref="Flare"/> come from
+/// **pulling the anchor** in boss pockets 1 and 2 — ratified 2026-08-04, and note it is the *anchor* rather
+/// than the Waking-world fight that follows it. Boss pocket 3 grants nothing: it is the finale, and there is
+/// no game left to spend a verb in.
+/// </para>
+/// </remarks>
+public enum DreamVerb
+{
+    /// <summary>Not a verb. The default, so a pocket that grants nothing says so.</summary>
+    None = 0,
+
+    /// <summary>
+    /// Hide — the near field goes dark. Yours from the start, and <b>the only verb boss pocket 1 can be
+    /// solved with</b>, since Float is what is inside it.
+    /// </summary>
+    Suppress = 1,
+
+    /// <summary>Slow rise and slight lateral drift. Vertical traversal without ladders.</summary>
+    Float = 2,
+
+    /// <summary>
+    /// Push the light out: hidden geometry, the anchor and the tether lines become visible — and everything
+    /// in the pocket can see you. The exact mirror of <see cref="Suppress"/>, which is why it is the right
+    /// third one.
+    /// </summary>
+    Flare = 3,
+}
+
 /// <summary>Which of the two worlds the player is currently perceiving.</summary>
 public enum GameRealm
 {
@@ -48,8 +85,14 @@ public enum HotspotKind
     /// <summary>A relic in the Waking world. Touching it begins a Dream heist.</summary>
     CrossToDream = 5,
 
-    /// <summary>The anchor itself, at the far end of the maze. Taking it ends the heist.</summary>
-    TakeAnchor = 6,
+    // `TakeAnchor = 6` stood here and was deleted 2026-08-04 with unit 6b. It was the anchor at the far end
+    // of the 2D maze, and the objective lives **inside the 3D pocket** now — a pocket scene calls
+    // `PocketManager.Complete()` when the player reaches it, so there is no Waking-world hotspot for taking
+    // anything. Its sibling `CrossToDream` survives with a new owner, which is why one went and one stayed.
+    //
+    // **The number is deliberately not reused.** `Workbench` stays at 7 and the gap is left open: every
+    // authored `.tres` stores `Kind` as an integer, so renumbering would silently repoint 59 rooms' worth of
+    // hotspots at a different verb. A hole in an enum is free; a shifted one is a content migration.
 
     /// <summary>
     /// The bench. Placing one of these is what *makes* a room a camp — there is no separate camp
@@ -197,18 +240,13 @@ public enum Condition
     Collapsing = 3,
 }
 
-/// <summary>How a Dream heist finished. Every ending is an ejection; only the price differs.</summary>
-public enum HeistOutcome
-{
-    /// <summary>The anchor was taken. The target is Severed.</summary>
-    Success = 0,
-
-    /// <summary>It reached you. Thrown out, and it cost.</summary>
-    Captured = 1,
-
-    /// <summary>Resolve ran out. The Dream spat you back on its own terms.</summary>
-    Exhausted = 2,
-}
+// `HeistOutcome` — Success / Captured / Exhausted — stood here and went with unit 6b. It was the payload of
+// `HeistEnded`, and a pocket has **two** exits rather than three: `Complete` and `Leave`, carried as a bool
+// on `PocketLeft`. That is not a simplification for its own sake, it is the design changing underneath: two
+// of the three endings were the pursuer and the drain clock, and a quiet pocket has neither.
+//
+// A third outcome comes back if a boss pocket ever ejects you on its own terms, and it should be named then
+// rather than kept warm now — an enum member with no producer reads as a state the game can reach.
 
 // `RealmVisibility` stood here — Both / WakingOnly / DreamOnly, the per-hotspot filter that made
 // spectral vision work. Deleted 2026-08-02 with the rest of it (the great swap). A Waking screen
@@ -312,6 +350,92 @@ public enum StashBlock
 }
 
 /// <summary>
+/// Why the return-to-camp verb refused, or <see cref="None"/>. Unit 5, built to combat.md §17 as amended
+/// 2026-08-01: <i>the menu is a shortcut in, not a bubble you stand inside.</i>
+/// </summary>
+/// <remarks>
+/// <b>The order is the decision, and it is <see cref="CraftBlock"/>'s argument applied to a different
+/// axis.</b> There, <see cref="CraftBlock.Unknown"/> beats <see cref="CraftBlock.NotAtStation"/> so a
+/// player who has not found the page is not told the recipe exists. Here the two *where you are* refusals
+/// come first, because a player mid-fight should be told they are mid-fight rather than that they have
+/// never visited the cottage — the second sentence is true and useless, and it sends them looking for a
+/// map instead of finishing the thing in front of them.
+/// </remarks>
+public enum TravelBlock
+{
+    /// <summary>Nothing in the way; the verb would carry you there.</summary>
+    None = 0,
+
+    /// <summary>
+    /// A fight is running. <b>Refused rather than priced as a flight, which is the load-bearing choice in
+    /// this enum</b> — see <c>CampManager.InspectTravel</c> for the full argument. Short version: a door
+    /// clicked mid-fight flees and charges a parting blow, and arriving at a camp refills both pools, so
+    /// one button doing both would be escape *plus* a free heal.
+    /// </summary>
+    InFight = 1,
+
+    /// <summary>
+    /// Inside a Dream pocket. Keyed on a live run rather than on <c>GameRealm.Dream</c>, for the reason
+    /// <c>Hud.RefreshPools</c> gives at length: unit 6's quiet pockets put you in the Dream with nothing
+    /// draining, and the question this asks is *can you leave from here*, not *where are you*.
+    /// </summary>
+    InPocket = 2,
+
+    /// <summary>
+    /// No room by that id, or one that holds no <see cref="HotspotKind.Workbench"/>. A content error
+    /// rather than a player state, like <see cref="CraftBlock.NoSuchRecipe"/> — nothing the player does
+    /// reaches this, because the panel only ever lists camps.
+    /// </summary>
+    NotACamp = 3,
+
+    /// <summary>
+    /// A real camp you have not stood in yet, so <c>Flags.CampFound</c> is unset. <b>This is the member
+    /// that keeps the verb from being a map</b>: without it, a fresh game could travel to the chapter-3
+    /// store from the cottage doorstep.
+    /// </summary>
+    NotFound = 4,
+
+    /// <summary>
+    /// You are standing in it. Its own member rather than folded into a silent success, on
+    /// <see cref="CraftBlock.AlreadyMade"/>'s precedent: it is not a failure, and the panel should word it
+    /// as *"you are here"* rather than greying the row like something withheld.
+    /// </summary>
+    AlreadyHere = 5,
+}
+
+/// <summary>
+/// Why <c>PocketManager.Enter</c> would refuse. Unit 6, and the sixth member of the inspect/act family
+/// (<see cref="CraftBlock"/>, <see cref="UseBlock"/>, <see cref="StashBlock"/>, <see cref="EquipBlock"/>,
+/// <see cref="TravelBlock"/>) — the hotspot's availability and the act must ask one question.
+/// </summary>
+public enum PocketBlock
+{
+    /// <summary>Nothing in the way; the way in is open.</summary>
+    None = 0,
+
+    /// <summary>No pocket registered under that id. A content error, like <see cref="CraftBlock.NoSuchRecipe"/>.</summary>
+    NoSuchPocket = 1,
+
+    /// <summary>You are in one already. There is exactly one at a time.</summary>
+    AlreadyInside = 2,
+
+    /// <summary>
+    /// A fight is running. <b>A correctness guard rather than a rule of taste</b> — see
+    /// <c>PocketManager.InspectEnter</c>: a pocket is not a room, so entering one does not navigate, so the
+    /// backstop that stops a fight outliving its screen never fires. Without this you could tour a 3D scene
+    /// and come back still committed to a creature.
+    /// </summary>
+    InFight = 3,
+
+    /// <summary>
+    /// Already finished, so the artifact is broken. Unreachable from an authored entrance — the hotspot
+    /// hides itself on <c>Flags.PocketCleared</c> — which makes this the arm that catches a second door
+    /// authored onto one pocket, or a debug key.
+    /// </summary>
+    AlreadyTaken = 4,
+}
+
+/// <summary>
 /// Why an item cannot be used from the satchel. The sibling of <see cref="CraftBlock"/>, and it
 /// exists for the same reason plus one: the inventory panel has to grey its Use button without
 /// deciding anything itself, and duplicating the rules into the panel would put game logic
@@ -343,6 +467,30 @@ public enum UseBlock
     /// and uncraftable at the good end of the scale (invariant 7).
     /// </summary>
     NothingToTreat = 4,
+
+    /// <summary>
+    /// A fight is running, so the satchel is not where an item gets spent — <c>EncounterManager.Treat</c>
+    /// is, and it charges a turn and counts against <c>GameConfig.SalveSlotsPerFight</c>.
+    /// </summary>
+    /// <remarks>
+    /// <b>Added 2026-08-04 to close a hole, not to tidy an interface.</b> Jeremy found the satchel opening
+    /// during a fight, and the draw order was the least of it: <c>UseItem</c> had no fight guard, so the
+    /// satchel's Use button healed for **free, unlimited, and without ending the turn** — bypassing both the
+    /// salve cap and the turn currency §18 makes the only currency inside a fight.
+    /// <para>
+    /// <c>EncounterManager.Treat</c>'s own comment says it routes through <c>UseItem</c> *"so that 'nothing
+    /// to treat' refuses here exactly as it refuses in the satchel"* — the two were deliberately joined in
+    /// that direction and **the reverse leak was never closed**. The lesson is the general one about shared
+    /// paths: joining two callers so a rule cannot drift says nothing about rules that should apply to only
+    /// one of them.
+    /// </para>
+    /// <para>
+    /// Ordered last, after <see cref="NothingToTreat"/>, so a player at full Vitality mid-fight still hears
+    /// *"nothing to treat"* — the more useful of two true answers, and the one that does not imply the salve
+    /// would have worked.
+    /// </para>
+    /// </remarks>
+    InFight = 5,
 }
 
 /// <summary>

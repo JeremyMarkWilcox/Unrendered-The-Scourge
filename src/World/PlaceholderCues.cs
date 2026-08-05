@@ -71,8 +71,10 @@ public static class PlaceholderCues
             // Provisional: unit 6 retires the heist system that owns this kind.
             [HotspotKind.CrossToDream] = new("#b07cff"),
 
-            // The objective. Provisional, same reason.
-            [HotspotKind.TakeAnchor] = new("#ffffff"),
+            // `TakeAnchor` had white here and went with the kind in unit 6b. **`CrossToDream`'s violet above
+            // stops being provisional at the same time** — unit 1.5 marked both that way expecting unit 6 to
+            // delete the heist and both kinds with it. Only one went: the verb *cross into the Dream* is
+            // unchanged and only the thing on the other side is new, so the colour keeps its customer.
 
             // The blight, and the one place it is worth spending a green. The paragraph above warns
             // that mid-value green vanishes on purified ground (#6f8f5e) — this is pushed brighter and

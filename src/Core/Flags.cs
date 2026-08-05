@@ -31,6 +31,27 @@ public static class Flags
     public static string Milestone(string id) => $"milestone.{id}";
 
     /// <summary>
+    /// A camp stood in at least once, and therefore a destination the return-to-camp verb will offer
+    /// (unit 5, combat.md §17). Written by <c>CampManager</c> on arrival, beside the silent rebind of
+    /// the collapse return point.
+    /// </summary>
+    /// <remarks>
+    /// <b>A flag rather than a field on <c>SaveGame</c>, and that is the whole reason the save format did
+    /// not move for this unit.</b> Flags already export, import and rebroadcast, so "which camps can I
+    /// travel to" persists for free — the same trade unit 2 made when <c>ZonePhases</c> became
+    /// <see cref="Cleansed"/>, and for the same reason: one vocabulary means one export.
+    /// <para>
+    /// <b>This is per-camp state, which §17 said it did not want, and the sentence it appears to
+    /// contradict is about something else.</b> That list ruled out a picker for the *collapse return
+    /// point* — an answer that is the newest camp ~95% of the time, so asking is a confirmation step.
+    /// A travel destination is declined two thirds of the time, so it is a choice; and §20's revised
+    /// good ending is built on backtracking being nearly free, which a single destination cannot
+    /// deliver. <c>CampManager.ReturnCampRoomId</c> is untouched and still has no picker.
+    /// </para>
+    /// </remarks>
+    public static string CampFound(string roomId) => $"camp.{roomId}.found";
+
+    /// <summary>
     /// The milestone that re-arms a chapter's material nodes: <b>each chapter refills when that
     /// chapter's own boss is defeated</b> (Jeremy, 2026-08-02). Chapter 3 is terminal — its boss is
     /// the finale, so there is nothing left to resupply for.
@@ -130,4 +151,21 @@ public static class Flags
 
     /// <summary>One of her four scattered notes, read.</summary>
     public static string NoteRead(string noteId) => $"note.{noteId}.read";
+
+    /// <summary>
+    /// A Dream verb learned, by pulling the anchor in a boss pocket (unit 6, combat.md §19).
+    /// </summary>
+    /// <remarks>
+    /// <b>Only ever two of these exist</b>: <c>verb.Float.learned</c> and <c>verb.Flare.learned</c>.
+    /// <see cref="DreamVerb.Suppress"/> is held from the first frame, so it is deliberately *not* flagged —
+    /// a flag nothing can fail to have is a flag every reader has to remember to ignore. Geometry gated on
+    /// Suppress would be geometry gated on nothing.
+    /// <para>
+    /// Its own domain rather than reusing <see cref="Learned"/>, which is recipes. Counting a class of thing
+    /// by prefix is the whole reason these are functions instead of string literals, and *"how many verbs
+    /// does the player have"* and *"how many recipes"* are different questions the ending's bill asks
+    /// separately.
+    /// </para>
+    /// </remarks>
+    public static string VerbLearned(DreamVerb verb) => $"verb.{verb}.learned";
 }
