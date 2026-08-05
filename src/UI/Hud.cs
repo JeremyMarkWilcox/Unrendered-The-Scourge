@@ -29,6 +29,7 @@ public partial class Hud : CanvasLayer
     private MendPanel _mend;
     private FightPanel _fight;
     private CampPanel _camp;
+    private CraftingPanel _crafting;
 
     private float _notifyTimer;
     private const float NotifyHoldSeconds = 5f;
@@ -71,6 +72,13 @@ public partial class Hud : CanvasLayer
     /// </summary>
     public CampPanel Camp => _camp;
 
+    /// <summary>
+    /// The journal — unit 7a. <b>Never null</b>, for <see cref="Fight"/>'s reason: no authored scene yet, so
+    /// it falls back to a code-built tree rather than to nothing. Nothing toggles this one; it opens off
+    /// <c>CraftingRequested</c> and closes itself, like <see cref="Mend"/>.
+    /// </summary>
+    public CraftingPanel Crafting => _crafting;
+
     /// <summary>Opacity of the Vitality caption and bar as drawn. For the gates.</summary>
     public float VitalityOpacity => _vitalityGroup?.Modulate.A ?? 1f;
 
@@ -105,6 +113,7 @@ public partial class Hud : CanvasLayer
         bus.PocketEntered += OnPocketEntered;
         bus.PocketLeft += OnPocketLeft;
         bus.MendRequested += OnMendRequested;
+        bus.CraftingRequested += OnCraftingRequested;
         bus.FightStarted += OnFightStarted;
         bus.FightEnded += OnFightEnded;
 
@@ -125,6 +134,7 @@ public partial class Hud : CanvasLayer
         bus.PocketEntered -= OnPocketEntered;
         bus.PocketLeft -= OnPocketLeft;
         bus.MendRequested -= OnMendRequested;
+        bus.CraftingRequested -= OnCraftingRequested;
         bus.FightStarted -= OnFightStarted;
         bus.FightEnded -= OnFightEnded;
     }
@@ -188,17 +198,23 @@ public partial class Hud : CanvasLayer
         bottom.AddChild(_hoverLabel);
 
         // -- Controls reminder --
-        // F6 and F7 are unit 4a's crafting scaffolding and are listed because a debug key nobody knows
-        // about is not an unblock. Both come off this line when the journal lands (`build-plan.md` §4).
-        // **F8 joined them on 2026-08-03 for the same reason and comes off separately** — it reaches
-        // `EncounterManager.Rig`, which shipped in 3a with no verb anywhere, and it retires when the
-        // satchel grows a *Set* button beside Use and Equip rather than when the journal lands.
+        // The F-keys are scaffolding, listed because a debug key nobody knows about is not an unblock. Each
+        // comes off separately, when the thing it stands in for exists.
+        //
+        // **`[F7] craft` came off on 2026-08-04 with unit 7a** — the journal replaced it, and the branch and
+        // its method went with the caption. **F6 stayed, and the note that used to sit here said it would
+        // not.** It read *"both come off this line when the journal lands"*, which was wrong about which job
+        // the panel takes over: a journal shows you what you know, it does not teach you, and nothing in the
+        // game grants a blueprint yet. F6 comes off when a pocket or a page does.
+        //
+        // **F8 retires when the satchel grows a *Set* button** beside Use and Equip — it reaches
+        // `EncounterManager.Rig`, which shipped in 3a with no verb anywhere.
         //
         // `[C] camp` is **not** on the demolition list — it is §17's return-to-camp verb, a shipping
         // control, and it sits first with the satchel rather than with the F-keys for that reason.
         var hint = MakeLabel(
             "[I] satchel   [C] camp   [F3] debug   [F5] save   [F9] load   "
-            + "[F6] learn   [F7] craft   [F8] rig   [F10] pocket",
+            + "[F6] learn   [F8] rig   [F10] pocket",
                              16, new Color(0.62f, 0.62f, 0.66f, 0.65f));
         hint.SetAnchorsPreset(Control.LayoutPreset.BottomLeft);
         hint.Position = new Vector2(40, -44);
@@ -243,6 +259,25 @@ public partial class Hud : CanvasLayer
             _mend = mendScene.Instantiate<MendPanel>();
             root.AddChild(_mend);
         }
+
+        // The journal, over the satchel and the mending board. Unit 7a, and the fourth panel with a code
+        // fallback rather than an error for the reason the two below have one: no `.tscn` exists yet, so
+        // absence is the expected state and not a typo. Existence is checked before loading so a `Load` of
+        // a path that is not there does not log a Godot-level error.
+        //
+        // Above the mending board because the two can be reached from the same screen and the journal is
+        // opened by a click on a bench, which means it is the one the player asked for most recently. They
+        // cannot currently be open together — `OnMendRequested` and this handler each close the other's
+        // neighbours — but the order is what decides it on the day one of those guards is wrong.
+        const string craftingScenePath = "res://scenes/ui/CraftingPanel.tscn";
+        var craftingScene = ResourceLoader.Exists(craftingScenePath)
+            ? ResourceLoader.Load<PackedScene>(craftingScenePath)
+            : null;
+
+        _crafting = craftingScene != null
+            ? craftingScene.Instantiate<CraftingPanel>()
+            : CraftingPanel.BuildFallback();
+        root.AddChild(_crafting);
 
         // Over both, because a fight is the one screen you are not free to walk away from — flight is a
         // verb inside it (§3), not a matter of finding the window underneath.
@@ -439,7 +474,34 @@ public partial class Hud : CanvasLayer
     private void OnMendRequested(HotspotData blight)
     {
         if (_inventory != null) _inventory.Visible = false;
+        _crafting?.Close();
         _mend?.Open(blight);
+    }
+
+    /// <summary>
+    /// Puts the journal up — a bench or a field station was clicked (unit 7a). This is the whole of the
+    /// HUD's involvement in crafting: the panel calls <c>InventoryCraftingManager.Craft</c> itself, so
+    /// nothing about the satchel or the world travels back through here.
+    /// </summary>
+    /// <remarks>
+    /// <b>The station id is passed through untouched and the panel uses it as a caption only.</b> Whether a
+    /// given recipe may be made here is <c>Inspect</c>'s answer, read off the room — so this handler
+    /// deliberately does not check that the station exists, is reachable, or matches anything. A guard here
+    /// would be the camp-satisfies-every-station ruling copied to a third place.
+    /// <para>
+    /// The other panels are closed first, for the reason <see cref="OnMendRequested"/> closes the satchel:
+    /// every one of them draws a 55% black dim and two dims stack into something much darker than either
+    /// was drawn against. The camp menu is closed too — it cannot currently be up, since it covers the
+    /// screen and a station click has to come from the world underneath, but that is the same *"no path can
+    /// produce this state"* reasoning that left the menu sitting behind the fight screen on 2026-08-04.
+    /// </para>
+    /// </remarks>
+    private void OnCraftingRequested(string stationId)
+    {
+        if (_inventory != null) _inventory.Visible = false;
+        _camp?.Close();
+        _mend?.Close();
+        _crafting?.Open(stationId);
     }
 
     /// <summary>
@@ -467,6 +529,7 @@ public partial class Hud : CanvasLayer
     {
         if (_inventory != null) _inventory.Visible = false;
         _camp?.Close();
+        _crafting?.Close();
         _fight?.Open(instanceId);
     }
 
@@ -522,6 +585,7 @@ public partial class Hud : CanvasLayer
         }
 
         _camp?.Close();
+        _crafting?.Close();
         _inventory.Open();
         return true;
     }
@@ -541,6 +605,7 @@ public partial class Hud : CanvasLayer
         }
 
         if (_inventory != null) _inventory.Visible = false;
+        _crafting?.Close();
         return _camp.Open();
     }
 

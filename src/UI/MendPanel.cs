@@ -102,7 +102,9 @@ public partial class MendPanel : Control
     /// </remarks>
     public bool Open(HotspotData blight)
     {
-        if (blight == null || blight.Kind != HotspotKind.Mend) return false;
+        // Not a bare kind test: a major repair is a Station with a board on it, and MendManager owns
+        // which hotspots those are (`MendManager.CarriesABoard`, 2026-08-05).
+        if (!MendManager.CarriesABoard(blight)) return false;
 
         var puzzle = blight.MendPuzzle;
         if (puzzle == null || !puzzle.IsSolvable())

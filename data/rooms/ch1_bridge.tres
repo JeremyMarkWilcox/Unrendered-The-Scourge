@@ -1,7 +1,8 @@
-[gd_resource type="Resource" script_class="RoomData" load_steps=6 format=3]
+[gd_resource type="Resource" script_class="RoomData" load_steps=9 format=3]
 
 [ext_resource type="Script" uid="uid://b0jetcphiy2cm" path="res://src/Data/HotspotData.cs" id="1_hs"]
 [ext_resource type="Script" uid="uid://v0juosv2w310" path="res://src/Data/RoomData.cs" id="2_room"]
+[ext_resource type="Script" path="res://src/Data/MendPuzzleData.cs" id="9_mpz"]
 
 [sub_resource type="Resource" id="hs_0"]
 script = ExtResource("1_hs")
@@ -18,6 +19,7 @@ Label = "The Bridgehead"
 Kind = 0
 Region = Rect2(1560, 390, 290, 410)
 TargetRoomId = "ch2_bridgehead"
+RequiredFlag = "passage.bridge.rebuilt"
 
 [sub_resource type="Resource" id="hs_2"]
 script = ExtResource("1_hs")
@@ -27,10 +29,27 @@ Kind = 1
 Region = Rect2(700, 550, 520, 250)
 ExamineText = "[unwritten]"
 
+[sub_resource type="Resource" id="mp_repair"]
+script = ExtResource("9_mpz")
+Prompt = "[unwritten]"
+Parts = PackedStringArray("[unwritten 1]", "[unwritten 2]", "[unwritten 3]", "[unwritten 4]", "[unwritten 5]", "[unwritten 6]", "[unwritten 7]", "[unwritten 8]")
+Solution = PackedInt32Array(3, 0, 6, 1, 5)
+
+[sub_resource type="Resource" id="hs_repair"]
+script = ExtResource("1_hs")
+Id = "ch1_bridge_span"
+Label = "The Span"
+Kind = 9
+Region = Rect2(640, 820, 620, 210)
+StationId = "bridge_span"
+SetsFlag = "passage.bridge.rebuilt"
+RequiredFlag = "defeated.ch1.lost_trapper"
+MendPuzzle = SubResource("mp_repair")
+
 [resource]
 script = ExtResource("2_room")
 Id = "ch1_bridge"
 DisplayName = "The Broken Bridge"
 ChapterId = "ch1"
 PlaceholderStyle = 0
-Hotspots = Array[ExtResource("1_hs")]([SubResource("hs_0"), SubResource("hs_1"), SubResource("hs_2")])
+Hotspots = Array[ExtResource("1_hs")]([SubResource("hs_0"), SubResource("hs_1"), SubResource("hs_2"), SubResource("hs_repair")])

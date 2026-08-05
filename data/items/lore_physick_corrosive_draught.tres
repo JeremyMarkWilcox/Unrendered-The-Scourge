@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://src/Data/ItemData.cs" id="1_lpcor"]
+
+[resource]
+script = ExtResource("1_lpcor")
+Id = "lore_physick_corrosive_draught"
+DisplayName = "Her Note on the Corrosive Draught"
+Description = "One leaf in her hand, dropped where it was worth nothing to the thing that took her. A dose measured to be survived, written out as a warning."
+Category = 4
+PlaceholderColor = Color(0.8039216, 0.8039216, 0.68235296, 1)
+Track = 1

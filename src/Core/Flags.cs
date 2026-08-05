@@ -96,6 +96,12 @@ public static class Flags
     /// <c>freed.* + killed.* == 24</c>, with <c>defeated.* == 6</c>. See <see cref="Killed"/> for why
     /// a third domain was cheaper than the alternatives.
     /// </para>
+    /// <para>
+    /// <b>The 24 did not move when the bosses landed on 2026-08-05, and that is the point of the split.</b>
+    /// <c>defeated.*</c> went 6 → 8 and will reach 9 with Iris, while this side stayed exactly where it was
+    /// — a boss frees nobody, so it cannot appear here even though two of the three were people. The pair
+    /// that is invariant is still <c>freed.* + killed.* == 24</c>; only the other domain grows.
+    /// </para>
     /// </remarks>
     public static string Freed(string instanceId) => $"freed.{instanceId}";
 
@@ -128,20 +134,35 @@ public static class Flags
     public static string Killed(string instanceId) => $"killed.{instanceId}";
 
     /// <summary>
-    /// A creature put down that frees nobody — the six Beast sightings, and nothing else
+    /// A creature put down that <b>frees nobody</b> — the six Beast sightings and the bosses
     /// (<c>items.md</c> §10: <i>"it is slain, not freed"</i>).
     /// </summary>
     /// <remarks>
     /// A separate domain rather than reusing <see cref="Freed"/>, so that the human half of the roster
-    /// stays at 24 and <c>defeated.*</c> at 6. Sharing one name would have been cheaper by a line and
+    /// stays at 24 and <c>defeated.*</c> at 8. Sharing one name would have been cheaper by a line and
     /// would have made both counts unreadable — and counting by prefix is the only reason these are
     /// functions instead of string literals in the .tres files. <b>Unit 3a made that argument a third
     /// time</b> and reached the same answer: see <see cref="Killed"/>.
     /// <para>
-    /// What it gates today is the carcass: the Beast is the one creature you may harvest, because it
-    /// is the one that was never a person. See <c>EntityData.HarvestItemId</c>, which stays unused —
-    /// the drop is a <see cref="HotspotKind.Harvest"/> the room places behind this flag, exactly
-    /// mirroring the NPC hotspot a freed person appears as.
+    /// <b>This used to read "the six Beast sightings, and nothing else", and it used to mean "was never a
+    /// person". Jeremy widened it on 2026-08-05 when the Blacksmith was placed.</b> His spirit is broken
+    /// in the Dream, his demonic form is weakened, and the body dies with the demon that was holding it up
+    /// — so he is a person, and nobody walks away from his fight. The domain is therefore about the
+    /// *outcome*, not the *nature*: it means the ending's bill cannot count this one as saved. <c>combat.md</c>
+    /// §20's <i>"begs, is freed, thanks you, and dies"</i> is still the scene; the freeing is what the scene
+    /// is *about*, and the flag records where it left him. Nothing needed implementing for that — see
+    /// <see cref="Killed"/>, where the choice of flag is derived from a blank <c>EntityData.PurifiedName</c>
+    /// and never authored.
+    /// </para>
+    /// <para>
+    /// <b>The carcass did not widen with it, and that asymmetry is a ruling rather than an oversight.</b>
+    /// The Beast is still the only thing you may harvest — Jeremy, the same day: <i>"no loot, since it would
+    /// be dishonourable to loot a human corpse."</i> So the harvest argument is now scoped to the Beast
+    /// **by what it is**, where it used to ride along on what this domain meant, and the two can no longer
+    /// be conflated: a <see cref="HotspotKind.Harvest"/> behind <c>defeated.ch2.blacksmith</c> would pass
+    /// every gate in the suite and be wrong. The drop is a hotspot the room places behind this flag,
+    /// exactly mirroring the NPC hotspot a freed person appears as; <c>EntityData.HarvestItemId</c> stays
+    /// unused, and both bosses leave it blank.
     /// </para>
     /// </remarks>
     public static string Defeated(string instanceId) => $"defeated.{instanceId}";

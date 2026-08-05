@@ -70,24 +70,47 @@ public partial class ResolveManager : Node
     }
 
     /// <summary>
-    /// Resolve spent per second. <b>Zero everywhere, as of unit 6b</b> — the heist owned the only rate in
-    /// the game and it retired with the class. Exposed so the meter can show a trend when there is one.
+    /// Resolve spent per second — <b>the Dream's rate, and only the Dream's</b>. Nonzero exactly while a
+    /// verb is held. Exposed so the meter can show a trend when there is one.
     /// </summary>
     /// <remarks>
-    /// <b>Kept as a stub rather than deleted, and the reason is that two readers already draw it</b>
-    /// (<c>ResolveMeter</c>'s trend, <c>DebugPanel</c>'s readout) and two designed mechanisms will supply
-    /// it: the boss aura, which drains only while a boss's tether is unbroken (`combat.md` §6), and the
-    /// Dream's own abilities, which spend rather than tick.
+    /// <b>The boss aura does not appear here, and that is the whole point of <see cref="SpendForTurn"/>.</b>
+    /// A fight is turn-based, so a per-second rate inside one charges the player for reading the screen
+    /// (`combat.md` §6: *"the drain must tick on turns or the player is punished for thinking"*). Two spend
+    /// paths, one bar, one meaning.
     /// <para>
-    /// <b>The two checks that used to sit over this were deleted rather than re-pointed, deliberately.</b>
-    /// They read *"no drain outside a run"* and *"the bar holds still in the Waking world"*, and with no
-    /// rate source anywhere in the game they are now true of a method that returns a constant — a universal
-    /// over an empty set, which is a wish rather than a check. The rule they encoded survives in prose,
-    /// where it is honest: **there is no ambient drain, and never was one.** They come back with the first
-    /// mechanism that can violate them, which is the boss aura.
+    /// <b>The two checks that used to sit over this were deleted by unit 6b and are back as of
+    /// 2026-08-05.</b> They read *"no drain outside a run"* and *"the bar holds still in the Waking world"*,
+    /// and with no rate source anywhere in the game they had become universals over an empty set — wishes
+    /// rather than checks. The boss aura is the first mechanism that can violate them, and it violates the
+    /// second one *in part*: the bar now does move in the Waking world, in a boss fight, on turns. So they
+    /// came back rewritten rather than restored, which is the honest version — see the aura section of
+    /// <c>SliceVerifier</c>.
     /// </para>
     /// </remarks>
     public float CurrentRatePerSecond() => DreamVerbs.RatePerSecond();
+
+    /// <summary>
+    /// Spend a flat amount for one turn of a boss fight. The discrete path <c>combat.md</c> §6 asks for
+    /// alongside <see cref="_Process"/>, so that a fight never consults a wall clock.
+    /// </summary>
+    /// <remarks>
+    /// <b>Nothing here notices an empty bar, and nothing here should.</b> <see cref="SetTo"/> announces the
+    /// depletion, <c>CampManager</c> hears it and carries you to a camp, and arriving refills both pools — so
+    /// by the time this returns, <see cref="IsEmpty"/> is <c>false</c> again and a banishment is
+    /// indistinguishable from a turn you survived. Callers must ask whether the *fight* is still running, not
+    /// whether the bar is empty; <c>EncounterManager.EndPlayerTurn</c> does, and the same trap is already
+    /// written up on <c>EncounterManager.OnCollapsed</c> for the Vitality half.
+    /// <para>
+    /// Guarded against zero so that a creature with no aura calls this harmlessly: a spend of nothing must not
+    /// be a change, or the meter flickers on every rat's turn.
+    /// </para>
+    /// </remarks>
+    public void SpendForTurn(float amount)
+    {
+        if (amount <= 0f) return;
+        Modify(-amount);
+    }
 
     public void Modify(float amount) => SetTo(Current + amount);
 

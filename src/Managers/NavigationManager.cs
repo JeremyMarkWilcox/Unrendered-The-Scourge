@@ -141,4 +141,35 @@ public partial class NavigationManager : Node
 
         return null;
     }
+
+    /// <summary>
+    /// The creature on this screen, or <c>null</c> where there is none. What the satchel's <i>Set</i> button
+    /// rigs against.
+    /// </summary>
+    /// <remarks>
+    /// <b>The name is a claim about content, and it is the reason this is a named readout rather than a
+    /// <c>FirstOrDefault</c> at each call site.</b> Every one of the thirty authored rooms that holds a
+    /// creature holds exactly one, so <i>which</i> body a room-level verb means has never been a question —
+    /// which is what lets rigging be a button instead of a target-picking mode. That invariant was assumed
+    /// by the retired F8 key for two units and gated by nothing; it is asserted now
+    /// (<c>GateFights</c>, *"no room holds two creatures for a room-level verb to choose between"*), so
+    /// the day it stops being true a check says so and names the room, rather than the button quietly
+    /// rigging against whichever placement happens to be first in the file.
+    /// <para>
+    /// <b>Placements with no <c>Entity</c> are skipped, and that is not the same as being empty.</b> A
+    /// placement whose <c>Entity</c> failed to resolve is a content error the authoring sweeps already fail
+    /// (a body that cannot be drawn or fought), so a verb offering itself against one would be offering
+    /// something that cannot happen. It is also what keeps this honest in the suite, where
+    /// <c>verify_held</c>'s body is deliberately id-only.
+    /// </para>
+    /// </remarks>
+    public EntityPlacement SoleCreatureHere()
+    {
+        if (CurrentRoom?.Entities == null) return null;
+
+        foreach (var p in CurrentRoom.Entities)
+            if (p?.Entity != null) return p;
+
+        return null;
+    }
 }

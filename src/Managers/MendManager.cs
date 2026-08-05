@@ -49,7 +49,66 @@ public static class MendManager
     /// which is the harder version to notice.
     /// </remarks>
     public static bool CanMend(HotspotData blight) =>
-        blight is { Kind: HotspotKind.Mend } && !IsMended(blight);
+        blight != null && !IsMended(blight) && CarriesABoard(blight);
+
+    /// <summary>
+    /// Whether this hotspot's click is a board rather than its usual verb. True for every
+    /// <see cref="HotspotKind.Mend"/>, and for the three major repairs of <c>items.md</c> §6 — a
+    /// <see cref="HotspotKind.Station"/> with a <see cref="HotspotData.MendPuzzle"/> on it — once the
+    /// repair has been assembled.
+    /// </summary>
+    /// <remarks>
+    /// <b>Added 2026-08-05, and the widening is deliberately this narrow.</b> §22 rules that the three
+    /// majors get a jigsaw "on the same terms", and `Enums.cs` already authored them as stations whose
+    /// recipe outputs a flag. What was missing was only the carrier: the board had nowhere to hang,
+    /// because both this method and <see cref="UI.MendPanel.Open"/> tested the kind directly.
+    /// <para>
+    /// <b>A repair is not a blight, and only this method widened.</b> <see cref="IsFouled"/>,
+    /// <see cref="IsCleansed"/> and the room sweep still count <see cref="HotspotKind.Mend"/> alone, so
+    /// a broken bridge does not foul its screen and cannot be the last thing standing between a screen
+    /// and cleansed. It also pays no Graveflower — a repair station carries no <c>ItemId</c>, and
+    /// <see cref="Mend"/> already says "it holds" rather than naming a yield when there is none. Both
+    /// matter to the good ending: <c>GateMending</c> bills exactly twelve blights and the exorcism
+    /// engine is priced at eight of their flowers, so a thirteenth would be a flower nobody costed.
+    /// </para>
+    /// <para>
+    /// <b>The board is the last step, not the first.</b> The recipe is what costs commons and what the
+    /// reclaimed memory gates, so the station opens the crafting panel until that recipe has been made
+    /// and the board once it has — which is §22's <i>"the puzzle is not a gate, it is the animation"</i>
+    /// in the only order that leaves the price somewhere.
+    /// </para>
+    /// </remarks>
+    public static bool CarriesABoard(HotspotData blight) => blight?.Kind switch
+    {
+        HotspotKind.Mend => true,
+        HotspotKind.Station => blight.MendPuzzle != null && IsAssembled(blight),
+        _ => false,
+    };
+
+    /// <summary>
+    /// Has the repair this station is for been crafted yet? Read off the recipe registry rather than a
+    /// field on the hotspot: the repair recipe already names its venue
+    /// (<see cref="Data.RecipeData.RequiresStation"/>) and already names the flag it writes
+    /// (<see cref="Data.RecipeData.SetsFlag"/>), so a station and its repair cannot be authored into
+    /// disagreeing about which belongs to which.
+    /// </summary>
+    /// <remarks>
+    /// A station with a board but no repair recipe authored for it yet returns false rather than
+    /// opening: an unbuilt bridge whose recipe is missing should refuse, and <c>--verify-slice</c>
+    /// fails on the pairing separately so this is never how the mistake is found.
+    /// </remarks>
+    public static bool IsAssembled(HotspotData station)
+    {
+        var flag = RepairAt(station?.StationId)?.SetsFlag;
+        return !string.IsNullOrEmpty(flag) && WorldStateManager.Instance?.GetFlag(flag) == true;
+    }
+
+    /// <summary>The world-repairing recipe made at this station, if there is one.</summary>
+    public static RecipeData RepairAt(string stationId) =>
+        string.IsNullOrEmpty(stationId)
+            ? null
+            : InventoryCraftingManager.Instance?.Recipes.Values.FirstOrDefault(
+                r => r != null && r.RepairsWorld && r.RequiresStation == stationId);
 
     /// <summary>
     /// The blight is put right: set the flag, pay the authored yield, re-check the screen. Returns
@@ -67,7 +126,7 @@ public static class MendManager
     /// </remarks>
     public static bool Mend(HotspotData blight)
     {
-        if (blight == null || blight.Kind != HotspotKind.Mend) return false;
+        if (!CarriesABoard(blight)) return false;
 
         var world = WorldStateManager.Instance;
 
@@ -176,7 +235,9 @@ public static class MendManager
     /// colour coming back has to be caused by something you did here.
     /// <para>
     /// Checked against all three ledgers, this costs one screen: every Blocked screen also carries a
-    /// creature or a blight, except the three major repairs (which have no mend site until unit 4) and
+    /// creature or a blight, except the three major repairs — whose boards are
+    /// <see cref="HotspotKind.Station"/> and so are invisible to <see cref="IsFouled"/> by design
+    /// (see <see cref="CarriesABoard"/>), leaving a broken bridge on a screen that reads cleansed — and
     /// <b>the Snarl, which reads cleansed from the start</b> and is a known wart. Unit 6 owns that
     /// screen's door. The note belongs here rather than as a special case in the predicate — a
     /// hard-coded room id would outlive the reason for it.

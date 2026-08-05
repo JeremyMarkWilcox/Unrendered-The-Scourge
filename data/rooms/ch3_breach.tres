@@ -1,9 +1,10 @@
-[gd_resource type="Resource" script_class="RoomData" load_steps=11 format=3]
+[gd_resource type="Resource" script_class="RoomData" load_steps=14 format=3]
 
 [ext_resource type="Script" uid="uid://b0jetcphiy2cm" path="res://src/Data/HotspotData.cs" id="1_hs"]
 [ext_resource type="Script" uid="uid://v0juosv2w310" path="res://src/Data/RoomData.cs" id="2_room"]
 [ext_resource type="Script" uid="uid://c4nlnfkcu2a6u" path="res://src/Data/EntityPlacement.cs" id="3_ep"]
 [ext_resource type="Resource" path="res://data/entities/beast_breach_thing.tres" id="4_ent"]
+[ext_resource type="Script" path="res://src/Data/MendPuzzleData.cs" id="9_mpz"]
 
 [sub_resource type="Resource" id="hs_0"]
 script = ExtResource("1_hs")
@@ -48,6 +49,23 @@ Region = Rect2(1260, 560, 250, 260)
 ExamineText = "[unwritten]"
 SetsFlag = "note.engine_physick.read"
 
+[sub_resource type="Resource" id="mp_repair"]
+script = ExtResource("9_mpz")
+Prompt = "[unwritten]"
+Parts = PackedStringArray("[unwritten 1]", "[unwritten 2]", "[unwritten 3]", "[unwritten 4]", "[unwritten 5]", "[unwritten 6]", "[unwritten 7]", "[unwritten 8]", "[unwritten 9]")
+Solution = PackedInt32Array(4, 1, 8, 2, 6, 0)
+
+[sub_resource type="Resource" id="hs_repair"]
+script = ExtResource("1_hs")
+Id = "ch3_breach_engine"
+Label = "The Engine"
+Kind = 9
+Region = Rect2(760, 820, 500, 210)
+StationId = "exorcism_engine"
+RequiredFlag = "defeated.ch3.beast_breach_thing_01"
+SetsFlag = "engine.built"
+MendPuzzle = SubResource("mp_repair")
+
 [sub_resource type="Resource" id="ep_0"]
 script = ExtResource("3_ep")
 InstanceId = "ch3.beast_breach_thing_01"
@@ -60,5 +78,5 @@ Id = "ch3_breach"
 DisplayName = "The Breach"
 ChapterId = "ch3"
 PlaceholderStyle = 1
-Hotspots = Array[ExtResource("1_hs")]([SubResource("hs_0"), SubResource("hs_1"), SubResource("hs_2"), SubResource("hs_3"), SubResource("hs_4")])
+Hotspots = Array[ExtResource("1_hs")]([SubResource("hs_0"), SubResource("hs_1"), SubResource("hs_2"), SubResource("hs_3"), SubResource("hs_4"), SubResource("hs_repair")])
 Entities = Array[ExtResource("3_ep")]([SubResource("ep_0")])

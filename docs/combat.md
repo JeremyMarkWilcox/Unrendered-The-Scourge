@@ -90,6 +90,40 @@ shimmer die, and understands they have won something. No tutorial copy required.
 > race. What is lost is this paragraph's teaching moment, and the notify line on leaving an anchored
 > fight carries it instead. All three land with the bosses, in unit 6.
 
+> ### ✅ Built, unit 9a, 2026-08-05 — both halves, and the note above is now history
+>
+> **Two of the three are done: the regeneration and the Resolve drain.** Only the visual aura is
+> outstanding, and it is art (`Hud`/`RoomView`, Jeremy's lane) rather than mechanism.
+>
+> Jeremy set the split — *"regen hp on enemy's turn and resolve drain on the players turn makes sense in my
+> head. Double whammy"* — so the two pressures compound rather than share a tick:
+>
+> | | when | how much | where |
+> |---|---|---|---|
+> | Resolve drain | the **player's** turn | `CorruptionAura` × the *full bar* | `EncounterManager.EndPlayerTurn` → `ResolveManager.SpendForTurn` |
+> | Regeneration | the **creature's** turn | `GameConfig.AnchoredRegenFraction` × the body's `Durability`, floor of 1 | `EncounterManager.Regenerate` → `CombatManager.Mend` |
+>
+> Both are gated by one condition and it is the one this section states: `EncounterManager.ActiveAura`
+> returns 0 unless the state is `Corrupted`, so **severing takes both away together** and a build that
+> stopped only one of them is red (`--verify-slice`, the `encounters` section, block 14).
+>
+> **Two corrections to the note above, both worth keeping visible.**
+>
+> 1. *"No boss is placed yet"* stopped being a reason to defer. The mechanism is content-independent: the
+>    field **is** the boss marker (a positive aura, no `IsBoss` flag), so it can be built, gated against
+>    fixtures and left waiting. What was actually blocking it was that nobody had checked.
+> 2. *"The regen was declined on purpose"* was reversed by Jeremy, and the stated reason with it. The race
+>    it feared is answered by **sizing** rather than by absence: `GameConfig.AnchoredRegenFraction` is 0.05,
+>    and it carries the one hard constraint — it must stay strictly **below** what a wrong-type weapon
+>    deals, or a resisted weapon becomes futile instead of slow, which is §18's immunity-reads-as-a-lock
+>    failure arriving through the back door. The gate checks that constraint rather than trusting it.
+>
+> **`CorruptionAura`'s default is now `0` and that was a bug fix.** It defaulted to `0.15` while nothing
+> read the field, so the first reader would have handed every creature in the game — eleven of them, rats
+> included — a boss's aura, by way of nobody having mentioned the field. Author it on the three bosses and
+> nowhere else; the `fights` section prints a census of who has one on every run. **Two of the three were
+> authored at `0.167` on 2026-08-05 and the census reads `2 of 13`** — only Iris is left.
+
 ### Defence is fixed, and equipment is the answer to it
 
 > **Superseded in part by §18, 2026-07-30. The *type* half of this section is exactly right and is
@@ -340,6 +374,10 @@ Consequences worth stating, because they are easy to get wrong later:
   is real-time traversal. A boss fight is turn-based, so the drain must tick on turns or the
   player is punished for thinking. Same bar, same meaning, different unit — `ResolveManager`
   will need a discrete `SpendForTurn`-style path alongside `_Process`.
+  **✅ Built, unit 9a (2026-08-05):** `ResolveManager.SpendForTurn`, called from
+  `EncounterManager.EndPlayerTurn`. The boss aura deliberately does **not** appear in
+  `CurrentRatePerSecond`, so a fight cannot consult a wall clock even by accident, and the gate asserts
+  that the per-second rate stays 0 *inside* a boss fight.
 - **Six turns is the budget for the whole engagement, not per phase.** If a boss ever gets
   multiple phases, the bar does not reset between them.
 - The rate is defined against a **full bar**, which is what makes camps load-bearing: see §17.
@@ -679,9 +717,16 @@ Small enough to finish, deep enough to have opinions about.
 Mostly additive:
 
 - `EntityState` already has the `Severed` middle value the model pivots on
-- `EntityData.CorruptionAura` already exists as an authored field — though **nothing reads it
-  yet**; it is stored in the `.tres`, and that is all *(it was seeded there; `ContentSeeder` was
-  deleted 2026-08-01)*
+- ~~`EntityData.CorruptionAura` already exists as an authored field — though **nothing reads it
+  yet**; it is stored in the `.tres`, and that is all~~ *(it was seeded there; `ContentSeeder` was
+  deleted 2026-08-01)* — **read as of unit 9a, 2026-08-05**, by `EncounterManager.ActiveAura`, which
+  drives both the drain and the regeneration. It is also the **boss marker**: a positive aura is what
+  "this is a boss" means in code, so there is no `IsBoss` flag and there should not be one. Its default
+  is now `0`, and ~~**no `.tres` stores it** — the three bosses are unauthored, so a census printed by
+  `--verify-slice` reads `0 of 11` until Jeremy sets them~~ **two `.tres` store it as of 2026-08-05**: the
+  Lost Trapper and the Blacksmith both carry `0.167`, the rate §6 asks for, and the census now reads
+  `2 of 13`. Iris is the only one outstanding, so the census stops being a placeholder and starts being a
+  claim — it was the one check written this unit that its own comment admitted was vacuous
 - `SaveService` persists plain dictionaries, so per-entity combat state grows without a save
   format break
 - `EntityStateManager.Resolve` stays the one place that knows how a state looks
@@ -1813,6 +1858,18 @@ unread because **no boss exists** — a universal quantified over an empty set i
 and per-turn regeneration (`SettleEngagement`'s coarser answer already covers it, and a heal on top
 would turn §5's 3–6 turns into a race).
 
+> **Two of those three shipped in unit 9a, 2026-08-05, and both stated reasons turned out to be wrong.**
+> See §2's ✅ subsection for what was built. The reasons are worth keeping because of how they failed:
+>
+> - *"No boss exists, so it would be a universal over an empty set."* The **gate** would have been
+>   vacuous; the **mechanism** was not, because it is content-independent — fixtures with an authored
+>   aura make every rule about it falsifiable without a single boss on the map. The deferral confused
+>   *nothing to check* with *nothing to build*.
+> - *"A heal on top would turn §5's 3–6 turns into a race."* True at the wrong rate and false at the
+>   right one. Jeremy reinstated §2's regeneration and the race is answered by `AnchoredRegenFraction`
+>   instead of by absence. A deferral's *reason* can be reversed by the author, and a reason that reads
+>   as arithmetic is the easiest kind to mistake for a proof.
+
 ### Reading 3a's gates back — 2026-08-03, 670 → 687 checks
 
 A day spent on the opposite question to the one a build asks: not *does this work* but *what did 3a ship
@@ -2604,7 +2661,7 @@ because a doc that only records its wins is a doc nobody trusts:
 | | What §19 said | What authoring it settled |
 |---|---|---|
 | **The fused pair are salves** | the four-salve table calls them *"burning oil salve"* and *"corrosive salve"* | They are **`Component`**, ids `brew_burning_oil` and `brew_corrosive_draught`. `items.md` §2 wins, and the reason is this section's own two-cap rule: a Component is never carried into a fight, so *which cap does it count against* becomes void rather than answered |
-| **A fused trap requires both tracks** | *"cannot be made by either track alone"* — read as a standing order to set `RequiresBothTracks` | The requirement is carried by the **ingredient**, and it has to be. This section's own inversion — her brews are an authored cache *"in your hands from the first hour"* — means a flag demanding you know her recipe would make the oil she left unusable until you could already replace it. `RequiresBothTracks` is reserved for **the exorcism engine**, the one recipe needing two *blueprints*, which no input can express |
+| **A fused trap requires both tracks** | *"cannot be made by either track alone"* — read as a standing order to set `RequiresBothTracks` | The requirement is carried by the **ingredient**, and it has to be. This section's own inversion — her brews are an authored cache *"in your hands from the first hour"* — means a flag demanding you know her recipe would make the oil she left unusable until you could already replace it. `RequiresBothTracks` is reserved for **the exorcism engine**, the one recipe needing **both hands of the journal**, which no input can express |
 | **Blank `RequiresStation` is compatible with old recipes** | the 4a note above rested on it | Vacuous: all four pre-existing recipes name a station, so nothing was relying on the blank case. Blank means the bench, and the six trap recipes leave it blank **deliberately** — a `"bench"` station id would be an alias for identical behaviour plus a hotspot nobody has authored |
 | **Every trap deals a damage type** | 4a gated it, on §13's since-reversed *"traps are consumed win or lose"* | **Two deal nothing on purpose** — the Snare holds, the Chime reveals. The gate was vacuously green until the roster landed, then went red against *correct content*. It narrowed to weapons, and the claim worth making about traps is a census: four armed traps, four distinct types, and the two inert ones named |
 

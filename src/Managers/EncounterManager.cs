@@ -157,6 +157,11 @@ public partial class EncounterManager : Node
     /// </summary>
     public RigBlock InspectRig(string instanceId, string itemId)
     {
+        // First, and not against `_opponentId` in particular: §22 strikes rigging from inside a fight
+        // without qualifying which creature, and the satchel you would set a trap from does not open once
+        // one is running. See `RigBlock.InFight`.
+        if (InFight) return RigBlock.InFight;
+
         var inv = InventoryCraftingManager.Instance;
         if (inv == null || string.IsNullOrEmpty(instanceId)) return RigBlock.NoSuchItem;
 
@@ -179,27 +184,30 @@ public partial class EncounterManager : Node
     /// <summary>
     /// Put a trap on one of a creature's sites.
     ///
-    /// <para><b>Free before the fight, a turn inside it</b> — §18's one sentence, and the only place in
-    /// this class where the same call costs different things. Nothing is consumed either way: traps went
-    /// permanent on 2026-08-01 (§19), so rigging *names* a trap you own rather than spending one — and since
-    /// unit 8 a collapse takes nothing at all, so there is no route by which one can be lost.</para>
+    /// <para><b>Free, and only before the fight.</b> Nothing is consumed: traps went permanent on
+    /// 2026-08-01 (§19), so rigging *names* a trap you own rather than spending one — and since unit 8 a
+    /// collapse takes nothing at all, so there is no route by which one can be lost. The rigging phase has
+    /// no timer either, so this costs neither an item nor a turn: it is the free half of the fight, and
+    /// committing is where the bill starts.</para>
     /// </summary>
     /// <remarks>
-    /// Rigging mid-fight needed no rule of its own, which is §18's point about the turn currency: it is
-    /// an action, so it costs an action. At 3–6 turns that is usually a bad trade and occasionally the
-    /// right desperate move, which is a decision rather than something to memorise.
+    /// <b>There used to be a mid-fight path here, and deleting it was a correction rather than a
+    /// simplification.</b> §18 priced re-rigging inside a fight at one turn — *"it is an action, so it costs
+    /// an action"* — and this method charged it, guarding on whose turn it was. §22's table then struck
+    /// rigging from what a fight reaches at all, and §22 also records the satchel refusing to open mid-fight,
+    /// which is the thing that actually enforces it. So the branch implemented an overruled rule and no UI
+    /// could reach it; <see cref="RigBlock.InFight"/> now refuses instead, which turns an unreachable arm into
+    /// a stated one. <see cref="RigBlock"/> carries Jeremy's ruling.
     /// </remarks>
     public bool Rig(string instanceId, string itemId)
     {
-        var fightingThis = InFight && _opponentId == instanceId;
-
-        // Mid-fight, it is only legal on your own turn — like every other action.
-        if (fightingThis && !_playersTurn) return false;
-
         switch (InspectRig(instanceId, itemId))
         {
             case RigBlock.NoSuchItem:
             case RigBlock.NotHeld:
+                return false;
+            case RigBlock.InFight:
+                EventBus.Instance?.EmitNotify("No time to set anything now.");
                 return false;
             case RigBlock.NotATrap:
                 EventBus.Instance?.EmitNotify("Not something you can set as a trap.");
@@ -221,24 +229,21 @@ public partial class EncounterManager : Node
 
         rig.Add(itemId);
         EventBus.Instance?.EmitNotify($"Set: {InventoryCraftingManager.Instance?.DisplayNameOf(itemId)}");
-
-        if (fightingThis) EndPlayerTurn();
         return true;
     }
 
     /// <summary>
-    /// Take a trap back off a site. Free outside a fight — the rigging phase has no timer, so changing
-    /// your mind is not a cost — and a turn inside one, like everything else.
+    /// Take a trap back off a site. Free, because the rigging phase has no timer and changing your mind is
+    /// not a cost — and refused mid-fight for the same reason <see cref="Rig"/> is, since a rule that let you
+    /// unset what you could not set would be the deleted mid-fight path arriving from the other side.
     /// </summary>
     public bool Unrig(string instanceId, string itemId)
     {
-        var fightingThis = InFight && _opponentId == instanceId;
-        if (fightingThis && !_playersTurn) return false;
+        if (InFight) return false;
 
         if (!_rigs.TryGetValue(instanceId, out var rig) || !rig.Remove(itemId)) return false;
         if (rig.Count == 0) _rigs.Remove(instanceId);
 
-        if (fightingThis) EndPlayerTurn();
         return true;
     }
 
@@ -529,6 +534,28 @@ public partial class EncounterManager : Node
         _playersTurn = false;
 
         var placement = NavigationManager.Instance?.FindPlacement(_opponentId);
+        var aura = ActiveAura(_opponentId, placement?.Entity);
+
+        // The player's turn is what the aura charges for, so it is billed here rather than inside the
+        // creature's step. If that empties the bar, `CampManager` has already carried you to a camp and
+        // `OnRoomEntered` has already ended this fight by the time the call returns — so the test is whether
+        // a fight is still running, exactly as it is below and for the same reason. Do not test the bar: the
+        // respawn refilled it.
+        if (aura > 0f)
+        {
+            ResolveManager.Instance?.SpendForTurn(aura * (ResolveManager.Instance?.Max ?? GameConfig.ResolveMax));
+            if (!InFight) return;
+        }
+
+        // Its turn: it closes what you opened, then it hits you. **Regeneration first**, because
+        // `CreatureStrike` can collapse you and end the fight, and a heal belongs inside the fight it is a turn
+        // of. Stated as a preference rather than a rule: after a collapse `SettleEngagement` has already closed
+        // an anchored body's wounds, so `Regenerate` would find nothing standing and return 0 — the other order
+        // is inert rather than wrong, and its only visible effect would be the aura's line of narration landing
+        // after *"you come to somewhere else"*. **No check distinguishes the two orders**, and none can with the
+        // fixtures as they are: every arena body but the ward test's deals no damage, so nothing there can
+        // collapse the player mid-turn. Worth knowing before reading the gate as cover for this line.
+        Regenerate(_opponentId, placement?.Entity, aura);
         CreatureStrike(placement?.Entity, parting: false);
 
         // Its blow may have collapsed you, in which case the fight is already over: the bar's own
@@ -550,11 +577,15 @@ public partial class EncounterManager : Node
     /// rather than at zero. The floor of 1 is the mirror of
     /// <see cref="CombatManager.DamageAgainst"/>'s: a warded hit is a smaller hit, not a miss.
     ///
-    /// <para><b>There is deliberately no regeneration step here.</b> §2 describes the anchored body as
-    /// regenerating every turn, and the built model already answers that more coarsely and better:
-    /// <see cref="CombatManager.SettleEngagement"/> closes wounds when the fight ends anchored. Healing
-    /// per turn as well would turn §5's 3–6 turn fight into a race against a heal, which is exactly the
-    /// length failure §18 deleted the Defence scalar to avoid.</para>
+    /// <para><b>The regeneration step is not here — it is <see cref="Regenerate"/>, called before this.</b>
+    /// This remark used to say there deliberately was none: §2 describes the anchored body as regenerating
+    /// every turn, and <see cref="CombatManager.SettleEngagement"/> already closes wounds when a fight ends
+    /// anchored, so a per-turn heal on top looked like it could only turn §5's 3–6 turns into a race. Jeremy
+    /// reinstated §2's version on 2026-08-05 — *"regen hp on enemy's turn and resolve drain on the players
+    /// turn makes sense in my head. Double whammy"* — and the race is answered by the rate instead of by the
+    /// absence: <c>GameConfig.AnchoredRegenFraction</c> carries the argument, including the one number this
+    /// must stay under. The two heals are also not the same claim. Settling answers *what survives between
+    /// visits*; this answers *what a turn is worth inside one*.</para>
     /// </remarks>
     private void CreatureStrike(EntityData data, bool parting)
     {
@@ -573,6 +604,64 @@ public partial class EncounterManager : Node
         EventBus.Instance?.EmitNotify(warded
             ? $"{lead} strikes, and the {InventoryCraftingManager.Instance?.DisplayNameOf(armour.Id)} takes most of it."
             : $"{lead} strikes home.");
+    }
+
+    /// <summary>
+    /// How strongly this body's aura is working on you right now, or 0 for no aura at all.
+    /// <c>combat.md</c> §2 and §6, in one place because both effects ask the same question.
+    /// </summary>
+    /// <remarks>
+    /// <b>Three rules collapse into two lines here, and none of them needed a new field.</b>
+    /// <list type="bullet">
+    /// <item><i>Only bosses have auras</i> — so a positive <see cref="EntityData.CorruptionAura"/> is the
+    /// marker. `aura-scoped-to-bosses` names *having an aura* as the property, so the number that measures it
+    /// is the number that decides, and the default is 0 for exactly this reason.</item>
+    /// <item><i>Only an unbroken tether drains</i> — so the state machine answers it:
+    /// <see cref="EntityState.Corrupted"/> yes, <see cref="EntityState.Severed"/> no. §2 is explicit that
+    /// this needs no boss-specific case and no flag.</item>
+    /// <item><i>It is never ambient</i> — so this is only ever consulted from inside a turn. Nothing calls it
+    /// from <c>_Process</c>, and <c>ResolveManager.CurrentRatePerSecond</c> deliberately does not know it
+    /// exists.</item>
+    /// </list>
+    /// A missing state defaults to <see cref="EntityState.Corrupted"/> to match every other read in this
+    /// class — but note the default cannot manufacture a drain on its own, because an unauthored aura is 0.
+    /// </remarks>
+    private static float ActiveAura(string instanceId, EntityData data)
+    {
+        if (data == null || data.CorruptionAura <= 0f) return 0f;
+
+        var state = EntityStateManager.Instance?.GetState(instanceId) ?? EntityState.Corrupted;
+        return state == EntityState.Corrupted ? data.CorruptionAura : 0f;
+    }
+
+    /// <summary>
+    /// The anchored body closing what you opened, once per creature turn. §2's *"regenerates every turn"*.
+    /// </summary>
+    /// <remarks>
+    /// <b>Reads whether there is an aura, not how strong it is</b> — see
+    /// <c>GameConfig.AnchoredRegenFraction</c>, which is where the sizing argument lives and why the two
+    /// halves of the aura do not share a number.
+    /// <para>
+    /// <b>A floor of 1, and it is the same floor <see cref="CreatureStrike"/> and
+    /// <see cref="CombatManager.DamageAgainst"/> both keep.</b> A boss durable enough to round the fraction
+    /// down to nothing would regenerate visibly in the fiction and measurably not at all, which is worse than
+    /// either honest answer. Silent when nothing closes, so an unwounded body does not narrate a heal — and
+    /// that is the guard, not an optimisation: <see cref="CombatManager.Mend"/> returning 0 is how *nothing
+    /// moved* is told apart from a heal of zero.
+    /// </para>
+    /// </remarks>
+    private static void Regenerate(string instanceId, EntityData data, float aura)
+    {
+        if (aura <= 0f || data == null) return;
+
+        var combat = CombatManager.Instance;
+        if (combat == null) return;
+
+        var closed = combat.Mend(instanceId,
+            Mathf.Max(1, Mathf.RoundToInt(data.Durability * GameConfig.AnchoredRegenFraction)));
+
+        if (closed > 0)
+            EventBus.Instance?.EmitNotify("The aura pulses, and the wound you opened knits shut.");
     }
 
     /// <summary>

@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="EntityData" format=3]
+
+[ext_resource type="Script" path="res://src/Data/EntityData.cs" id="1_ed"]
+
+[resource]
+script = ExtResource("1_ed")
+Id = "boss_blacksmith"
+CorruptedName = "The Blacksmith"
+SpiritName = "[unwritten]"
+BlocksPath = false
+CorruptionAura = 0.167
+Durability = 38
+VulnerableTo = 4
+ResistantTo = 3
+Deals = 2
+Damage = 14

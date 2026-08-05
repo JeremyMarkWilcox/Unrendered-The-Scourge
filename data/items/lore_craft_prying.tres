@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://src/Data/ItemData.cs" id="1_lcpry"]
+
+[resource]
+script = ExtResource("1_lcpry")
+Id = "lore_craft_prying"
+DisplayName = "On Leverage"
+Description = "His own hand, set down again after the Dream gave it back. Where to put a bar, and what a boarded door gives way to."
+Category = 4
+PlaceholderColor = Color(0.7215686, 0.5803922, 0.36078432, 1)

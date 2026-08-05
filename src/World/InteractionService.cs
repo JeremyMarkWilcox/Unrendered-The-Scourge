@@ -130,8 +130,32 @@ public static class InteractionService
             // one authority on whether a given recipe can be made here, and re-asking that question at
             // the door would put a second copy of the camp-satisfies-every-station ruling somewhere it
             // could disagree. Clicking a station always opens the panel; the panel greys the rows.
+            //
+            // A station with a board on it is one of §22's three major repairs, and it has two clicks
+            // in this order: the panel, where the commons are paid and the reclaimed memory gates the
+            // row, and then the board, which is the animation rather than the gate. `SetsFlag` is
+            // withheld from a repair for exactly the reason the Mend branch below withholds it — on a
+            // repair it is the passage, and a passage must not open because you looked at the bridge.
             case HotspotKind.Station:
-                SetFlagIfAny(data.SetsFlag);
+                if (data.MendPuzzle != null)
+                {
+                    if (MendManager.CanMend(data))
+                    {
+                        EventBus.Instance?.EmitMendRequested(data);
+                        return true;
+                    }
+
+                    if (MendManager.IsMended(data))
+                    {
+                        EventBus.Instance?.EmitNotify(MendManager.AlreadyMended);
+                        return false;
+                    }
+                }
+                else
+                {
+                    SetFlagIfAny(data.SetsFlag);
+                }
+
                 EventBus.Instance?.EmitCraftingRequested(data.StationId);
                 AnnounceCraftingVenue(data);
                 return true;

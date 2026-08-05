@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://src/Data/ItemData.cs" id="1_lcmec"]
+
+[resource]
+script = ExtResource("1_lcmec")
+Id = "lore_craft_mechanisms"
+DisplayName = "On Mechanisms"
+Description = "His own hand, set down again after the Dream gave it back. Tension, and the several ways a thing can be made to spring when it is stepped on."
+Category = 4
+PlaceholderColor = Color(0.7215686, 0.5803922, 0.36078432, 1)

@@ -85,14 +85,23 @@ public static class ContentReport
     {
         var placements = rooms.Values.SelectMany(r => r.Entities).Where(p => p?.Entity != null).ToList();
 
-        Row("creature files on disk", FilesIn(GameConfig.EntityDataDir), 12);
+        Row("creature and beast files on disk", FilesIn(GameConfig.EntityDataDir, "boss_", excluding: true), 12);
+        Row("— boss files (Iris outstanding)", FilesIn(GameConfig.EntityDataDir, "boss_"), 3);
         Row("fights placed", placements.Count, 33);
 
         // Split the way §1 splits it, because 33 = 30 regular + 3 bosses and the bosses are the missing half.
-        // A boss is the one creature with no `PurifiedName` *and* a pocket to be severed in — but no boss is
-        // authored yet, so this counts what it can: never-human bodies, which today is the Beast only.
+        // ~~A boss is the one creature with no `PurifiedName` *and* a pocket to be severed in — but no boss is
+        // authored yet, so this counts what it can: never-human bodies, which today is the Beast only.~~
+        //
+        // **Two of the three landed 2026-08-05, so this row now reads 8 of 9 and the remainder is Iris.** The
+        // struck sentence also carried a definition that Jeremy's ruling that day retired: a boss is *not*
+        // "the creature with no `PurifiedName` and a pocket to be severed in". The Blacksmith has a pocket and
+        // is a person, and he still has no `PurifiedName` — because the name records **who walks away**, and
+        // nobody walks away from his fight. What makes something a boss is the aura (`EntityData.CorruptionAura`,
+        // the boss marker); what a blank `PurifiedName` marks is a fight that frees nobody. Those were the same
+        // set for as long as the Beast was the only member, which is how one word did both jobs unnoticed.
         var neverHuman = placements.Count(p => string.IsNullOrEmpty(p.Entity.PurifiedName));
-        Row("— of those, never-human bodies (Beasts + bosses)", neverHuman, 9);
+        Row("— of those, bodies that free nobody (Beasts + bosses)", neverHuman, 9);
 
         Row("people freed (flag-gated NPC hotspots)",
             rooms.Values.SelectMany(r => r.Hotspots)
@@ -312,7 +321,22 @@ public static class ContentReport
     /// Count `.tres` files in a directory without consulting whatever registry loaded them — the fifth
     /// blind-spot class, and the reason this is measured on disk rather than from a manager.
     /// </summary>
-    private static int FilesIn(string dir)
+    /// <summary>
+    /// Counts authored files, optionally only those whose name begins with <paramref name="prefix"/> —
+    /// or, when <paramref name="excluding"/> is true, only those that do not.
+    ///
+    /// <para><b>The filter arrived with the bosses on 2026-08-05, and the reason is worth keeping.</b> The
+    /// creature row's target of 12 is the pair matrix of `items.md` §10, which counts the *regular* roster;
+    /// two boss files pushed the count to 13 and `Row` correctly printed `!!`, because over-target is the
+    /// one status this tool treats as a contradiction rather than as progress. Widening the target to 15
+    /// would have been the wrong repair — it makes one number mean two bills and the `!!` stops being able
+    /// to fire on either. Two rows counting two things is what the bill actually says.</para>
+    ///
+    /// <para>Filtering on the filename rather than on placements is deliberate: a boss authored and never
+    /// put anywhere has to stay visible, which is the whole point of counting disk against registry
+    /// (`handoff.md` §3, fifth class).</para>
+    /// </summary>
+    private static int FilesIn(string dir, string prefix = "", bool excluding = false)
     {
         var count = 0;
         using var handle = DirAccess.Open(dir);
@@ -320,8 +344,13 @@ public static class ContentReport
 
         handle.ListDirBegin();
         for (var f = handle.GetNext(); f != ""; f = handle.GetNext())
-            if (!handle.CurrentIsDir() && (f.EndsWith(".tres") || f.EndsWith(".tres.remap")))
-                count++;
+        {
+            if (handle.CurrentIsDir()) continue;
+            if (!f.EndsWith(".tres") && !f.EndsWith(".tres.remap")) continue;
+            if (prefix.Length > 0 && f.StartsWith(prefix) == excluding) continue;
+
+            count++;
+        }
 
         return count;
     }

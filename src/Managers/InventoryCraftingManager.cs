@@ -385,6 +385,101 @@ public partial class InventoryCraftingManager : Node
     /// <summary>Everything known, for the journal and the save.</summary>
     public IReadOnlyCollection<string> DiscoveredBlueprints => _discovered;
 
+    // ---- Which half of the journal (unit 7a, decision 9) ------------------
+
+    // The two prefixes that say whose hand a page is in. Named once because three things read them now —
+    // <see cref="TrackOf"/>, <see cref="KnowsAnyPageOn"/>, and a gate that holds every page to declaring
+    // one — and a second spelling of either string is a second thing to keep in agreement for no gain.
+    private const string CraftPagePrefix = "lore_craft_";
+    private const string PhysickPagePrefix = "lore_physick_";
+
+    /// <summary>
+    /// Which hand taught this recipe — the divider the journal is drawn along.
+    /// </summary>
+    /// <remarks>
+    /// <b>Derived, never authored, and that is decision 9 taken at its word.</b> The panel is one journal
+    /// with two sides, so *which side* is not new information: it is already written down twice over. The
+    /// blueprint id says it out loud (<c>lore_craft_</c> / <c>lore_physick_</c>, and a gate already asserts
+    /// every family declares its hand), and the output item carries <see cref="Data.ItemData.Track"/>. A
+    /// third authored field would be a third thing to keep in agreement, which is the mistake
+    /// <c>RoomData.IsSanctuary</c> was deleted for.
+    /// <para>
+    /// <b>The blueprint wins where both speak, and a gate holds them to agreeing anyway.</b> The order
+    /// matters for exactly one live case and it is the one the item has to answer: Clearmind is the only
+    /// recipe in the game with no blueprint — you have always known it — and <c>salve_clearmind</c>
+    /// authors <c>Track = 1</c>, so hers is the side it lands on. Every other recipe resolves the same way
+    /// from either source, which is what makes the crossing check meaningful rather than decorative.
+    /// </para>
+    /// <para>
+    /// <b>A repair recipe has no output item</b> (<see cref="RecipeData.RepairsWorld"/>), so for the three
+    /// major repairs the blueprint prefix is the only answer available — another reason it is consulted
+    /// first rather than as a fallback.
+    /// </para>
+    /// </remarks>
+    public KnowledgeTrack TrackOf(RecipeData recipe)
+    {
+        if (recipe == null) return KnowledgeTrack.Craft;
+
+        if (recipe.RequiredBlueprintId.StartsWith(PhysickPagePrefix)) return KnowledgeTrack.Physick;
+        if (recipe.RequiredBlueprintId.StartsWith(CraftPagePrefix)) return KnowledgeTrack.Craft;
+
+        return GetItem(recipe.OutputItemId)?.Track ?? KnowledgeTrack.Craft;
+    }
+
+    /// <summary>
+    /// Whether this recipe is written on the given side of the journal. <b>The engine is on both</b>, which
+    /// is the whole reason this is a predicate rather than a comparison against
+    /// <see cref="TrackOf"/>.
+    /// </summary>
+    /// <remarks>
+    /// <b>This is <see cref="RecipeData.RequiresBothTracks"/>'s display reader; <see cref="Inspect"/> is the
+    /// one that bites.</b> Worth being exact about, because a field going from no readers to one is where
+    /// the eleventh blind-spot class hides: for one unit this method was the only reader, so the engine
+    /// appeared on both sides of the book and could be made by a player who knew one of them. ~~That
+    /// refusal is unit 7b and is still outstanding.~~ **Landed 2026-08-05 as
+    /// <see cref="CraftBlock.HalfKnown"/>.** Appearing on both sides is where the field *reads* correctly;
+    /// refusing until both are known is where it *bites*, and the two landing in different units is exactly
+    /// the situation that makes a green suite feel like more than it is.
+    /// <para>
+    /// The two now compose into the state the engine is for: its page is drawn on her side, greyed, while
+    /// her side is otherwise blank — which is the only place the game says out loud that you need something
+    /// of hers. Nothing leaks before that, because a recipe whose own page is unfound is <c>Unknown</c> and
+    /// an unknown page is not in the book at all.
+    /// </para>
+    /// </remarks>
+    public bool BelongsToSide(RecipeData recipe, KnowledgeTrack side) =>
+        recipe != null && (recipe.RequiresBothTracks || TrackOf(recipe) == side);
+
+    /// <summary>
+    /// Whether anything at all has been learned on the given side of the journal. The question
+    /// <see cref="RecipeData.RequiresBothTracks"/> asks of the hand the recipe is not written in.
+    /// </summary>
+    /// <remarks>
+    /// <b>Pages held, not recipes known, and that distinction is the whole rule rather than an
+    /// implementation detail.</b> The near-miss is Clearmind: it is hers, it is the one recipe in the game
+    /// with no blueprint, and you know it from the first minute. Asking *do you know a recipe on her side*
+    /// would therefore be true at game start, the engine would be half-satisfied before the story began,
+    /// and the flag would refuse nothing it was added to refuse — a check that cannot fail, wearing the
+    /// clothes of one that can. Asking *do you hold a page of hers* is the question `items.md` §6 actually
+    /// poses: *"his Craft from a pocket, her Physick from a scattered note."*
+    /// <para>
+    /// <b>Prefix only, with no fallback to the item's <see cref="Data.ItemData.Track"/>.</b> A fallback would
+    /// be unreachable: every page declares its hand in its id and a gate holds them to it, so the second arm
+    /// could never run, and an arm that cannot run is a shape with no reader. It also keeps the answer
+    /// honest for a set that contains something odd — an id on neither prefix counts for neither side,
+    /// rather than defaulting into one the way <see cref="TrackOf"/> has to.
+    /// </para>
+    /// </remarks>
+    public bool KnowsAnyPageOn(KnowledgeTrack side)
+    {
+        var prefix = side == KnowledgeTrack.Physick ? PhysickPagePrefix : CraftPagePrefix;
+
+        foreach (var id in _discovered)
+            if (id.StartsWith(prefix)) return true;
+
+        return false;
+    }
+
     // ---- Crafting --------------------------------------------------------
 
     /// <summary>
@@ -489,6 +584,20 @@ public partial class InventoryCraftingManager : Node
         if (recipe.NeedsBlueprint && !IsDiscovered(recipe.RequiredBlueprintId))
             return CraftBlock.Unknown;
 
+        // The other hand, immediately after the one this recipe is written in, because it is the same
+        // question and a knowledge block outranks everything a knowledge block outranks. One recipe sets
+        // this flag — the exorcism engine — and until 2026-08-05 nothing here read it, so knowing his half
+        // was enough to build the thing that needs both.
+        //
+        // **Both sides are tested rather than "the side this recipe is not on".** The narrower test would
+        // need `TrackOf` and would be right today by accident: the engine's own page is his, so the side to
+        // interrogate would be hers. Asking for both is symmetric, cannot be wrong if that page ever changes
+        // hands, and is what the field says — `RecipeData.RequiresBothTracks` is a bool precisely because
+        // *"the interesting state is both, never either"*.
+        if (recipe.RequiresBothTracks &&
+            (!KnowsAnyPageOn(KnowledgeTrack.Craft) || !KnowsAnyPageOn(KnowledgeTrack.Physick)))
+            return CraftBlock.HalfKnown;
+
         // A recipe must make *something*. Until 2026-08-03 that meant an item; §19 added the recipe
         // that outputs only a world flag (`RecipeData.RepairsWorld`), so the test is now "neither"
         // rather than "no item". Still `NoSuchRecipe`, because a recipe with neither is a content
@@ -516,6 +625,52 @@ public partial class InventoryCraftingManager : Node
     }
 
     public bool CanCraft(string recipeId) => Inspect(recipeId) == CraftBlock.None;
+
+    /// <summary>
+    /// Plain words for a refusal, or "" for the one that is not a refusal.
+    /// </summary>
+    /// <remarks>
+    /// <b>Public and static on <c>CampManager.Words</c>'s precedent</b>, which took it from
+    /// <c>EncounterManager.Words</c>: the panel has to say why a row is dead, and a private copy of these
+    /// sentences over there would close the loop today and drift the first time one is reworded. One
+    /// vocabulary, two readers.
+    /// <para>
+    /// <b><see cref="CraftBlock.AlreadyMade"/> is worded as news rather than as a no</b>, because its own
+    /// doc-comment instructs the panel to: *"the only CraftBlock that is good news… a row greyed by this
+    /// one must not read like a failure."* The enum asked for this sentence before there was anything to
+    /// read it.
+    /// </para>
+    /// <para>
+    /// <b><see cref="CraftBlock.NotAtStation"/> names the cure and not just the cause</b>, for the reason
+    /// §19 gives: a venue block can never dead-end anyone, since the camp bench satisfies every station and
+    /// a camp is reachable from anywhere. A line reading only *"not here"* would be true and would still
+    /// leave the player hunting.
+    /// </para>
+    /// <para>
+    /// <b><see cref="CraftBlock.MissingMaterials"/> does not name what is short</b>, and that is a division
+    /// of labour rather than an omission: this method sees a <see cref="CraftBlock"/> and nothing else,
+    /// while the row already draws every input with a *(have 1)* against the ones you are short of, which
+    /// is decision 9's *"Deadfall — needs Scrap Iron"* reading. Naming it here as well would need the
+    /// recipe passed in, and would then say it twice.
+    /// </para>
+    /// <para>
+    /// <b><see cref="CraftBlock.HalfKnown"/> does not name which side is blank</b>, for the same reason and
+    /// with a better consolation: this method sees a block and not a knowledge set, so it could not say. It
+    /// does not need to. The row is drawn on both sides of the book (<see cref="BelongsToSide"/>), so the
+    /// player reads that refusal while looking at the empty half — the panel points at the answer by where
+    /// it puts the page, which is stronger than a sentence naming it.
+    /// </para>
+    /// </remarks>
+    public static string Words(CraftBlock block) => block switch
+    {
+        CraftBlock.NoSuchRecipe => "The page is spoiled. Nothing on it can be made.",
+        CraftBlock.Unknown => "He does not know how.",
+        CraftBlock.HalfKnown => "One side of the book is still blank. This needs both hands.",
+        CraftBlock.MissingMaterials => "Not enough to hand.",
+        CraftBlock.NotAtStation => "Not here. The bench at camp, or the right station.",
+        CraftBlock.AlreadyMade => "Already made.",
+        _ => "",
+    };
 
     /// <summary>
     /// Spend the inputs, gain the output. Returns false without touching anything when refused —

@@ -21,9 +21,12 @@ creature grammar and §22 is the screen grammar, and where they disagree the gra
 > the struck paragraph above stays deliberately unread — `RequiresBothTracks`, reserved for the exorcism
 > engine; see the note under §3's fusion table for why the fused traps do *not* set it.
 >
-> **What is still a document:** the three major repairs (§6), the eleven `Lore` pages that eight pockets and
-> three notes will be (§8), the twelve creatures (§10), and equipping — a coat you can craft and cannot wear
-> is unit 3's problem, the same way a trap you can craft and cannot rig already is.
+> **What is still a document:** ~~the three major repairs (§6),~~ *(authored 2026-08-05 — three `Station`
+> hotspots and three `RepairsWorld` recipes; `RequiresBothTracks` is read by two things now, the refusal and
+> the engine)* the eleven `Lore` pages that eight pockets and three notes will be (§8) — **ten of them are
+> files as of 2026-08-05**, the eleventh being her fourth note — the twelve creatures (§10), and equipping — a
+> coat you can craft and cannot wear is unit 3's problem, the same way a trap you can craft and cannot rig
+> already is.
 
 > **What is locked and what is sketch, because they are not the same.**
 >
@@ -574,11 +577,47 @@ small version of *"zone cleanses, sun comes out"*, already in the playable loop 
 | **The mine cart** | village → mine | commons + a memory from **the ch2 boss pocket** | end of ch2 |
 | **The exorcism engine** | **nothing** — it unlocks the good ending | **8 Graveflower** + commons + **its own pocket** + **one of her notes** | the finale |
 
+> **Authored 2026-08-05, and one column of that table is now wrong.** The *"memory from the boss pocket"*
+> was superseded by `build-plan.md` §7 decision 10 a day earlier: **the boss flag is the gate**, so there
+> is no reclaimed-memory item and `RequiredBlueprintId` is empty on all three recipes. Read the Cost column
+> as *commons, behind the boss* for the first two; the engine's 8 Graveflower, its commons and its two hands
+> are all real and all authored (`data/recipes/repair_exorcism_engine.tres`).
+>
+> The shape on disk: a `HotspotKind.Station` hotspot carrying a `MendPuzzle`, plus a recipe whose
+> `OutputItemId` is blank and whose `SetsFlag` is the passage. **A major repair is not a thirteenth blight** —
+> `MendManager.CarriesABoard` is the only predicate that treats it like one, so it does not foul its screen
+> and pays no Graveflower, which is what keeps §6's twelve-flower supply matching the engine's price of 8.
+> The two chapter seams (`ch1_bridge` → `ch2_bridgehead`, `ch2_cart_road` → `ch3_adit`) are gated on the
+> passage flags now, so the Gates column is enforced rather than described.
+
 **The first two cost no extra pocket; the engine does.** Beat the boss, get the memory, fix the thing,
 cross into the next chapter — that is why the bridge and the cart are free. The engine cannot borrow its
 chapter's boss pocket, because you build it *before* that fight rather than after, so it needs one of its
 own. It is also **the only recipe requiring both tracks** — his Craft from a pocket, her Physick from a
 scattered note. See §8, where this was undercounted in the first draft.
+
+**Why it needs both, confirmed by Jeremy 2026-08-05: the engine *is* the two of them working together.**
+*"You need a Physick and a Crafting recipe. Two halves to complete it… It combines their trades."* That is
+the whole reason the requirement exists and the reason it is the good ending's price rather than a difficulty
+knob — the thing that ends the Scourge cannot be built by his hands alone, and the recipe is the only place
+in the game where the two halves of the journal are read at once. The `RequiresBothTracks` bool is that
+sentence; the row drawn on both sides of the book is that sentence on screen. Nothing else in the game
+requires two hands, and nothing else should.
+
+**What "her Physick" means, ruled 2026-08-05: any page of hers, not a named one.** The refusal landed this
+day as `CraftBlock.HalfKnown` — the engine's own page is his, and until you hold *something* she wrote, the
+recipe is drawn on both sides of the journal and dead from either. The alternative was a second blueprint id
+on the recipe, so the engine could demand one specific note; it was rejected because knowledge is already a
+flat set of page ids whose prefix says whose hand it is, so *do you know anything of hers* needs no new
+field, and seventeen other recipes would have carried a blank one. The practical consequence is that her
+three teaching notes are interchangeable for this purpose: find any one and the engine's Physick half is
+answered.
+
+**It is a side path, and nothing is obliged to make it reachable.** The engine buys the good ending and
+gates nothing — `combat.md` §20: *"a player who reaches the finale with nothing built can still finish the
+game. They just finish it badly."* So invariant 12 does not reach it: neither the 8 Graveflower nor her
+notes nor its pocket has to be placed where a player must walk, and a claim to the contrary was withdrawn
+on the day the refusal landed. The refusal is real; escaping it is optional.
 
 Taught on a bridge, practised on a cart, and its third use is the climax. Same system all three times,
 and the escalation costs nothing. See `combat.md` §20 for what the third one actually is.
@@ -1103,6 +1142,25 @@ weighting the whole set toward one or the other.
 | **The Lost Trapper** | 1 | Edge | Blunt | Edge | **already dead** — a corpse being worn. Severing frees nobody, and it says nothing |
 | **The Blacksmith** | 2 | **Caustic** | Fire | Blunt | alive, tethered; he **begs you**, thanks you, and dies. The first person you kill |
 | **The Demon / Iris** | 3 | — | — | — | the finale. See `combat.md` §20 |
+
+**Two of the three are on disk and standing, 2026-08-05.** `boss_lost_trapper.tres` in `ch1_trap_yard` and
+`boss_blacksmith.tres` in `ch2_smithy` — the screens `ledger-ch1` row 9 and `ledger-ch2` row 11 give them,
+each **one screen before** the major repair its defeat flag opens. Everything above this line was enough to
+author them: the table fixes all three types and the display names, and `combat.md` §6 fixes the aura at
+`0.167`. Only two numbers were invented — `Durability` 34 / 38 and `Damage` 12 / 14, sized so a matched
+weapon at Potency 10 doubled kills inside the six-turn Resolve budget §6 allows. `BlocksPath` is **false**
+on both: the passage each guards is already flag-gated, so blocking would additionally seal the way back
+out of the chapter behind them.
+
+**Both leave `PurifiedName` blank, and that is Jeremy's Blacksmith ruling rather than an omission** — his
+spirit breaks in the Dream and the body dies with the demon, so nobody walks away from either fight and both
+write `defeated.*`. Which flag a win writes is derived from that blank field and never authored; see
+`Flags.Defeated`, which also records why the **harvest** did not widen along with it. `HarvestItemId` stays
+blank on both: the Beast is still the only thing you may loot.
+
+**Iris is deliberately still absent**, and it is this section's *"the Demon's types are deliberately
+unfixed"* below that keeps her that way — she cannot be derived while her pair is open, so the roster bill
+sits at `defeated.* == 8` of an eventual 9 and the content report shows `boss files 2 / 3`.
 
 **Each boss's anchor is an object of their trade, never person-shaped** — the Trapper's is **a snare,
 sprung and empty**. Ratified 2026-07-31; the reasoning and the one part still open (Iris's object) are in

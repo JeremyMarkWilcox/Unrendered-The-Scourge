@@ -313,7 +313,10 @@ public partial class PocketManager : Node
         {
             case PocketKind.Knowledge:
                 if (!string.IsNullOrEmpty(pocket.GrantsBlueprintId))
+                {
                     InventoryCraftingManager.Instance?.Discover(pocket.GrantsBlueprintId);
+                    GrantPage(pocket.GrantsBlueprintId);
+                }
 
                 if (pocket.GrantsMaxResolve > 0)
                     ResolveManager.Instance?.RaiseMax(pocket.GrantsMaxResolve);
@@ -344,6 +347,49 @@ public partial class PocketManager : Node
                 }
                 break;
         }
+    }
+
+    /// <summary>
+    /// Hand over the page for a blueprint just learned, so what he knows is also something he holds.
+    /// </summary>
+    /// <remarks>
+    /// <b>Decision 11, 2026-08-04: a page is a view of the knowledge rather than a second copy of it</b>, and
+    /// what makes that safe is that the page id and the blueprint id are <i>the same string</i>. So this takes
+    /// no argument of its own — there is nothing to pass that could disagree with what
+    /// <see cref="InventoryCraftingManager.Discover"/> was just given, and a second field naming "the page for
+    /// this family" is precisely the drift the decision was made to avoid. The fiction is Jeremy's: Daniel
+    /// writes the page himself once the Dream gives the craft back, which is why the pocket produces one at all.
+    /// <para>
+    /// The other direction was already built — <see cref="InventoryCraftingManager.AddItem"/> discovers on
+    /// picking up anything <see cref="ItemCategory.Lore"/> — so <c>Discover</c> above is strictly redundant
+    /// whenever the page exists. It is called anyway, and deliberately: <b>the knowledge is the grant and the
+    /// page is the receipt.</b> A family whose <c>.tres</c> has not been authored yet must still open its
+    /// recipes, or an unwritten page would silently cost the player a whole craft family — which is the
+    /// failure mode that the guard below turns into a warning instead.
+    /// </para>
+    /// <para>
+    /// <b>Not a silent no-op on a missing file.</b> <c>AddItem</c> accepts any id and only consults the
+    /// catalogue to decide whether to <c>Discover</c>, so handing over an unauthored page would put a nameless
+    /// stack in the satchel that the grid draws as a blank swatch. Better to say so: the seven
+    /// <c>lore_craft_*</c> pages are authored as of 2026-08-05, so the day this warning fires it means a
+    /// pocket names a family nobody wrote a page for.
+    /// </para>
+    /// </remarks>
+    private static void GrantPage(string blueprintId)
+    {
+        var inv = InventoryCraftingManager.Instance;
+        if (inv == null) return;
+
+        if (inv.GetItem(blueprintId) == null)
+        {
+            GD.PushWarning($"[Pocket] Learned '{blueprintId}' with no page authored for it; nothing to hand over.");
+            return;
+        }
+
+        // Idempotent by the same reasoning as `GrantStartingKit`: the satchel is the only authority that
+        // cannot drift, and a re-entered pocket must not print a second copy. `Complete` already refuses a
+        // cleared pocket, so this is the belt to that braces.
+        if (!inv.Has(blueprintId)) inv.AddItem(blueprintId);
     }
 
     /// <summary>Put the player back on the screen they left. Shared by both exits so they cannot drift.</summary>

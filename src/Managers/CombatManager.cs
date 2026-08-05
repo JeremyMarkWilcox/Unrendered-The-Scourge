@@ -104,6 +104,39 @@ public partial class CombatManager : Node
         data != null && data.Durability > 0 && WoundsOn(instanceId) >= data.Durability;
 
     /// <summary>
+    /// Close part of a wound back up and return how much actually closed — which is not always what was
+    /// asked for, since the ledger stops at nothing. <c>combat.md</c> §2's per-turn regeneration, driven by
+    /// <c>EncounterManager</c> on the creature's turn.
+    /// </summary>
+    /// <remarks>
+    /// <b>The counterpart of <see cref="Wound"/> and clamped at the same two ends</b>, so the ledger cannot
+    /// hold a negative any more than it can run past durability. Returning the amount rather than a bool is
+    /// <see cref="Wound"/>'s reason too: a fight narrates what moved, and *nothing moved* is the case that
+    /// must not produce a line.
+    /// <para>
+    /// Removing the key at zero rather than storing a 0 keeps this honest against
+    /// <c>ExportWounds</c>/<c>ImportWounds</c>, which drop non-positive entries on the way in — a body healed
+    /// to full and saved would otherwise come back as a body that had never been fought, which it now is
+    /// either way.
+    /// </para>
+    /// </remarks>
+    public int Mend(string instanceId, int amount)
+    {
+        if (string.IsNullOrEmpty(instanceId) || amount <= 0) return 0;
+
+        var standing = WoundsOn(instanceId);
+        if (standing <= 0) return 0;
+
+        var closed = Mathf.Min(amount, standing);
+        var left = standing - closed;
+
+        if (left > 0) _wounds[instanceId] = left;
+        else _wounds.Remove(instanceId);
+
+        return closed;
+    }
+
+    /// <summary>
     /// Wipe the ledger for one body. This is the *anchored* half of the asymmetry — see
     /// <see cref="SettleEngagement"/>, which is what callers should use, because it knows when
     /// closing is correct and this does not.

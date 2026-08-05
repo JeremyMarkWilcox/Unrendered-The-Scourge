@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://src/Data/ItemData.cs" id="1_lcfrg"]
+
+[resource]
+script = ExtResource("1_lcfrg")
+Id = "lore_craft_forging"
+DisplayName = "On the Forge"
+Description = "His own hand, set down again after the Dream gave it back. Heat, and the weight a haft will carry without turning in the hand."
+Category = 4
+PlaceholderColor = Color(0.7215686, 0.5803922, 0.36078432, 1)

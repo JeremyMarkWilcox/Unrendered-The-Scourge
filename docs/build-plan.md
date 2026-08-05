@@ -170,6 +170,15 @@ format ever has — and gained a pair of checks that load a hand-authored save i
 recipe — unit 4) and a reclaimed memory (a boss drop — unit 3/6), so they inherit this unit's jigsaw
 later at a cost of 3 files and no system. Fifteen mends is still the total.
 
+> **Landed 2026-08-05, and the estimate was wrong in a way worth keeping: it cost 6 files and one predicate,
+> not 3 files and no system.** The three files were right in number — a station hotspot each, in
+> `ch1_bridge`, `ch2_cart_road` and `ch3_breach` — but each needed a recipe file beside it, and the jigsaw
+> did *not* simply get inherited: `MendManager.CanMend` and `MendPanel.Open` both tested
+> `HotspotKind.Mend` directly, so a board on a station was inert. One widened predicate
+> (`CarriesABoard`) was the whole of the system this was said not to need. **The "reclaimed memory" half of
+> §6's price was never charged** — decision 10 ruled the boss flag is the gate, so no key item exists and
+> `RequiredBlueprintId` is empty on all three.
+
 **Unit 3 — the encounter state machine.** *Largest.* The one piece of combat still missing: rig two
 slots, click to opt in, alternating turns, placement free and acting costing a turn, flee guaranteed.
 `CombatManager` already owns the arithmetic and has 39 gates over it; this gives it a caller. **Unblocks
@@ -216,18 +225,26 @@ door: learn the Bill Hook → flag → the bramble hotspot opens. **No new gatin
 >   already means *the bench* — so the stump and the *"fused traps require `bench`"* ruling were the same
 >   behaviour written twice, and one hotspot invented to enforce a restriction that buys nothing. All six
 >   trap recipes leave the field blank.
-> - **The 3 major repairs are still not authored**, and that is now a decision rather than an omission:
+> - ~~**The 3 major repairs are still not authored**, and that is now a decision rather than an omission:
 >   §6 prices each as *a reclaimed memory + key items + a jigsaw*, and two of the three have no field yet.
->   Authoring them with commons standing in for a memory would write a lie into `.tres`.
+>   Authoring them with commons standing in for a memory would write a lie into `.tres`.~~ **Authored
+>   2026-08-05**, and the deferral's reason was resolved rather than waived: decision 10 ruled the **boss
+>   flag** is the gate, so there is no reclaimed-memory field to leave blank and no key item to invent.
+>   `RequiredBlueprintId` is empty on all three because nothing is owed there — see decision 10.
 > - **The Pry Bar got its own blueprint.** 4a had it sharing `lore_craft_edges` with the Bill Hook, which
 >   quietly made the authored pocket bill **7 against §8's 8** — invisible because no pocket exists to
 >   count. Split, and the eight is now a gated census by name.
 >
-> The **two known gaps 4b inherited are still open and are both the same gap**: the **tally strip** and the
-> **crafting panel**. `EventBus.CraftingRequested` still fires with nothing subscribed, so the arsenal is
-> twenty-seven files that only a debug key can spend — `F7` crafts everything craftable where you stand and
-> names the block reason for the rest. Both land in the editor pass, and decision 9 makes that screen *the
-> journal*.
+> The **gap 4b inherited is the crafting panel**. `EventBus.CraftingRequested` still fires with nothing
+> subscribed, so the arsenal is twenty-seven files that only a debug key can spend — `F7` crafts everything
+> craftable where you stand and names the block reason for the rest. It lands in the editor pass, and
+> decision 9 makes that screen *the journal*.
+>
+> **Read as of 4b, 2026-08-01. Closed in unit 7a** — `src/UI/CraftingPanel.cs` subscribes, a bench opens the
+> book, and `F7` is retired. This paragraph also listed a second gap, a **"tally strip"**, which appeared
+> nowhere else in the repo — no code, no scene, no other doc — and was **struck by Jeremy on 2026-08-05 as a
+> redundancy rather than an omission**: `CraftingPanel.RowText` already draws the count per recipe
+> ("Linen ×2 (have 1)"), so a strip would be a second home for the same number. Nothing is owed here.
 >
 > **The unit's real find was a defect, not a feature: 33 harvest nodes paid out items that had never been
 > written, and 439 gates were green over it.** The room sweep and the item catalogue were two authored
@@ -761,16 +778,19 @@ months.
 > |---|---|---|
 > | screens · camps · blights per chapter · freed NPCs · her notes · Cairnstone spots · Graveflower · carcass harvests | **all matching** | — |
 > | creature files | 11 | 12 |
-> | fights placed | 30 | 33 *(the three bosses)* |
+> | boss files | 0 → **2 as of 2026-08-05** | 3 *(Iris outstanding — her pair is deliberately unfixed)* |
+> | fights placed | 30 → **32 as of 2026-08-05** | 33 *(the three bosses)* |
 > | pocket files · entrances · knot · boss | 1 · 0 · 0 · 0 | 14 · 14 · 3 · 3 |
 > | max-Resolve grants | 0 | 8 |
-> | jigsaws | 12 | 15 *(the three major repairs)* |
-> | items · recipes | 27 · 17 | ~39 · ~18 |
+> | jigsaws | 12 → **15 as of 2026-08-05** | 15 *(the three major repairs)* |
+> | items · recipes | 27 → **37** · 17 → **20** | ~39 · ~18 |
 >
-> **Everything outstanding traces to two things: the three bosses and the fourteen pockets.** The major
-> repairs need a reclaimed memory, the max-Resolve grants need knowledge pockets, and the missing items are
-> mostly the lore pages those pockets hand out — so the list is not eleven independent jobs, it is Jeremy's
-> 3D pass plus the boss content that hangs off it.
+> **Everything outstanding traces to two things: the three bosses and the fourteen pockets.** ~~The major
+> repairs need a reclaimed memory,~~ *(no longer — decision 10 made the boss flag the gate, and all three are
+> authored)* the max-Resolve grants need knowledge pockets, and the missing items are mostly the lore pages
+> those pockets hand out — so the list is not eleven independent jobs, it is Jeremy's 3D pass plus the boss
+> content that hangs off it. **Recipes are over the estimate rather than under**, and that is the estimate
+> being wrong, not the content: ~18 was written before the three repairs were counted as recipes at all.
 >
 > **The tool corrected itself three times on its first two runs, and each correction is the same mistake:
 > a status that made outstanding work look like something else.**
@@ -1134,6 +1154,12 @@ adds zero... the puzzle would be what we should add/change if we choose to."*
 > `defeated` derivation) and `HotspotData.RequiredFlags` already gates on flags. **The three jigsaws stop
 > being blocked the moment the three bosses are placed** — 12 of 15 becomes 15 of 15 with no new field.
 >
+> **Two of the three landed on 2026-08-05 and this held exactly as written** — no field, no code, two
+> `RequiredFlag` lines. The one thing the prediction did not mention is *where* the boss stands: he belongs
+> one screen **before** the repair he gates (`ledger-ch1` row 9 → 10, `ledger-ch2` row 11 → 12), because a
+> boss standing on the repair screen makes the flag a formality rather than a gate. Placing them on the
+> repair screens passed 1080 checks; the gate asks for the room now.
+>
 > **And no key item, deliberately.** An item that must always agree with a flag is two copies of one
 > fact — the `IsSanctuary` mistake, deleted once already. If the object ever wants to exist for the
 > fiction it is a keepsake: not consumed, not checked, not the gate.
@@ -1148,6 +1174,48 @@ adds zero... the puzzle would be what we should add/change if we choose to."*
 > constraint that does not move is §22's, **no fail state and no timer**; Jeremy: *"it is for atmosphere
 > mostly."* A major board may be longer and busier and may never be punishing, because the good ending
 > hangs off attention rather than skill.
+>
+> > **Corrected 2026-08-05 — "authored data, no code" is true of the board and false of its carrier.**
+> > Read back before authoring, and the read-back is the only reason this was caught. A major repair is
+> > **a `Station` hotspot plus a repair recipe**, which `Enums.cs` says outright at `Station = 9` —
+> > *"a collapsed bridge is a station whose recipe outputs a flag instead of an item… the three major
+> > repairs of `items.md` §6 are authored against it"* — and that half is **fully built**:
+> > `RecipeData.SetsFlag` / `RepairsWorld`, the crafting manager's no-output branch, the panel's naming
+> > of a recipe with nothing to name itself after, all gated.
+> >
+> > **The board has nowhere to hang.** `MendPanel.Open` and `MendManager.CanMend` both refuse a hotspot
+> > whose `Kind != Mend`, so a `MendPuzzle` authored onto a station is inert — no error, no board, and
+> > every registry check still green. **And the obvious fix is the expensive mistake:** authoring the
+> > three as `Kind = Mend` reddens three checks in `GateMending` at once (the 12-blight bill, the
+> > 2/4/6 split, and *every blight pays exactly 1 Graveflower*) — and the red is right, because a
+> > thirteenth blight is **a Graveflower the 8-flower engine was never priced against**. The gate's own
+> > remarks predicted this in July: *"the other three are the major repairs, which are recipes and land
+> > with no new blight hotspot."*
+> >
+> > So the open piece is exactly the one Jeremy left open in this ruling — *"the puzzle would be what we
+> > should add/change if we choose to"* — and it is **code, small**: either widen the mend path to accept
+> > a station carrying a `MendPuzzle`, or hang the puzzle off `RecipeData`. Not authoring. **Deciding it
+> > is not urgent**, because all three repairs are blocked behind their boss flags either way, and no
+> > boss is placed yet.
+> >
+> > **Decided and built the same day. Jeremy picked the first — *"sounds good"* — and the whole of it is
+> > `MendManager.CarriesABoard`:** `Mend` is always a board, a `Station` is one when it has a `MendPuzzle`
+> > **and** its repair has been assembled. `MendPanel.Open` and `InteractionService` ask that instead of
+> > the kind. Three things about the shape are load-bearing and easy to undo:
+> > - **The order is book-then-board.** The station opens the crafting panel until the repair is crafted
+> >   and the board after, because the recipe is where the commons are paid and where knowledge gates the
+> >   row — which leaves §22's *"the puzzle is not a gate, it is the animation"* somewhere to put the price.
+> > - **`SetsFlag` is withheld from the station click.** On a bench it announces the venue; here it is the
+> >   passage, so setting it on click would rebuild the bridge because you looked at it. It is set by
+> >   `MendManager.Mend`, i.e. by finishing the board.
+> > - **`IsAssembled` derives from the recipe** (`RequiresStation` → `SetsFlag`), so no field was added to
+> >   `HotspotData` and a station and its repair cannot be authored into disagreeing. **No enum member
+> >   either**, which was the 4b discipline and holds here.
+> >
+> > **And only that one predicate widened.** `IsFouled`, `IsCleansed` and the room sweep still count
+> > `Kind == Mend` alone — so a repair does not foul a screen, cannot be the last thing between a screen and
+> > cleansed, and pays no Graveflower. The twelve-blight bill above is the reason, and it is one word in one
+> > predicate away from being false.
 >
 > **The chapter-transition beat** — *"an animation type thing to make level shifting more meaningful"* —
 > fires on the mend completing, which is a flag that already gets written. Pure pass 3, blocks nothing,
@@ -1255,18 +1323,24 @@ to 8 were each sized by what they unblocked; the tail was not. The two lanes bel
 (3D scenes and `data/pockets/` on one side, `src/UI/` and `data/items/` on the other), so they run in
 parallel and meet at the vertical slice.
 
-**Measured against the code on the day of the re-cut**, not read out of this document: **1** pocket scene
-of 14, **0** entrances, **0** of 8 max-Resolve grants, **11** creature files of 12, **30** fights of 33,
-**12** jigsaws of 15, **27** items of 38, **17** recipes of 18 — and **no crafting panel in any form**.
-`src/UI/` holds no `CraftingPanel.cs`, and `EventBus.CraftingRequested` fires from
-`InteractionService.cs:135` with nothing subscribed, so **clicking the cottage bench in play does nothing
-at all.**
+**Measured against the code on the day of the re-cut** (2026-08-04), not read out of this document: **1**
+pocket scene of 14, **0** entrances, **0** of 8 max-Resolve grants, **11** creature files of 12, **30** fights
+of 33, **12** jigsaws of 15, **27** items of 38, **17** recipes of 18 — and **no crafting panel in any form**.
 
-**Four debug keys are four missing verbs**, and each retires against a named piece of work below: `F6`
-learn-all (the first knowledge pocket), `F7` craft-here (the panel), `F8` rig-here (a satchel *Set*
-button), `F10` pocket (the first authored entrance). When all four are gone, the game has no mechanism
-that only a keyboard shortcut can reach. **`F11` joined them on 2026-08-04** and retires with the second
-boss pocket.
+> **Re-measured 2026-08-05, because a dated snapshot read in the present tense is how a closed gap gets
+> rebuilt.** Two numbers moved and one sentence is now false. **Items are 37 of 38** (the ten lore pages
+> landed; the last is her fourth note, Jeremy's). **The crafting panel exists** — `src/UI/CraftingPanel.cs`
+> subscribes to `CraftingRequested` and a bench opens the book, so *"clicking the cottage bench does nothing"*
+> is no longer true. Unchanged: 1 pocket of 14, 0 entrances, 0 of 8 grants, 11 creatures of 12, 30 fights of
+> 33, 12 jigsaws of 15, 17 recipes of 18. **Everything still outstanding is authored content, and all of it
+> is Jeremy's** — which is the point of re-measuring rather than patching the numbers in place.
+
+**Four debug keys were four missing verbs**, and each retires against a named piece of work below: `F6`
+learn-all (the first knowledge pocket), ~~`F7` craft-here (the panel)~~ **retired with unit 7a**, ~~`F8`
+rig-here (a satchel *Set* button)~~ **retired with the Set button**, `F10` pocket (the first authored
+entrance). When all four are gone, the game has no mechanism that only a keyboard shortcut can reach —
+**two down, and the two that remain both retire against the first authored pocket.** **`F11` joined them on
+2026-08-04** and retires with the second boss pocket.
 
 > **✅ Unit 9 landed first, 844 → 860, because Jeremy's lane was blocked on it.** `DreamVerbs` was built as
 > *the cost with no button*, so no verb could be held by anything: `DreamVerbHold` turns three rebindable
@@ -1297,11 +1371,11 @@ boss pocket.
 
 | | Jeremy — the editor and the 3D pass | Claude — code, gates, derivable content |
 |---|---|---|
-| **now** | **open-ended.** Build the 3D world at your own pace and hook points up as they arise; nothing in the 2D queue waits on it | **unit 7a — the journal / crafting panel**, the 11 pages (decision 11), and a satchel *Set* button. Retires `F7` and `F8`, and makes a bench do something |
-| **then** | the first `CrossToDream` entrance pair and its `PocketData` → retires `F6` and `F10` → **play the chapter 1 arm end to end**: walk in, fight, take the pocket, mend the blight, cleanse the screen, camp | the three major-repair boards and their hotspots — decision 10, so **no code**; it takes jigsaws 12 → 15 the moment the bosses are placed |
-| **then** | clone to 14 pockets · the 3 bosses and the 12th creature file · `CampPanel.tscn` and `CraftingPanel.tscn` against their published contracts | **the boss aura drain** — `EntityData.CorruptionAura` has no reader today, and the two checks 6b retired as universals over an empty set come back with it |
+| **now** | **open-ended.** Build the 3D world at your own pace and hook points up as they arise; nothing in the 2D queue waits on it | ~~**unit 7a — the journal / crafting panel**~~ **landed 2026-08-05, 860 → 913 checks** — `F7` retired, a bench opens the book, contract published in `handoff.md` §2. **The pages landed 2026-08-05, 913 → 929 checks** — ten of the eleven authored, `PocketManager.GrantPage` hands one over beside the knowledge, and decision 11's crossing is gated both ways. **The satchel *Set* button landed 2026-08-05, 929 → 945 checks** — `%SetButton` beside Use and Equip, `F8` and `RigEverythingPossibleHere` retired, and the *one creature per screen* invariant the key had leaned on for two units is finally gated (`GateFights`, 30 peopled screens). **Claude's half of this row is now closed.** Not Claude's: **her fourth note** (reopened 2026-08-05 — it may be the exorcism engine's Physick page rather than pure story; the `lore_` prefix rule handles both answers without amendment, and rule A means the engine does not need it either way) and **placing her three notes** as `Harvest` hotspots, without which the ten are authored-but-unreachable by design |
+| **then** | the first `CrossToDream` entrance pair and its `PocketData` → retires `F6` and `F10` → **play the chapter 1 arm end to end**: walk in, fight, take the pocket, mend the blight, cleanse the screen, camp | ~~the three major repairs — a `Station` hotspot and a `SetsFlag` recipe each, plus the two passage doors that are **currently ungated**, all of it waiting on the boss flags. Authoring only. ~~so **no code**~~ — **the boards are the exception, corrected 2026-08-05 under decision 10**: a `MendPuzzle` has no carrier on a station, and authoring the three as `Kind = Mend` would redden the twelve-blight bill rather than take jigsaws 12 → 15~~ **landed 2026-08-05, 1042 → 1073 checks.** Three stations, three `RepairsWorld` recipes, both passage doors gated, and the carrier built: `MendManager.CarriesABoard` — a station opens the **book** until its repair is assembled and the **board** after, with `SetsFlag` withheld from the click so a passage cannot open because you looked at it. **Only that one predicate widened**, so a repair still does not foul a screen and pays no Graveflower. ~~Two things are Jeremy's and are named in the row below: **the two boss placements**, which is what lets `RequiredFlag` go back onto the span and the cart (a gate naming an unplaced creature is red, correctly, so the obligation is recorded as a check that fires the hour a boss is placed) — and **whether the Blacksmith is `freed.` or `defeated.`**, which decides whether people goes 24 → 25~~ **both closed the same day, and only one of them was ever Jeremy's.** He ruled on the Blacksmith — `defeated.`, because the spirit breaks in the Dream and the body dies with the demon, so people stays at 24 — and then asked why the bosses could not be placed the way the enemies were. **They could.** `items.md` §10 fixes both display names and all three damage types, `combat.md` §6 fixes the aura, and the ledgers fix the screen; only `Durability` and `Damage` were uninvented. That is the derivable half of content, which is mine, and calling it his was the mistake — see `handoff.md`'s bullet for the room I then got wrong and the gate that now holds it |
+| **then** | clone to 14 pockets · ~~**the 3 bosses and the 12th creature file — and the bosses now need `CorruptionAura` typed on them, because the default is `0` and an aura is opt-in**~~ **two of the three bosses landed 2026-08-05 with their auras typed, on `ch1_trap_yard` and `ch2_smithy`; what remains is Iris (her damage pair is deliberately unfixed until the finale is authored) and the 12th creature file** · `CampPanel.tscn` and `CraftingPanel.tscn` against their published contracts · **the aura shimmer**, which is the one part of §2 still unbuilt and is art | ~~**the boss aura drain** — `EntityData.CorruptionAura` has no reader today, and the two checks 6b retired as universals over an empty set come back with it~~ **landed early, 2026-08-05, unit 9a, 968 → 1023 checks.** Pulled forward off its own row because the mechanism turned out to be content-independent: a positive `CorruptionAura` *is* the boss marker, so fixtures with one make every rule falsifiable with no boss on the map. **Both halves** — the drain on the player's turn, regeneration on the creature's, one tether condition over both — plus mid-fight rigging deleted (§22 had struck it). The two retired checks came back **rewritten rather than restored**: the bar now *does* move in the Waking world, so the surviving claim is that nothing about it is a clock |
 | **then** | chapter 1 sealed — `--verify-content`'s ch1 block turns from a report into gates | |
-| **then** | chapter 2 | **unit 7b** — one rule with exactly one customer: `RecipeData.RequiresBothTracks` has no reader either, and the engine is the only recipe that wants it |
+| **then** | chapter 2 | ~~**unit 7b** — one rule with exactly one customer: `RecipeData.RequiresBothTracks` and the engine, the only recipe that wants it. **Half-read since unit 7a**: `BelongsToSide` puts the engine on both sides of the journal, but `Inspect` still ignores the field, so knowing one hand is currently enough to make it. The *refusal* is what is left~~ **the refusal landed 2026-08-05, 945 → 968 checks** — `CraftBlock.HalfKnown`, returned by `Inspect` immediately after `Unknown` because it is the same question asked of the other hand, and `Craft` refuses through it unchanged. **Rule A** (Jeremy, same day): the other hand means *any* page on it, answered by `KnowsAnyPageOn` off the flat discovery set, so no field was authored — see `items.md` §6. **The engine recipe itself is deferred, deliberately**: `combat.md` §20 makes it good-ending-only, so it is a side path, invariant 12 does not reach it, and nothing forces her notes or the 8 Graveflower to be placed. What remains of this row is therefore Jeremy's — the recipe, its pocket, and whether her fourth note is the page it names |
 | **then** | chapter 3 · the Snarl · the finale | all three endings reachable |
 | **last** | pass 3 everywhere — art, jigsaw boards, prose | audio · **narration and tutorial** · the chapter-transition beat on the bridge mend |
 

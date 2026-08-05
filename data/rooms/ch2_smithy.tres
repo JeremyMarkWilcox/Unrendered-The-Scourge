@@ -1,7 +1,9 @@
-[gd_resource type="Resource" script_class="RoomData" load_steps=7 format=3]
+[gd_resource type="Resource" script_class="RoomData" load_steps=10 format=3]
 
 [ext_resource type="Script" uid="uid://b0jetcphiy2cm" path="res://src/Data/HotspotData.cs" id="1_hs"]
 [ext_resource type="Script" uid="uid://v0juosv2w310" path="res://src/Data/RoomData.cs" id="2_room"]
+[ext_resource type="Script" uid="uid://c4nlnfkcu2a6u" path="res://src/Data/EntityPlacement.cs" id="3_ep"]
+[ext_resource type="Resource" path="res://data/entities/boss_blacksmith.tres" id="4_ent"]
 
 [sub_resource type="Resource" id="hs_0"]
 script = ExtResource("1_hs")
@@ -36,6 +38,12 @@ Region = Rect2(400, 700, 290, 240)
 StationId = "anvil"
 ExamineText = "[unwritten]"
 
+[sub_resource type="Resource" id="ep_0"]
+script = ExtResource("3_ep")
+InstanceId = "ch2.blacksmith"
+Entity = ExtResource("4_ent")
+WakingPosition = Vector2(530, 855)
+
 [resource]
 script = ExtResource("2_room")
 Id = "ch2_smithy"
@@ -43,3 +51,4 @@ DisplayName = "The Smithy"
 ChapterId = "ch2"
 PlaceholderStyle = 1
 Hotspots = Array[ExtResource("1_hs")]([SubResource("hs_0"), SubResource("hs_1"), SubResource("hs_2"), SubResource("hs_3")])
+Entities = Array[ExtResource("3_ep")]([SubResource("ep_0")])

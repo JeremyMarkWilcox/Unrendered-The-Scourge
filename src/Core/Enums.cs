@@ -322,11 +322,47 @@ public enum CraftBlock
     /// <para>
     /// It exists as its own member rather than reusing <see cref="MissingMaterials"/> — which would have
     /// been the smaller change and a lie — because the whole purpose of this enum is that the panel says
-    /// *which kind of no* it is, and "you have it" is not a shortage. Ordered last: a state you reach by
-    /// succeeding cannot be the reason a recipe is refused before you have learned it.
+    /// *which kind of no* it is, and "you have it" is not a shortage. Evaluated after the knowledge
+    /// blocks: a state you reach by succeeding cannot be the reason a recipe is refused before you have
+    /// learned it.
     /// </para>
     /// </remarks>
     AlreadyMade = 5,
+
+    /// <summary>
+    /// One side of the journal is blank. The recipe needs both hands
+    /// (<see cref="Data.RecipeData.RequiresBothTracks"/>) and only one has anything written on it.
+    /// </summary>
+    /// <remarks>
+    /// <b>This is the second half of <see cref="Unknown"/>, and it exists because the first half cannot
+    /// carry it.</b> <c>Unknown</c> asks whether one named page has been found — the recipe supplies the
+    /// id and the answer is a set lookup. The engine's second requirement has no id to supply: the field
+    /// asserting it is a bool, deliberately (*"the interesting state is both, never either"*), so there is
+    /// nothing for <c>Unknown</c> to test. A different question needs a different answer, which is this
+    /// member.
+    /// <para>
+    /// <b>Rule A, ruled 2026-08-05: the other hand means any page on it, not a named one.</b> Knowledge is
+    /// a flat set of blueprint ids and the prefix says whose each is, so *do you know anything of hers* is
+    /// already answerable — see <c>InventoryCraftingManager.KnowsAnyPageOn</c>. The alternative was a
+    /// second id field on the recipe, which buys the ability to demand one specific note and costs a field
+    /// that eighteen recipes leave blank.
+    /// </para>
+    /// <para>
+    /// <b>Numbered after <see cref="AlreadyMade"/> and evaluated second</b> — appended so no existing value
+    /// shifted, but read immediately after <c>Unknown</c>, because it is the same question about the other
+    /// hand and must outrank everything a knowledge block outranks. A recipe you half-know must not start
+    /// complaining about the venue or the materials, for the reason <c>NotAtStation</c> gives: a refusal
+    /// that names the inputs has admitted the page exists.
+    /// </para>
+    /// <para>
+    /// <b>It is a refusal on a side path, and no invariant leans on it.</b> The one recipe that sets the
+    /// flag is the exorcism engine, which buys the good ending and is needed for nothing else —
+    /// `combat.md` §20: *"a player who reaches the finale with nothing built can still finish the game.
+    /// They just finish it badly."* So invariant 12 is not in play here and nothing may be gated into
+    /// existence to satisfy it (ruled 2026-08-05, correcting a claim that it was).
+    /// </para>
+    /// </remarks>
+    HalfKnown = 6,
 }
 
 /// <summary>
@@ -553,6 +589,25 @@ public enum RigBlock
     /// than stacked (§19), so a second copy of one is not a thing you can have.
     /// </summary>
     AlreadyRigged = 5,
+
+    /// <summary>
+    /// A fight is running, and rigging is a before-the-fight verb.
+    ///
+    /// <para><b>This replaces a mid-fight rigging path that had already been overruled.</b>
+    /// <c>combat.md</c> §18 priced re-rigging inside a fight as an action costing a turn, and
+    /// <c>EncounterManager.Rig</c> implemented that. §22's table then <b>struck rigging</b> from what a
+    /// fight lets you reach, and the satchel refusing to open mid-fight is what enforces it — so the
+    /// implementation was serving a superseded rule and the turn-cost branch was unreachable through the
+    /// UI. Jeremy on the deletion, 2026-08-05: *"sounds like a good delete. Maybe we thought about bringing
+    /// the item menu up awhile ago but the potion options come up instead which makes more sense."*</para>
+    /// </summary>
+    /// <remarks>
+    /// Ordered <b>first</b> in <c>EncounterManager.InspectRig</c>, unlike <see cref="UseBlock.InFight"/>,
+    /// which is ordered last. The difference is which of two true answers is worth hearing. A salve mid-fight
+    /// is a thing you can nearly do, so the useful answer is about the salve; rigging mid-fight is not on the
+    /// menu at all, so the rule is the answer and whether you happen to hold the trap is beside the point.
+    /// </remarks>
+    InFight = 6,
 }
 
 /// <summary>

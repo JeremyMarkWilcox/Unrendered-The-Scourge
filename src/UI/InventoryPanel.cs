@@ -23,6 +23,7 @@ public partial class InventoryPanel : Control
     private Label _itemDescription;
     private Button _useButton;
     private Button _equipButton;
+    private Button _setButton;
     private Button _closeButton;
     private Container _tabStrip;
 
@@ -90,6 +91,13 @@ public partial class InventoryPanel : Control
     /// </summary>
     public bool EquipEnabled => _equipButton != null && !_equipButton.Disabled;
 
+    /// <summary>
+    /// Whether the Set button is clickable as drawn. The third of the same read-off, and the only one of
+    /// the three whose answer depends on the <i>room</i> rather than on the satchel and the body — see
+    /// <see cref="OnSetPressed"/>.
+    /// </summary>
+    public bool SetEnabled => _setButton != null && !_setButton.Disabled;
+
     /// <summary>How many tabs are drawn, counting All. One on an empty satchel, and it grows with it.</summary>
     public int TabCount => _tabs.Count;
 
@@ -109,7 +117,11 @@ public partial class InventoryPanel : Control
         }
     }
 
-    /// <summary>The kinds the strip offers, All excluded. For the gate that asserts Lore has no tab yet.</summary>
+    /// <summary>
+    /// The kinds the strip offers, All excluded. For the gate that asserts the strip follows what he is
+    /// carrying rather than the enum — a tab appears when the first item of its kind reaches the satchel and
+    /// goes away with the last one, which is the whole reason this is a property and not a constant.
+    /// </summary>
     public IEnumerable<ItemCategory> TabbedCategories =>
         _tabs.Where(t => t.Category.HasValue).Select(t => t.Category.Value);
 
@@ -253,6 +265,11 @@ public partial class InventoryPanel : Control
         // drop-in — the day it exists this branch stops running and nothing else changes.
         _equipButton = GetNodeOrNull<Button>("%EquipButton") ?? BuildEquipButtonBeside(_useButton);
 
+        // The third verb, on the same optional terms. Built beside Equip rather than beside Use so the row
+        // reads in the order the fiction does: drink it, wear it, leave it somewhere for something else.
+        _setButton = GetNodeOrNull<Button>("%SetButton")
+                     ?? BuildButtonBeside(_equipButton ?? _useButton, "SetButton", "Set");
+
         // Both optional on the same terms as the Equip button. The strip has no authored home yet either;
         // the caption band has no room in `SlotTemplate` without moving layout that is Jeremy's.
         _tabStrip = GetNodeOrNull<Container>("%CategoryTabs") ?? BuildTabStripAboveTheGrid();
@@ -260,6 +277,7 @@ public partial class InventoryPanel : Control
 
         _useButton.Pressed += OnUsePressed;
         if (_equipButton != null) _equipButton.Pressed += OnEquipPressed;
+        if (_setButton != null) _setButton.Pressed += OnSetPressed;
         _closeButton.Pressed += Close;
 
         var bus = EventBus.Instance;
@@ -279,6 +297,7 @@ public partial class InventoryPanel : Control
     {
         if (_useButton != null) _useButton.Pressed -= OnUsePressed;
         if (_equipButton != null) _equipButton.Pressed -= OnEquipPressed;
+        if (_setButton != null) _setButton.Pressed -= OnSetPressed;
         if (_closeButton != null) _closeButton.Pressed -= Close;
 
         var bus = EventBus.Instance;
@@ -589,6 +608,19 @@ public partial class InventoryPanel : Control
             if (worn) _equipButton.Disabled = false;
         }
 
+        // And the third, which asks the *room* instead of the satchel. RigBlock lives in EncounterManager
+        // for the third time over: one question, one answer, so the grey and the refusal agree.
+        //
+        // **A null target greys it rather than hiding it**, on the same reasoning as an unusable reagent
+        // keeping a dead Use button: a verb that vanishes teaches nothing, and a trap you are carrying with
+        // nothing to set it against is a fact about the screen worth reading off a grey button.
+        if (_setButton != null)
+        {
+            var target = NavigationManager.Instance?.SoleCreatureHere();
+            _setButton.Disabled = item == null || target == null ||
+                                  EncounterManager.Instance?.CanRig(target.InstanceId, _selectedItemId) != true;
+        }
+
         // Said in the detail column rather than on the slot, because worn is not a property of the stack —
         // an equipped item is still sitting in the satchel and still counts once.
         if (_itemName != null && worn) _itemName.Text += "  (worn)";
@@ -608,6 +640,30 @@ public partial class InventoryPanel : Control
 
     /// <summary>Selection, exposed so the gates can drive the panel without a mouse.</summary>
     public void DebugSelect(string itemId) => Select(itemId);
+
+    /// <summary>
+    /// Press <i>Set</i> through the signal a click goes through, on
+    /// <see cref="FightPanel.DebugPressVerb"/>'s precedent. Returns false where there is no button at all.
+    /// </summary>
+    /// <remarks>
+    /// <b>The signal rather than the handler, and for this button it matters more than it did for the
+    /// others.</b> Calling <see cref="OnSetPressed"/> directly would leave the <c>Pressed +=</c> in
+    /// <c>_Ready</c> uncovered — and this is the only one of the three verbs whose subscription is on a node
+    /// this class <i>builds</i>, so a wiring slip would produce a button that draws, greys and un-greys
+    /// correctly and does nothing when pressed. Green on every readout, dead on screen.
+    /// <para>
+    /// It deliberately does not consult <see cref="SetEnabled"/> first: <c>EmitSignal</c> ignores
+    /// <c>Disabled</c>, which is what lets a gate assert that a greyed button is refused by the manager too
+    /// and not only by the drawing.
+    /// </para>
+    /// </remarks>
+    public bool DebugPressSet()
+    {
+        if (_setButton == null) return false;
+
+        _setButton.EmitSignal(BaseButton.SignalName.Pressed);
+        return true;
+    }
 
     // ---- Signals ----------------------------------------------------------
 
@@ -644,6 +700,41 @@ public partial class InventoryPanel : Control
 
         // Unequip emits InventoryChanged but the panel is open, so the rebuild is immediate — and the
         // label above has to flip whether or not the stack list moved. Cheapest correct thing.
+        RefreshDetail();
+    }
+
+    /// <summary>
+    /// Set the selected trap on the creature on this screen. The verb that retired <c>F8</c>, and the reason
+    /// <c>EncounterManager.Rig</c> spent two units reachable only from <c>--verify-slice</c>.
+    /// </summary>
+    /// <remarks>
+    /// <b>No target picker, and none is wanted.</b> <see cref="NavigationManager.SoleCreatureHere"/> carries
+    /// that argument and the gate that holds it: one creature per screen, so the verb is a button rather than
+    /// a mode. A picker would be a mode with one entry in it.
+    /// <para>
+    /// <b>Setting a trap is free here and costs a turn inside a fight</b> (<c>combat.md</c> §18), and this
+    /// button is only ever the free half — <see cref="Hud.ToggleSatchel"/> refuses to open the satchel while
+    /// a fight is running, so <c>Rig</c>'s mid-fight arm has no verb behind it at all. That gap belongs to the
+    /// fight screen, whose <c>RigStrip</c> reads the sites and cannot change them; it is written down in
+    /// <c>handoff.md</c> §2 rather than half-built here, because a rig button on the fight screen has to spend
+    /// the turn and sit in the turn order, which is a different job from this one.
+    /// </para>
+    /// <para>
+    /// <b>Refreshed by hand, and that is not laziness.</b> Traps went permanent on 2026-08-01, so rigging
+    /// <i>names</i> a trap you keep rather than spending one — nothing leaves the satchel, so no
+    /// <c>InventoryChanged</c> fires and nothing else would repaint the button. Without this call the same
+    /// trap stays offered and a second press answers <c>AlreadyRigged</c> with a line, which is a correct
+    /// refusal to a question the screen should not have let you ask.
+    /// </para>
+    /// </remarks>
+    private void OnSetPressed()
+    {
+        if (string.IsNullOrEmpty(_selectedItemId)) return;
+
+        var target = NavigationManager.Instance?.SoleCreatureHere();
+        if (target == null) return;
+
+        EncounterManager.Instance?.Rig(target.InstanceId, _selectedItemId);
         RefreshDetail();
     }
 
@@ -872,20 +963,30 @@ public partial class InventoryPanel : Control
     }
 
     /// <summary>
-    /// Put an Equip button in beside Use, for as long as <c>InventoryPanel.tscn</c> does not have one.
-    /// <b>Delete this when it does.</b>
+    /// Put a verb button in beside the one before it, for as long as <c>InventoryPanel.tscn</c> does not have
+    /// one of its own. <b>Delete the call, not this, when a button is authored</b> — each caller is
+    /// independently retired by its <c>GetNodeOrNull</c>, and the last one to go takes this with it.
     /// </summary>
-    private static Button BuildEquipButtonBeside(Button useButton)
+    /// <remarks>
+    /// Was <c>BuildEquipButtonBeside</c> until the Set button needed the identical five lines. Generalised
+    /// rather than copied, because two stopgaps that must lay out the same way are one stopgap — and the
+    /// version that gets copied is the version where only one of them gets fixed.
+    /// </remarks>
+    private static Button BuildButtonBeside(Button sibling, string name, string text)
     {
-        var parent = useButton?.GetParent();
+        var parent = sibling?.GetParent();
         if (parent == null) return null;
 
-        var button = new Button { Name = "EquipButton", Text = "Equip", Disabled = true };
+        var button = new Button { Name = name, Text = text, Disabled = true };
         parent.AddChild(button);
-        parent.MoveChild(button, useButton.GetIndex() + 1);
+        parent.MoveChild(button, sibling.GetIndex() + 1);
 
         return button;
     }
+
+    /// <inheritdoc cref="BuildButtonBeside"/>
+    private static Button BuildEquipButtonBeside(Button useButton) =>
+        BuildButtonBeside(useButton, "EquipButton", "Equip");
 
     /// <summary>
     /// Rebuild now if the player is looking, otherwise note it and let <see cref="Open"/> catch up.

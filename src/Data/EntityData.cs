@@ -62,8 +62,25 @@ public partial class EntityData : Resource
     /// <see cref="EntityState.Severed"/>, so severing buys a fight that costs no Resolve.
     /// Read the state, do not add a flag. And it is never ambient — only the engagement
     /// costs, never standing in the room.
+    ///
+    /// <para><b>Zero means no aura, and that is what makes this field the boss marker.</b>
+    /// `aura-scoped-to-bosses` rules that only bosses project one — a rat has no aura, cannot be severed,
+    /// and must never drain a point of nerve. There is no `IsBoss` flag to check and there should not be
+    /// one: *having an aura* is the thing the design actually names, so the number that measures it is
+    /// also the thing that says whether there is one. Author it on the three bosses and nowhere else.</para>
+    ///
+    /// <para><b>The default used to be 0.15 and that was a trap</b>, discovered when the first reader was
+    /// written on 2026-08-05. While nothing read the field, an inherited default was invisible; the moment
+    /// something did, every one of the eleven authored creatures — rats included — was carrying a boss's
+    /// aura by never having mentioned it. A default that is wrong only once someone believes it is the
+    /// fixture-by-default shape in `verify-slice-blind-spots`. It is 0 now, so an aura is something Jeremy
+    /// typed rather than something he forgot to override.</para>
+    ///
+    /// <para><b>Units.</b> A fraction of the *Resolve bar*, spent per player turn: 0.167 empties a full bar
+    /// in the six turns §6 asks for. The regeneration half does not read the magnitude, only whether it is
+    /// above zero — see <c>GameConfig.AnchoredRegenFraction</c> for why the two effects are sized apart.</para>
     /// </summary>
-    [Export] public float CorruptionAura { get; set; } = 0.15f;
+    [Export] public float CorruptionAura { get; set; } = 0f;
 
     // ---- Combat (docs/combat.md §18, ratified 2026-07-30) --------------------
 

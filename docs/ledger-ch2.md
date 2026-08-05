@@ -32,8 +32,8 @@ anywhere strands a creature with no answer. **The chain survives this map — th
 | 8 | `ch2_taproom` | The Taproom | 7, 9 | **Innkeeper #1** *(path)* | — | — | — | Tallow ×2 | freed: the pot-boy |
 | 9 | `ch2_inn_yard` | The Inn Yard | 8, 10 | — | — | — | — | Scrap Iron ×2, Cured Hide | the stables. **One of her scattered notes** *(silent — it reads, it grants nothing)* |
 | 10 | `ch2_forge_row` | Forge Row | 9, 11 | **Innkeeper #2** *(path)* | — | — | ▸ **Pry Bar** | Scrap Iron ×2 | **the anvil** — field station. Freed: the farrier |
-| 11 | `ch2_smithy` | The Smithy | 10, 12 | — | — | — | ▸ **the Blacksmith** *(boss)* | — | his forge. The door is his place |
-| 12 | `ch2_cart_road` | The Cart Road | 11, → ch3 | — | *(the repair)* | — | — | — | **MAJOR REPAIR 2** + jigsaw. Gated on the boss memory |
+| 11 | `ch2_smithy` | The Smithy | 10, 12 | **the Blacksmith** *(boss)* | — | — | ▸ **the Blacksmith** *(boss)* | — | his forge. The door is his place. **Body placed 2026-08-05** as `ch2.blacksmith` — the pocket door is still Jeremy's |
+| 12 | `ch2_cart_road` | The Cart Road | 11, → ch3 | — | *(the repair)* | — | — | — | **MAJOR REPAIR 2** + jigsaw. ~~Gated on the boss memory~~ gated on the boss **flag** *(decision 10)*. Authored 2026-08-05 as `ch2_cart_road_cart` + `recipe_repair_mine_cart`; ~~the `RequiredFlag` goes on once the Blacksmith is placed~~ **the boss was placed on row 11 the same day and the `RequiredFlag` is on**: `defeated.ch2.blacksmith` — `defeated.`, not `freed.`, per Jeremy's ruling that the body dies with the demon *(see `Flags.Defeated`)*. **No creature stands on this screen**; he is one screen back at the forge |
 | 13 | `ch2_back_lane` | Back Lane | 4, 14, 16, 19 | — | — | — | — | Cured Hide | the optional branch hub |
 | 14 | `ch2_tannery` | The Tannery | 13, 15 | **Stable Master #3** *(optional,* **Warden***)* | — | **blight 1** | — | Cured Hide ×2 | |
 | 15 | `ch2_drying_yard` | The Drying Yard | 14 | — | — | — | — | Scrap Iron ×2 | behind a Warden, so it is a real choice |

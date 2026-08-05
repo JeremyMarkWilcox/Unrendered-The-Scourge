@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://src/Data/ItemData.cs" id="1_lpdpm"]
+
+[resource]
+script = ExtResource("1_lpdpm")
+Id = "lore_physick_deepmend"
+DisplayName = "Her Note on Deepmend"
+Description = "One leaf in her hand, dropped where it was worth nothing to the thing that took her. The deeper of her two salves."
+Category = 4
+PlaceholderColor = Color(0.8039216, 0.8039216, 0.68235296, 1)
+Track = 1

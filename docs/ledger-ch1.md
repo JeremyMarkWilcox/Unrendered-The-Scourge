@@ -36,8 +36,8 @@ Ids follow `ch<n>_<place>`. Flags follow the §5 vocabulary. **Held** = a creatu
 | 6 | `ch1_cut_stand` | The Cut Stand | 5, 8 | **Logger #2** *(path)* | — | — | **Bill Hook** | Heartwood ×2 | freed: the sawyer |
 | 7 | `ch1_bramble` | The Bramble Choke | **5**, 16 | **Messenger #1** *(optional)* | **Bill Hook** | — | — | — | Held **and** Blocked. Seen one screen before the key |
 | 8 | `ch1_snare_line` | The Snare Line | 6, 9 | **Hunter #2** *(path)* | — | — | — | Tallow, Pitch | freed: the trapper's boy |
-| 9 | `ch1_trap_yard` | The Trap Yard | 8, 10 | — | — | — | **the Lost Trapper** *(boss)* | — | his trap line. The door is his place |
-| 10 | `ch1_bridge` | The Broken Bridge | 9, → ch2 | — | *(the repair)* | — | — | — | **MAJOR REPAIR 1** + jigsaw. Gated on the boss memory |
+| 9 | `ch1_trap_yard` | The Trap Yard | 8, 10 | **the Lost Trapper** *(boss)* | — | — | **the Lost Trapper** *(boss)* | — | his trap line. The door is his place. **Body placed 2026-08-05** as `ch1.lost_trapper` — the pocket door is still Jeremy's |
+| 10 | `ch1_bridge` | The Broken Bridge | 9, → ch2 | — | *(the repair)* | — | — | — | **MAJOR REPAIR 1** + jigsaw. ~~Gated on the boss memory~~ gated on the boss **flag** *(decision 10)*. Authored 2026-08-05 as `ch1_bridge_span` + `recipe_repair_bridge`; ~~the `RequiredFlag` goes on once the Lost Trapper is placed~~ **the boss was placed on row 9 the same day and the `RequiredFlag` is on**: `defeated.ch1.lost_trapper`, and a gate asserts the span is drawn shut until it is set. **No creature stands on this screen** — he is one screen back, which is what makes the flag a gate rather than a formality |
 | 11 | `ch1_fern_gully` | Fern Gully | 12 | **Logger #3** *(optional)* | — | **blight 1** | — | Heartwood | **the tutorial blight** — pure observation |
 | 12 | `ch1_wet_hollow` | The Wet Hollow | 5, 11, 13, 14 | — | — | — | — | Bitterroot ×2 | the whole optional branch hangs off here |
 | 13 | `ch1_burnt_stand` | The Burnt Stand | 12, 15 | **Hunter #3** *(optional)* | — | — | — | Pitch ×2 | **field station** — the trapper's stump |

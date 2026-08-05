@@ -27,10 +27,11 @@ public static class GameConfig
     // (unit 6a, `build-plan.md` §6 rule 6). It was `=> GameConfig.ResolveMax` until then, which is why
     // the eight grants had no mechanism to land in.
     //
-    // **Nothing drains Resolve as of unit 6b.** The per-second clock belonged to the deleted heist, and it
-    // was the wrong model anyway: Resolve is a fuel tank spent by verbs, not a timer. The boss aura
-    // (`combat.md` §6 — drain only while a boss's tether is unbroken) and the Dream's own abilities will
-    // each bring their own rate; there is deliberately no ambient drain and never was one.
+    // **Two things drain Resolve as of 2026-08-05, and neither is a clock.** The Dream verbs spend it per
+    // second while held (below), and a boss's aura spends it per player turn while its tether is unbroken
+    // (`combat.md` §6). The per-second clock the deleted heist ran on is not one of them, and the boss drain
+    // deliberately did not inherit its shape: a fight is turn-based, so a wall clock there would charge the
+    // player for thinking. There is still no ambient drain and there never was one.
 
     /// <summary>
     /// What each Dream verb costs per second while **held** (`combat.md` §19). One meter, three verbs, and
@@ -149,6 +150,36 @@ public static class GameConfig
     /// </para>
     /// </remarks>
     public const float WardMultiplier = 0.5f;
+
+    /// <summary>
+    /// How much of its own durability an anchored body closes back up on each of its turns, as a fraction.
+    /// <c>combat.md</c> §2's *"regenerates every turn"*, finally with a number under it. Reinstated
+    /// 2026-08-05 on Jeremy's ruling — *"regen hp on enemy's turn and resolve drain on the players turn
+    /// makes sense in my head. Double whammy"* — over an earlier deferral that had declined the per-turn
+    /// heal outright.
+    /// </summary>
+    /// <remarks>
+    /// <b>The number has one hard constraint and it is not about difficulty.</b> It must sit strictly below
+    /// what a *wrong-type* weapon does per turn, because a heal that outpaces the worst weapon in the game
+    /// makes that weapon useless rather than slow — and "an immunity reads as a lock" is the exact argument
+    /// <see cref="ResistantMultiplier"/> and <see cref="WardMultiplier"/> both refuse to break. At 0.05 a
+    /// resisted axe still nets progress every turn; it just will not finish inside the six turns of nerve
+    /// the aura also costs you, which is the fight telling you to bring the other tool or cut the tether.
+    /// <para>
+    /// <b>Sized apart from <c>EntityData.CorruptionAura</c> on purpose, though the aura is what switches it
+    /// on.</b> The aura's magnitude is pinned by §6 to a bar emptying in six turns; if regen read the same
+    /// number it would be pinned to that too, and at 0.167 of durability per turn a resisted weapon is
+    /// exactly the lock above. One authored float cannot carry two effects whose right sizes disagree, so
+    /// the field says <i>whether</i> and this dial says <i>how much</i>.
+    /// </para>
+    /// <para>
+    /// Not gated as a value, for <see cref="SuppressDrainPerSecond"/>'s reason — a check on the number goes
+    /// red the day Jeremy tunes it. The *constraint* above is gated, against the weakest weapon in the
+    /// arsenal, and so is the shape: that it stops at zero wounds, that severing switches it off, and that
+    /// a creature with no aura never heals.
+    /// </para>
+    /// </remarks>
+    public const float AnchoredRegenFraction = 0.05f;
 
     /// <summary>
     /// What a strike does with nothing equipped. §18 keeps a weak baseline attack so that <b>a player out
