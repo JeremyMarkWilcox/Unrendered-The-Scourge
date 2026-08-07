@@ -1409,7 +1409,7 @@ public static class SliceVerifier
     /// A fixture for <see cref="GateEncounters"/>: seven bodies on one screen, each shaped for exactly one
     /// question the turn loop has to answer. Synthetic for <see cref="GateWoundLedger"/>'s reason and one
     /// more of its own — a gate that fights an authored creature <b>wins</b>, and a win writes a
-    /// <c>freed.*</c> or <c>killed.*</c> flag that the ending's bill reads as something the player did.
+    /// <c>freed.*</c> or <c>defeated.*</c> flag that the ending's bill reads as something the player did.
     ///
     /// <para>
     /// Every field here exists to keep a check honest rather than to describe a creature. The frail pair
@@ -2661,6 +2661,49 @@ public static class SliceVerifier
         inv.ResetAll();
         nav.GoToRoom("verify_camp");
 
+        // -- The softlock play found, 2026-08-05 --
+        //
+        // Jeremy, playtesting: *"when it is full of the craft recipes it is so long you cannot see the bottom or
+        // scroll on the menu so you cannot exit the screen."* The rows lived in a bare `VBoxContainer`, so the
+        // column's **minimum** height grew with the book; a `PanelContainer`'s minimum is its child's, minimums
+        // beat offsets, and the backing grew past its own rect carrying ✕ off the bottom. With
+        // `MouseFilter = Stop` and no Escape binding anywhere, ✕ was the only way out and it was unreachable.
+        //
+        // **Asserted as a relationship between two measurements, because a pixel bound would be a different
+        // check every time Jeremy restyles the panel.** An empty book and a full one must demand the same
+        // height: growth *is* the defect, whatever the number. `GetCombinedMinimumSize` is computed from
+        // children rather than assigned by a layout pass, which is why it means something headless where `Size`
+        // does not — and why every other readout on this panel had to ask about anchors and offsets instead, and
+        // so could not see this.
+        var emptyDemand = panel.DemandedHeight;
+        var emptyWidth = panel.DemandedWidth;
+        Check("with an empty book the journal demands a size at all, so this is measuring something",
+            emptyDemand > 0f && emptyWidth > 0f);
+
+        foreach (var r in inv.Recipes.Values)
+            if (r?.NeedsBlueprint == true) inv.Discover(r.RequiredBlueprintId);
+        inv.Discover("lore_craft_verify");
+        panel.Open(StationId);
+
+        Check($"a full book draws more rows than an empty one ({panel.RowCount} rows), or the next check is vacuous",
+            panel.RowCount > 1);
+        Check($"and still demands exactly the same height, so ✕ cannot be pushed off the panel "
+            + $"({panel.DemandedHeight} against {emptyDemand})",
+            Mathf.IsEqualApprox(panel.DemandedHeight, emptyDemand));
+
+        // **The same claim on the other axis, and it was missing for exactly as long as it took Jeremy to open
+        // the book once.** A row is one line of *name · inputs · why-not* and a `Button`'s minimum width includes
+        // its text, so the exorcism engine's row pushed the panel wider than the screen — the height defect's
+        // twin, left live because the fix and its gate both only thought about rows *stacking*. A panel that
+        // grows sideways from an anchor-derived corner also stops being centred, which is the symptom that got
+        // reported.
+        Check($"and the same width, so a long row cannot push it off-centre or off-screen "
+            + $"({panel.DemandedWidth} against {emptyWidth})",
+            Mathf.IsEqualApprox(panel.DemandedWidth, emptyWidth));
+
+        panel.Close();
+        inv.ResetAll();
+
         Check("the mirror fixture is on both sides as well, so the two arms are the same shape",
             inv.BelongsToSide(herBothPage, KnowledgeTrack.Craft) &&
             inv.BelongsToSide(herBothPage, KnowledgeTrack.Physick));
@@ -3181,11 +3224,23 @@ public static class SliceVerifier
 
         nav.GoToRoom(ArenaRoomId);
 
-        // -- 7: the three win routes, and the three flags ------------------
+        // -- 7: the two win routes, and the two flags ----------------------
+        //
+        // **This block asserted three routes until 2026-08-06, and the third was unreachable in play from the
+        // day it shipped.** `Killed` was written when a person fell still anchored — and since
+        // `EntityStateManager.Sever` has exactly one caller (a boss pocket cutting its own target, and no
+        // pocket targets an ordinary creature), *every* real fight took that branch. The gates could not see
+        // it because this fixture severs `ArenaFreed` **by calling `states.Sever` directly**, which is a route
+        // no player has: the suite proved a branch the game cannot reach and stayed silent about the one it
+        // always takes. §3's nineteenth class with a fixture standing in for the missing route.
+        //
+        // Jeremy's ruling, found by playing the Apothecary: *"All non-bosses live — they have minor demons
+        // possessing them. They have no dream worlds to conquer. You more or less bonk them on the head and
+        // wake them up."* So a person is freed however the fight ends, `killed.*` is deleted, and severing is
+        // what weakens a boss rather than what saves a villager.
         foreach (var id in new[] { ArenaBeast, ArenaFreed, ArenaKilled })
         {
             world.SetFlag(Flags.Freed(id), false);
-            world.SetFlag(Flags.Killed(id), false);
             world.SetFlag(Flags.Defeated(id), false);
         }
 
@@ -3194,29 +3249,28 @@ public static class SliceVerifier
 
         Check("a thing that was never a person is fought",
             encounters.Engage(ArenaBeast) && encounters.Strike() && !encounters.InFight);
-        Check("and writing it down says defeated, and neither of the other two",
-            world.GetFlag(Flags.Defeated(ArenaBeast))
-            && !world.GetFlag(Flags.Freed(ArenaBeast)) && !world.GetFlag(Flags.Killed(ArenaBeast)));
+        Check("and writing it down says defeated, and not freed",
+            world.GetFlag(Flags.Defeated(ArenaBeast)) && !world.GetFlag(Flags.Freed(ArenaBeast)));
         Check("and the body is purified", states.GetState(ArenaBeast) == EntityState.Purified);
 
         states.Sever(ArenaFreed);
         Check("a person whose tether was cut first", states.GetState(ArenaFreed) == EntityState.Severed);
         Check("goes down the same way",
             encounters.Engage(ArenaFreed) && encounters.Strike() && !encounters.InFight);
-        Check("and is freed — not killed, and not merely defeated",
-            world.GetFlag(Flags.Freed(ArenaFreed))
-            && !world.GetFlag(Flags.Killed(ArenaFreed)) && !world.GetFlag(Flags.Defeated(ArenaFreed)));
+        Check("and is freed rather than merely defeated",
+            world.GetFlag(Flags.Freed(ArenaFreed)) && !world.GetFlag(Flags.Defeated(ArenaFreed)));
 
+        // **The arm that matters, and the one the old block had no fixture for: a person nobody severed.**
+        // This is what all 30 authored fights actually are, so it is asserted through the route a player
+        // walks — engage and strike, with the body still `Corrupted` when the blow lands. Break-testing the
+        // ruling means putting `wasSevered` back in `Finish`, which reddens exactly this.
         Check("a person still anchored when the last blow lands",
             states.GetState(ArenaKilled) == EntityState.Corrupted);
-        Check("goes down too, because overkill is never refused",
+        Check("goes down too, because a fight is never refused for want of a sever",
             encounters.Engage(ArenaKilled) && encounters.Strike() && !encounters.InFight);
-        Check("and is killed by it — the flag that keeps the ending's count honest",
-            world.GetFlag(Flags.Killed(ArenaKilled))
-            && !world.GetFlag(Flags.Freed(ArenaKilled)) && !world.GetFlag(Flags.Defeated(ArenaKilled)));
-        // The one consequence of that ruling worth asserting rather than leaving to be discovered: the
-        // enum has three members and Purified is the terminal one, so the screen cleanses either way.
-        // The weight of the overkill route lives in the ending's count of freed.*, not in a dirty room.
+        Check("and is freed just the same — the demon in an ordinary body is minor, and it lets go",
+            world.GetFlag(Flags.Freed(ArenaKilled)) && !world.GetFlag(Flags.Defeated(ArenaKilled)));
+        // The enum has three members and Purified is the terminal one, so the screen cleanses either way.
         Check("and purified all the same, whichever route you took",
             states.GetState(ArenaKilled) == EntityState.Purified);
         Check("and a finished body is no longer hostile",
@@ -3256,9 +3310,19 @@ public static class SliceVerifier
             }
         }
 
-        Check($"the placed roster bills 24 people, so freed.* + killed.* can only ever total 24 ({people})",
+        Check($"the placed roster bills 24 people, so freed.* can only ever total 24 ({people})",
             people == 24);
-        Check($"and 8 that free nobody, so defeated.* can only ever total 8 ({beasts})", beasts == 8);
+        // **8 → 9 on 2026-08-05, when Iris was placed and the roster closed.** `items.md` §10 predicted this
+        // number the whole time — *"the roster bill sits at `defeated.* == 8` of an eventual 9"* — so this is the
+        // last increment rather than a moving target: six Beasts and three bosses, and there is nothing else in
+        // the game that frees nobody.
+        //
+        // **Iris counts here despite surviving the good ending, and that is the subtle part.** She lives only if
+        // the exorcism engine releases the tether (`combat.md` §20), and that is a *repair* — not an outcome of
+        // her fight. The fight frees nobody on any of the three routes, so `PurifiedName` is blank and her win
+        // writes `defeated.ch3.iris`. Reading her survival as `freed.*` would have put her in the 24 and made
+        // the good ending double-count the person it saves.
+        Check($"and 9 that free nobody, so defeated.* can only ever total 9 ({beasts})", beasts == 9);
 
         // -- 9: what the end of a fight does to the ledger -----------------
         Check("the pair are one authored body standing in two states",
@@ -3713,7 +3777,6 @@ public static class SliceVerifier
         foreach (var id in new[] { ArenaBeast, ArenaFreed, ArenaKilled })
         {
             world.SetFlag(Flags.Freed(id), false);
-            world.SetFlag(Flags.Killed(id), false);
             world.SetFlag(Flags.Defeated(id), false);
         }
 
@@ -4146,6 +4209,15 @@ public static class SliceVerifier
     private const int PocketResolveGrant = 7;
 
     /// <summary>
+    /// A scene that really exists, borrowed to give a fixture pocket one for the length of two checks
+    /// (unit 10's routing). <b>The reference pocket's scene rather than a synthetic path</b>, because
+    /// <c>PocketHost</c> loads whatever this names and the crossing gate below asserts it resolves — a made-up
+    /// path would fail both, and a path that failed to load would fall back to the same empty pocket a blank
+    /// one gives, which is precisely the confusion <c>PocketData.HasScene</c> refuses to make.
+    /// </summary>
+    private const string ProbeScenePath = "res://scenes/dream/DreamProbe.tscn";
+
+    /// <summary>
     /// The way into the Dream and back out: what a pocket grants, what it writes, and what it must not write
     /// when you leave without finishing. Unit 6a, built to the discussion of 2026-08-04.
     ///
@@ -4208,14 +4280,48 @@ public static class SliceVerifier
 
         // -- The crossing that will not appear on its own --
         // A `ScenePath` is one authored collection naming something in another, which is the shape that hid
-        // 33 dangling harvest nodes behind 439 green gates. Non-vacuous today: there is one authored pocket
-        // and it names a scene that exists.
+        // 33 dangling harvest nodes behind 439 green gates.
+        //
+        // **Blank is no longer a failure, and the distinction is unit 10's (2026-08-05).** This used to read
+        // `IsNullOrEmpty(p.ScenePath) || !Exists(...)`, which was right while a pocket without a scene was
+        // useless. Now thirteen of the fourteen are deliberately scene-less stand-ins granted from the Waking
+        // world, so the two conditions have to come apart: **a blank path is the author saying *not yet*, a
+        // path that does not resolve is the author being wrong.** Only the second is a defect, and collapsing
+        // them would have forced a choice between deleting this check and inventing fourteen fake scene paths —
+        // the latter being much worse, since `PocketData.HasScene` would then read true for every stand-in and
+        // the whole mechanism would silently switch itself off.
         var badScene = authoredPockets
-            .Where(p => string.IsNullOrEmpty(p.ScenePath) || !ResourceLoader.Exists(p.ScenePath))
+            .Where(p => p.HasScene && !ResourceLoader.Exists(p.ScenePath))
             .Select(p => $"{p.Id}: {p.ScenePath}")
             .ToList();
-        Check($"and every authored pocket names a scene that is really there{Listing(badScene)}",
+        Check($"every pocket that names a scene names one that is really there{Listing(badScene)}",
             badScene.Count == 0);
+
+        // **The debt, counted — because the check above can no longer see it.** Relaxing a gate to permit a
+        // temporary state has to leave something that still reports the state, or the permission is
+        // indistinguishable from the work being done. §3's recurring shape: green over an absence.
+        //
+        // Phrased as a census rather than a bill on purpose. There is no number of scene-less pockets that is
+        // *wrong* — Jeremy builds the fourteen Dream levels at his own pace — so this must not fail while it is
+        // being worked through; `--verify-content`'s row is where the shortfall is tracked. What it must not do
+        // is stay silent, which is why the counts are in the message whether it passes or not.
+        //
+        // **The one thing it does assert is that the crossing has not gone dead.** `Enter`, `PocketHost`,
+        // `Leave`, `Eject` and every 3D hook are reachable in play only through a pocket that has a scene, and
+        // with thirteen stand-ins the reference pocket is the last one holding that path open — blank its
+        // `ScenePath` and nothing in the game can cross into the Dream at all, with every other check here
+        // still green because the fixtures drive the manager directly. That is a live route silently deleted
+        // by an edit to one authored field, so it gets a check. It reddens the day someone points the probe at
+        // nothing, and it retires on its own once real pockets have scenes.
+        //
+        // The behavioural half of this — that a scened pocket refuses `TakeFromWaking` and a scene-less one
+        // accepts it — is asserted on a fixture in the door block below, where `InPocket` and `InFight` are
+        // known rather than assumed. Asking it here would have been confounded by both.
+        var scened = authoredPockets.Where(p => p.HasScene).ToList();
+        var standIns = authoredPockets.Where(p => !p.HasScene).ToList();
+        Check($"and at least one pocket is still walked rather than taken, so the crossing is reachable in play "
+            + $"({scened.Count} with a scene, {standIns.Count} standing in of {authoredPockets.Count})",
+            scened.Count >= 1);
 
         // -- Fixtures. Synthetic, so a gate never grants something the ending's bill would count --
         var knowledge = new PocketData
@@ -4489,6 +4595,34 @@ public static class SliceVerifier
             world.GetFlag(Flags.VerbLearned(DreamVerb.Float)));
         Check("from the room the entrance was on", nav.CurrentRoomId == ArenaRoomId);
 
+        // -- The overkill order: boss killed first, pocket taken after (2026-08-05) --
+        //
+        // **Found in play, and it resurrected a corpse.** Jeremy killed the Lost Trapper the hard way — no
+        // sever, aura draining the whole fight — and then clicked the pocket entrance, which severed a body
+        // that was already `Purified`. The severed form draws, so the boss came back without his aura.
+        // `EncounterManager.Finish` has always *said* `Purified` is terminal; nothing made it so.
+        //
+        // **Both halves of Jeremy's ruling are asserted, because the fix could easily have taken the second
+        // with it**: *"we want it so that if you do it that way that the form is gone. And you just complete
+        // the 3D for the ability."* A guard that skipped the whole grant would have satisfied the first
+        // sentence and silently deleted a Dream verb from that playthrough — and the verbs are a budget of
+        // exactly two, so it would have been unrecoverable rather than merely wrong.
+        world.SetFlag(Flags.PocketCleared(PocketBoss), false);
+        world.SetFlag(Flags.VerbLearned(DreamVerb.Float), false);
+        states.SetState(ArenaTough, EntityState.Purified);
+
+        Check("a body that already went down cannot be severed",
+            !states.Sever(ArenaTough) && states.GetState(ArenaTough) == EntityState.Purified);
+
+        Check("so taking its pocket afterwards leaves the corpse where it fell",
+            pockets.Enter(PocketBoss) && pockets.Complete() &&
+            states.GetState(ArenaTough) == EntityState.Purified);
+
+        Check("and it still pays the verb, because the anchor was pulled either way",
+            PocketManager.Holds(DreamVerb.Float) &&
+            world.GetFlag(Flags.VerbLearned(DreamVerb.Float)) &&
+            world.GetFlag(Flags.PocketCleared(PocketBoss)));
+
         // **Suppress is held from the first frame and carries no flag**, which is the one thing about the
         // verb model that a reader would get wrong. A flag nothing can fail to have is a flag every caller
         // has to remember to ignore, so geometry gated on Suppress is geometry gated on nothing.
@@ -4654,6 +4788,19 @@ public static class SliceVerifier
         Check("and the broken remnant is not, because nothing is broken yet",
             remnant != null && !InteractionService.IsAvailable(remnant));
 
+        // ---- One door, two destinations (unit 10, 2026-08-05) ----
+        //
+        // `InteractionService` routes a `CrossToDream` click on whether the pocket has a scene, so **the same
+        // hotspot is driven twice** with the fixture's `ScenePath` set and then blank. One door rather than two
+        // is the point: it is the *pocket* that decides, never the hotspot, so a screen authored today needs no
+        // editing the day its Dream level is built.
+        //
+        // The scened arm runs **first** so the fixture ends this block back in its documented blank state —
+        // every guard after it, and `PocketHost`'s own contract, depend on a scene-less pocket being enterable.
+        knot.ScenePath = ProbeScenePath;
+
+        Check("a pocket with a scene refuses to hand its reward over from out here",
+            pockets.InspectTakeFromWaking(PocketKnot) == PocketBlock.MustBeWalked);
         Check("clicking the entrance crosses you over",
             InteractionService.ActivateHotspot(entrance) && pockets.InPocket &&
             pockets.CurrentPocketId == PocketKnot);
@@ -4669,6 +4816,162 @@ public static class SliceVerifier
             InteractionService.IsAvailable(remnant));
         Check("clicking the spent entrance crosses nobody over",
             !InteractionService.ActivateHotspot(entrance) && !pockets.InPocket);
+
+        // ---- The stand-in: the same door, on a pocket whose scene does not exist yet ----
+        //
+        // **This is the arm the 2D game is played through until the 3D pass lands**, and the claim worth
+        // proving is not that it grants — it is that *everything else is identical*. The flag, the broken
+        // entrance and the remnant are what the rest of the game reads, so if those match, a pocket getting
+        // its scene later changes nothing outside the pocket.
+        knot.ScenePath = "";
+        world.SetFlag(Flags.PocketCleared(PocketKnot), false);
+        world.SetFlag(Flags.KnotCut(PocketKnot), false);
+
+        Check("with no scene yet, the door is still open and the remnant still hidden",
+            InteractionService.IsAvailable(entrance) && !InteractionService.IsAvailable(remnant));
+        Check("and now it is the *taking* that is offered rather than the walking",
+            pockets.InspectTakeFromWaking(PocketKnot) == PocketBlock.None);
+
+        Check("clicking it grants what the pocket holds without crossing you over",
+            InteractionService.ActivateHotspot(entrance) && !pockets.InPocket);
+        Check("you never left the screen",
+            nav.CurrentRoomId == PocketDoorRoomId &&
+            RealmTransitionManager.Instance.CurrentRealm == GameRealm.Waking);
+        Check("the knot is cut all the same, which is the whole reward of this one",
+            world.GetFlag(Flags.KnotCut(PocketKnot)));
+
+        // The three facts the rest of the game actually reads, asserted against the stand-in rather than
+        // against a crossing — so *identical downstream* is a measured claim and not a hope.
+        Check("the pocket counts as cleared, exactly as finishing it would",
+            world.GetFlag(Flags.PocketCleared(PocketKnot)));
+        Check("so the entrance breaks the same way",
+            !InteractionService.IsAvailable(entrance));
+        Check("and leaves the same remnant behind",
+            InteractionService.IsAvailable(remnant));
+
+        // **What stops a second grant on this path, measured where it actually happens — and the first version
+        // of these two checks was written the wrong way round.** It read *"clicking the spent entrance a second
+        // time grants nothing again"* and stayed **green with `GrantOnce`'s flag guard deleted**, because the
+        // spent entrance is no longer `IsAvailable`, so the click never reaches the manager at all: §3's seventh
+        // class, a check passing for a reason other than the one it names. The break-test found it by reddening
+        // only the pre-existing `Complete` check and not this one.
+        //
+        // So they are split into the two claims that are really here, in the order the refusals fire:
+        world.SetFlag(Flags.KnotCut(PocketKnot), false);
+        Check("the spent entrance is inert, so a second click cannot even reach the grant",
+            !InteractionService.ActivateHotspot(entrance) &&
+            !world.GetFlag(Flags.KnotCut(PocketKnot)));
+        Check("and asking the manager directly is refused as already taken, which is what guards the grant here",
+            pockets.InspectTakeFromWaking(PocketKnot) == PocketBlock.AlreadyTaken &&
+            !pockets.TakeFromWaking(PocketKnot) &&
+            !world.GetFlag(Flags.KnotCut(PocketKnot)));
+
+        // **`GrantOnce`'s own flag guard is belt to that brace on this path, and saying so is more useful than
+        // pretending otherwise.** `AlreadyTaken` above is what a second click meets; the guard inside
+        // `GrantOnce` is only reachable through `Complete`, where the *"grants nothing a second time"* check has
+        // covered it since unit 6a — which is exactly the check the break-test reddened. Two callers, one
+        // once-only rule, and each caller's route to it is asserted where that route exists.
+
+        // -- What the stand-in *says*, which is the only thing 13 of the 14 pockets ever show the player --
+        //
+        // **Found by break-test on 2026-08-06: `PocketManager.Describe` could return `"nothing"` for every
+        // pocket in the game and all 1101 checks stayed green.** It is named nowhere in this file, and the
+        // notification it composes is the entire reward feedback on the taking path — no 3D scene runs, so a
+        // click on an entrance produces one line of text and that line is the whole event. A player taking the
+        // Trapper's Tether would have been told they received nothing, and the suite would have agreed.
+        //
+        // **Asserted over the authored pockets rather than the fixture**, deliberately. A fixture proves the
+        // method concatenates; what matters is that each of the fourteen has something to say and that every
+        // arm of the sentence is reachable from content that exists — the fixture knot pocket exercises one
+        // arm and would have left the other four able to be deleted in silence.
+        var described = (PocketManager.Instance?.Pockets ?? new Dictionary<string, PocketData>())
+            .Where(kv => !kv.Key.StartsWith("verify_") && kv.Key != ContentReport.ReferencePocketId)
+            .Where(kv => kv.Value != null)
+            .ToList();
+
+        // A local rather than five copies of the same shape. Each arm collects the pockets whose line fails to
+        // mention a grant they were authored with, so a failure names the pocket and not just the count.
+        List<string> Silent(Func<PocketData, bool> carries, Func<PocketData, string> expected) => described
+            .Where(kv => carries(kv.Value))
+            .Where(kv => !PocketManager.Describe(kv.Value).Contains(expected(kv.Value)))
+            .Select(kv => kv.Key)
+            .OrderBy(s => s)
+            .ToList();
+
+        var mute = described
+            .Where(kv => PocketManager.Describe(kv.Value) == "nothing")
+            .Select(kv => kv.Key)
+            .OrderBy(s => s)
+            .ToList();
+
+        Check($"every authored pocket can say what it gives you ({described.Count} pockets){Listing(mute)}",
+            mute.Count == 0);
+
+        // The page arm reads the catalogue the way the method does — the display name when the page is a real
+        // item, the raw id when it is not — because asserting the *pretty* one would fail on a pocket whose page
+        // is unauthored, which is a different defect with its own check in the `roster` section.
+        var unnamedPage = Silent(
+            p => !string.IsNullOrEmpty(p.GrantsBlueprintId),
+            p => InventoryCraftingManager.Instance?.GetItem(p.GrantsBlueprintId)?.DisplayName
+                 ?? p.GrantsBlueprintId);
+        Check($"and the ones that teach name the page{Listing(unnamedPage)}", unnamedPage.Count == 0);
+
+        var unnamedResolve = Silent(p => p.GrantsMaxResolve > 0, p => $"+{p.GrantsMaxResolve} max Resolve");
+        Check($"and the ones that raise the ceiling say by how much{Listing(unnamedResolve)}",
+            unnamedResolve.Count == 0);
+
+        // Through `Words` rather than the enum name, because the sentence is written in the game's voice —
+        // *"he can leave the ground"*, not *"Float"*. Reading it from the same map the method reads is the same
+        // construction the page arm uses: what is asserted is that the verb is **mentioned at all**, which
+        // deleting the arm breaks, and not a wording this file would then own a second copy of.
+        var unnamedVerb = Silent(p => p.GrantsAbility != DreamVerb.None,
+            p => PocketManager.Words(p.GrantsAbility));
+        Check($"and the two that teach a verb name it{Listing(unnamedVerb)}", unnamedVerb.Count == 0);
+
+        var unnamedKnot = Silent(p => p.Kind == PocketKind.Knot, _ => "knot");
+        Check($"and the three that cut a knot say so{Listing(unnamedKnot)}", unnamedKnot.Count == 0);
+
+        var unnamedTether = Silent(p => !string.IsNullOrEmpty(p.TargetEntityId), p => p.TargetEntityId);
+        Check($"and the three that sever name whose tether it is{Listing(unnamedTether)}",
+            unnamedTether.Count == 0);
+
+        // -- The debug key's one judgement, which no check could reach until it was split out --
+        //
+        // **The same read-back, and this is the older and worse shape: not an unwatched guard but an
+        // unwatchable one.** `F10` skipping scene-less pockets is the only thing between a press of that key
+        // and a black screen with no `PocketExit` in it — thirteen of the fourteen authored pockets have no
+        // geometry — and the skip lived inside a private handler that nothing but a keypress could call, so
+        // deleting it would have changed no measurable behaviour anywhere. Unit 9a's `EndPlayerTurn` guard in a
+        // different costume. `Main.DebugPocketToCrossInto` is the choice, extracted for exactly this.
+        //
+        // **The state is constructed rather than discovered**, which is §3's eighteenth class: whether some
+        // earlier fixture happens to have spent the probe is not something this check should depend on, and a
+        // check that silently goes vacuous when it does is worse than no check.
+        var withScenes = pockets.Pockets
+            .Where(kv => kv.Value is { HasScene: true })
+            .Select(kv => kv.Key)
+            .OrderBy(id => id)
+            .ToList();
+
+        var flagWas = withScenes.ToDictionary(id => id, id => world.GetFlag(Flags.PocketCleared(id)));
+        foreach (var id in withScenes) world.SetFlag(Flags.PocketCleared(id), false);
+
+        var picked = Main.DebugPocketToCrossInto(pockets);
+        Check($"the debug crossing picks a pocket that has a scene "
+            + $"({withScenes.Count} of {pockets.Pockets.Count} do) [{(picked == "" ? "none" : picked)}]",
+            withScenes.Count > 0 && withScenes.Contains(picked));
+
+        // The half that is the softlock. With every built pocket spent it must offer **nothing** — the failure
+        // being guarded against is that it falls through to the first stand-in on the list, which is a room you
+        // cannot walk out of because there is no room.
+        foreach (var id in withScenes) world.SetFlag(Flags.PocketCleared(id), true);
+
+        var fallback = Main.DebugPocketToCrossInto(pockets);
+        Check($"and with those spent it offers nothing rather than a pocket with no way out "
+            + $"[{(fallback == "" ? "none" : fallback)}]",
+            fallback == "");
+
+        foreach (var (id, was) in flagWas) world.SetFlag(Flags.PocketCleared(id), was);
 
         // -- What the verbs cost, and what a creature takes (unit 8) --
         //
@@ -4988,9 +5291,10 @@ public static class SliceVerifier
         // the click and does nothing, and `PocketManager.Enter` is deliberately silent about it *because*
         // this check exists — the diagnostic belongs to a sweep, not to a click.
         //
-        // **Zero entrances are authored today, so the count is printed.** A universal over an empty set is a
-        // wish (unit 4b), and the honest mitigation is that the mechanism is proved on `verify_pocket_door`
-        // instead — this line is the one that starts working the day pass 2 places a real one.
+        // ~~**Zero entrances are authored today, so the count is printed.**~~ **Fourteen are, since unit 10 —
+        // corrected 2026-08-06.** The count stays in the message for the reason it was put there: a universal
+        // over an empty set is a wish (unit 4b), and the number is what tells a reader which of the two this
+        // line currently is.
         var entrances = rooms
             .SelectMany(kv => kv.Value.Hotspots
                 .Where(h => h is { Kind: HotspotKind.CrossToDream })
@@ -5005,6 +5309,115 @@ public static class SliceVerifier
         Check($"every authored pocket entrance names a registered pocket "
             + $"({entrances.Count} authored){Listing(danglingPockets)}",
             danglingPockets.Count == 0);
+
+        // -- Unit 10: the same crossing read the other way, which is a different claim --
+        //
+        // **Found by break-test on 2026-08-06, in the read-back over unit 10.** Pointing `ch3_tear`'s entrance
+        // at a second pocket left `ch3_demon` — the Tear, where Iris's tether is cut and the game ends — with
+        // no door anywhere in the world, and **all 1101 checks passed**. `--verify-content` went on printing
+        // *pocket entrances authored on Waking screens 14 / 14* over a game that could not be finished, because
+        // **moving a door does not change how many doors there are.**
+        //
+        // The check above says *every door leads somewhere*. This one says *everywhere is reached by a door*,
+        // and the two stop being the same statement the moment one pocket can be named twice. §3's recurring
+        // class in the shape that keeps recurring: keyed on a count where the rule is about a pairing.
+        //
+        // **A knowledge pocket was already covered, and only by accident** — `GateRoster`'s page-reachability
+        // sweep asks whether anything opens the pocket that teaches each page, so losing that door reddens a
+        // check about *pages*. Knot and boss pockets grant no page and were invisible, which is exactly
+        // backwards: those six are the three chapter endings and the finale.
+        //
+        // `dream_probe` is excluded by name, as it is from the content bill and for the same reason — it is the
+        // reference implementation, it stands on no screen, and `F10` is deliberately its only way in.
+        var doorsPerPocket = entrances
+            .GroupBy(e => e.Hotspot.PocketId)
+            .ToDictionary(g => g.Key, g => g.Count());
+
+        var authoredPockets = (PocketManager.Instance?.Pockets
+                               ?? new Dictionary<string, PocketData>())
+            .Keys
+            .Where(id => id != ContentReport.ReferencePocketId && !id.StartsWith("verify_"))
+            .OrderBy(id => id)
+            .ToList();
+
+        var doorless = authoredPockets.Where(id => !doorsPerPocket.ContainsKey(id)).ToList();
+        Check($"and every authored pocket has one of its own "
+            + $"({authoredPockets.Count} pockets){Listing(doorless)}",
+            doorless.Count == 0);
+
+        var openedTwice = doorsPerPocket
+            .Where(kv => kv.Value > 1)
+            .Select(kv => $"{kv.Key} ×{kv.Value}")
+            .OrderBy(s => s)
+            .ToList();
+
+        Check($"and no two entrances lead into the same one{Listing(openedTwice)}", openedTwice.Count == 0);
+
+        // -- The remnant, which is the half of the pair that is not the door --
+        //
+        // The authoring checklist asks for **two** hotspots per pocket: the `CrossToDream` shown while
+        // `pocket.<id>.cleared` is false, and an `Examine` shown once it is true, standing in the same place as
+        // the broken thing the crossing left behind. Miss the second and the screen simply loses a region the
+        // moment the pocket is taken — no error, no refusal, just a spot that used to be interactive and now
+        // is not. The mechanism is gated on a fixture in the `pockets` section; **the authored content was not**,
+        // and 14 pairs is 14 chances to have typed one flag.
+        var unpaired = entrances
+            .Where(e => !rooms[e.Room].Hotspots.Any(h =>
+                h is { Kind: HotspotKind.Examine } &&
+                h.RequiredFlagValue &&
+                h.RequiredFlag == Flags.PocketCleared(e.Hotspot.PocketId)))
+            .Select(e => $"{e.Room}/{e.Hotspot.Id}")
+            .OrderBy(s => s)
+            .ToList();
+
+        Check($"and each one leaves a remnant behind when it is spent{Listing(unpaired)}", unpaired.Count == 0);
+
+        // -- Unit 10: a pocket that severs names a body, and the body has to be on the map --
+        //
+        // **Also found by break-test on 2026-08-06, and it is the more dangerous of the two.** Retyping
+        // `ch3_demon`'s target as `ch3.iris_typo` left every check green: `EntityStateManager.Sever` takes any
+        // string, writes the state of an instance nobody placed, and returns true — so the finale would report
+        // that it had cut the tether, Iris would stand where she was, and the only symptom is in the ending.
+        //
+        // The bill counts *boss pockets that sever somebody* by asking whether the field is **non-empty**, which
+        // is the weaker property again — it was written when the bosses were unplaced and blank was the honest
+        // state. Now that all three are on the map the field can be checked against them, and this is the check
+        // that goes red the day a boss is renamed in one file and not the other.
+        var placedInstances = rooms.Values
+            .SelectMany(r => r.Entities ?? new Godot.Collections.Array<EntityPlacement>())
+            .Where(p => p != null)
+            .Select(p => p.InstanceId)
+            .ToHashSet();
+
+        var severing = (PocketManager.Instance?.Pockets ?? new Dictionary<string, PocketData>())
+            .Where(kv => !kv.Key.StartsWith("verify_") && !string.IsNullOrEmpty(kv.Value?.TargetEntityId))
+            .ToList();
+
+        var phantomTethers = severing
+            .Where(kv => !placedInstances.Contains(kv.Value.TargetEntityId))
+            .Select(kv => $"{kv.Key}: {kv.Value.TargetEntityId}")
+            .OrderBy(s => s)
+            .ToList();
+
+        Check($"every pocket that cuts a tether names a body that is standing somewhere "
+            + $"({severing.Count} sever){Listing(phantomTethers)}",
+            phantomTethers.Count == 0);
+
+        // -- And severing is a boss verb, which is now a ruling rather than an accident of authoring --
+        //
+        // **Jeremy, 2026-08-06:** *"Sever is for weakening bosses (3) or regaining old knowledge."* The code
+        // already obeys it structurally — `PocketManager.Grant` cuts the tether inside `case PocketKind.Boss`
+        // and nowhere else — so a `TargetEntityId` on a knowledge or knot pocket is **inert rather than
+        // dangerous**. That is exactly why it wants a check: an authored field that silently does nothing is
+        // §3's eleventh class, and the shape of it here is a designer typing a name into the wrong `.tres` and
+        // believing a tether will be cut. Three severing pockets, three bosses, and no fourth.
+        var strayTethers = severing
+            .Where(kv => kv.Value.Kind != PocketKind.Boss)
+            .Select(kv => $"{kv.Key} ({kv.Value.Kind})")
+            .OrderBy(s => s)
+            .ToList();
+
+        Check($"and only a boss pocket names one at all{Listing(strayTethers)}", strayTethers.Count == 0);
 
         // -- Unit 5: the three camps the verb points at, and the walk out of each --
         //
@@ -5113,6 +5526,200 @@ public static class SliceVerifier
         Check($"every Examine hotspot says something{Listing(examineSilent)}",
             examineSilent.Count == 0);
 
+        // -- Every flag a hotspot waits on must have something that writes it --
+        //
+        // **The most expensive gap the suite has had, found in play on 2026-08-05 and closed here on
+        // 2026-08-06.** Jeremy beat the Apothecary and her notes stayed locked. The cause was not that screen:
+        // a win wrote `freed.*` only if the body was `Severed` when it fell, severing an ordinary creature has
+        // no route in the game, and so **all 24 `freed.*` hotspots in the world were permanently shut** —
+        // two of her three Physick notes among them, and with those the two fused traps whose blueprints they
+        // are. The ruling that fixed it is in `EncounterManager.Finish`; this is the check that would have
+        // found it without a playthrough.
+        //
+        // **Every sweep in this file asked a weaker question.** *"Every freed / defeated gate names a creature
+        // that is placed"* was green, because the creatures were placed — the missing term was whether the
+        // flag could ever be **written**. `--verify-content` printed *people freed 24 / 24* for the same
+        // reason: it counted the hotspots. §3's nineteenth class, and the general form of the fix is to model
+        // the writers rather than the names.
+        //
+        // A flag is writable if content sets it (`SetsFlag` on a hotspot or a recipe) or if a manager derives
+        // it from content that exists. The derived half is spelled out rather than pattern-matched on the
+        // prefix, because **the prefix is exactly what lies**: `freed.ch2.apothecary_01` looked well-formed
+        // for months. `Freed` is writable only for a body with a `PurifiedName` and `Defeated` only for one
+        // without, since that is the single question `Finish` asks.
+        var writable = new HashSet<string>();
+
+        foreach (var (roomId, room) in rooms)
+        {
+            writable.Add(Flags.Cleansed(roomId));
+            writable.Add(Flags.CampFound(roomId));
+
+            foreach (var h in room.Hotspots)
+            {
+                if (h == null) continue;
+                if (!string.IsNullOrEmpty(h.SetsFlag)) writable.Add(h.SetsFlag);
+                if (h.Kind == HotspotKind.Mend) writable.Add(Flags.Mended(h.Id));
+                if (h.Kind == HotspotKind.Harvest) writable.Add(Flags.Harvested(h.Id));
+            }
+
+            foreach (var p in room.Entities ?? new Godot.Collections.Array<EntityPlacement>())
+            {
+                if (p?.Entity == null) continue;
+                writable.Add(string.IsNullOrEmpty(p.Entity.PurifiedName)
+                    ? Flags.Defeated(p.InstanceId)
+                    : Flags.Freed(p.InstanceId));
+            }
+        }
+
+        foreach (var recipe in InventoryCraftingManager.Instance?.Recipes.Values
+                               ?? Enumerable.Empty<RecipeData>())
+            if (!string.IsNullOrEmpty(recipe?.SetsFlag)) writable.Add(recipe.SetsFlag);
+
+        foreach (var blueprint in InventoryCraftingManager.Instance?.Recipes.Values
+                                  .Select(r => r?.RequiredBlueprintId)
+                                  .Where(id => !string.IsNullOrEmpty(id)) ?? Enumerable.Empty<string>())
+            writable.Add(Flags.Learned(blueprint));
+
+        foreach (var pocketId in PocketManager.Instance?.Pockets.Keys ?? Enumerable.Empty<string>())
+        {
+            writable.Add(Flags.PocketCleared(pocketId));
+            writable.Add(Flags.KnotCut(pocketId));
+        }
+
+        foreach (var chapter in rooms.Values.Select(r => r?.ChapterId).Where(c => !string.IsNullOrEmpty(c)))
+            writable.Add(Flags.MaterialRefill(chapter));
+
+        foreach (DreamVerb verb in System.Enum.GetValues(typeof(DreamVerb)))
+            writable.Add(Flags.VerbLearned(verb));
+
+        var unwritable = new List<string>();
+        foreach (var (roomId, room) in rooms)
+            foreach (var h in room.Hotspots)
+            {
+                if (h == null) continue;
+
+                var gates = new List<string>();
+                if (!string.IsNullOrEmpty(h.RequiredFlag)) gates.Add(h.RequiredFlag);
+                foreach (var extra in h.RequiredFlags ?? System.Array.Empty<string>())
+                    if (!string.IsNullOrEmpty(extra)) gates.Add(extra);
+
+                foreach (var gate in gates.Where(g => !writable.Contains(g)))
+                    unwritable.Add($"{roomId}/{h.Id}: {gate}");
+            }
+
+        Check($"every flag a hotspot waits on has something that writes it "
+            + $"({writable.Count} writable){Listing(unwritable)}",
+            unwritable.Count == 0);
+
+        // -- `placement.md` rule 17: every optional fight must be worth having taken --
+        //
+        // **A `--verify-content` row for one day, promoted here on 2026-08-06 the hour its one violation was
+        // settled.** `ch1_bramble` held a fight whose only payoff was the person it freed, which §1 explicitly
+        // does not count; a heartwood cache went onto that screen with the chapter 2 material pass, which is
+        // the cheapest fix either problem was going to get. A rule with no violations left is a gate rather
+        // than a report — the row stays because its counts (13 optional, 9 of them a board) are how anyone
+        // checks the derivation is still the one §1 was written against.
+        //
+        // The walk lives in `ContentReport` and is called rather than copied, because two answers to *which
+        // fights are optional* would drift the first time a door moved.
+        var unpaidFights = ContentReport.OptionalFightsPayingNothing(rooms, out var optionalCount, out _);
+
+        Check($"every optional fight pays something beyond the person it frees "
+            + $"({optionalCount} optional){Listing(unpaidFights)}",
+            optionalCount > 0 && unpaidFights.Count == 0);
+
+        // -- A chapter gate must be affordable to a player who bought everything offered so far --
+        //
+        // **Jeremy's second play finding, 2026-08-05: he reached the end of chapter 2 with the kit built and
+        // could not afford the mine cart.** The cart wants 4 Scrap Iron, 2 Heartwood and 1 Pitch, and chapter 2
+        // contained **no Heartwood at all** — 7 in chapter 1, 0 in chapter 2, 3 in chapter 3 — while the
+        // mandatory bridge had already taken 4 of the 7. Everything craftable in the window wanted 13 Heartwood
+        // against a supply of 7. `items.md` §19 calls that out in its own words: *"A common must never be the
+        // reason a craft is refused. If the player is ever short of Heartwood, Heartwood was misclassified."*
+        //
+        // **Nothing saw it because every existing material check is global.** `GateRoster`'s *"every item in the
+        // catalogue can be reached from the ground"* asks whether each recipe's inputs exist **somewhere in the
+        // game**, and chapter 3 has Heartwood, so the sum came out fine. §1's rule 13 had the windowed form
+        // written down and deferred — *"the per-window form needs blueprint placement first"* — and blueprints
+        // landed with unit 10 without anyone cashing it.
+        //
+        // **What is asserted is the narrow claim that actually bit, not the general one, and the difference
+        // matters.** The general form — *no chapter window is ever short of any common* — is **false today and
+        // correctly so**: chapter 1 is woodland and holds no Scrap Iron, so the Spiked Pit and the Chime cannot
+        // be built until the village. That is a timing choice (decision 9 is built on it) and not a lockout,
+        // because nothing in chapter 1 is *gated* on those traps. What is never acceptable is a **repair that
+        // opens the next chapter** being unaffordable, because that is a save the player cannot finish —
+        // invariant 12. So the check is scoped to the materials each repair itself names.
+        //
+        // Supply counts base yields only and ignores `RefillsAtMilestone`, which is the conservative direction:
+        // a refill arrives at the chapter's boss and the gate may be reached before it.
+        // §19's own table: the four commons that are a **one-time startup cost**, spent building a kit you then
+        // own. Bitterroot and Tallow are deliberately excluded — they carry the repeating salve economy, so a
+        // one-shot demand count says nothing true about them. The two scarce materials are excluded too, and
+        // for the opposite reason: Cairnstone and Graveflower are *meant* to be tight enough to make a craft a
+        // decision, so asserting they cover every recipe would gate away the choice §1 exists to create.
+        var DormantCommons = new HashSet<string>
+        {
+            "mat_heartwood", "mat_scrap_iron", "mat_cured_hide", "mat_pitch",
+        };
+
+        var chapterOrder = new[] { "ch1", "ch2", "ch3" };
+
+        var stationChapter = rooms
+            .SelectMany(kv => kv.Value.Hotspots
+                .Where(h => h != null && !string.IsNullOrEmpty(h.StationId))
+                .Select(h => (h.StationId, kv.Value.ChapterId)))
+            .GroupBy(t => t.StationId)
+            .ToDictionary(g => g.Key, g => g.First().ChapterId);
+
+        int Window(string chapter) => System.Array.IndexOf(chapterOrder, chapter ?? "");
+
+        // A recipe with no station is made at the camp bench, which exists from chapter 1.
+        int RecipeWindow(RecipeData r) => string.IsNullOrEmpty(r.RequiresStation)
+            ? 0
+            : stationChapter.TryGetValue(r.RequiresStation, out var ch) ? Window(ch) : 0;
+
+        var recipes = InventoryCraftingManager.Instance?.Recipes.Values
+                          .Where(r => r != null).ToList()
+                      ?? new List<RecipeData>();
+
+        var unaffordable = new List<string>();
+
+        foreach (var repair in recipes.Where(r => r.RepairsWorld).OrderBy(r => r.Id))
+        {
+            var window = RecipeWindow(repair);
+
+            var supply = new Dictionary<string, int>();
+            foreach (var room in rooms.Values.Where(r => Window(r.ChapterId) <= window))
+                foreach (var h in room.Hotspots)
+                {
+                    if (h is not { Kind: HotspotKind.Harvest or HotspotKind.Mend }) continue;
+                    if (string.IsNullOrEmpty(h.ItemId)) continue;
+                    supply[h.ItemId] = supply.GetValueOrDefault(h.ItemId) + h.ItemAmount;
+                }
+
+            var demand = new Dictionary<string, int>();
+            foreach (var r in recipes.Where(r => RecipeWindow(r) <= window))
+                foreach (var input in r.Inputs)
+                {
+                    if (input == null || string.IsNullOrEmpty(input.ItemId)) continue;
+                    demand[input.ItemId] = demand.GetValueOrDefault(input.ItemId) + input.Amount;
+                }
+
+            foreach (var input in repair.Inputs.Where(i => i != null && DormantCommons.Contains(i.ItemId)))
+            {
+                var have = supply.GetValueOrDefault(input.ItemId);
+                var want = demand.GetValueOrDefault(input.ItemId);
+                if (want > have)
+                    unaffordable.Add($"{repair.Id} by {chapterOrder[window]}: "
+                        + $"{input.ItemId} {have} in the world against {want} wanted");
+            }
+        }
+
+        Check($"every repair that opens a chapter is affordable to a player who bought everything so far "
+            + $"({recipes.Count(r => r.RepairsWorld)} repairs){Listing(unaffordable)}",
+            unaffordable.Count == 0);
+
         GateWorldGraph(rooms);
         GateCombatShapes(rooms);
         GateFights(rooms);
@@ -5220,6 +5827,23 @@ public static class SliceVerifier
         Check($"the eight named materials all exist as components{Listing(missingRoster)}",
             missingRoster.Count == 0);
 
+        // **A `Lore` page is the one sanctioned non-material yield, corrected 2026-08-05.** This swept *every*
+        // `ItemId` against the eight and called anything else off-roster — but §19's ceiling is a rule about
+        // **materials** (*"a ninth material wanting to exist is a signal that a recipe wants redesigning"*), and
+        // a page is not a material. It is knowledge made into an object (decision 11), and `handoff.md` §2's own
+        // queue instructs placing her three notes as exactly this: *"one `Harvest` hotspot each, with `ItemId`
+        // set to the page id exactly."* So the check as written would have gone red on anyone who followed the
+        // written instruction, which is how it was found — by following it.
+        //
+        // **It is the recurring class with the polarity flipped, and that is worth naming.** Every other instance
+        // today was a check keyed on a *weaker* property than its rule and therefore passing on content the rule
+        // forbids. This one was keyed on a **stronger** property than its rule, and so failed on content the rule
+        // permits — the same defect, and the direction that gets a correct gate deleted by someone in a hurry
+        // rather than quietly banking a bug.
+        //
+        // Widened to *material or page*, not to *anything in the catalogue*: a node paying out a Bell Maul or a
+        // salve is still off-vocabulary and still caught, which is the coverage the old form had incidentally and
+        // that must not be lost while fixing what it had wrongly.
         var offRoster = new List<string>();
         foreach (var (roomId, room) in rooms)
         {
@@ -5228,6 +5852,7 @@ public static class SliceVerifier
             {
                 if (h is not { Kind: HotspotKind.Harvest or HotspotKind.Mend }) continue;
                 if (string.IsNullOrEmpty(h.ItemId) || roster.Contains(h.ItemId)) continue;
+                if (inv.GetItem(h.ItemId)?.Category == ItemCategory.Lore) continue;
                 offRoster.Add($"{roomId}/{h.Id} -> {h.ItemId}");
             }
         }
@@ -5277,7 +5902,15 @@ public static class SliceVerifier
         Check("a station recipe is refused where there is no station",
             inv.Inspect("recipe_tool_bill_hook") == CraftBlock.NotAtStation);
 
-        nav.GoToRoom("ch2_smithy");
+        // `ch2_forge_row`, and the room name is load-bearing rather than incidental. The anvil was in
+        // `ch2_smithy` until 2026-08-05, which `ledger-ch2` row 10 had never agreed with — and the reason
+        // it survived is that section 10's census keys on the station *id* and asks only whether some room
+        // built it, so it was green either way. This line is now the only assertion in the suite about
+        // *which* screen the one anvil stands on: move it back and this check goes red, which is the whole
+        // reason to navigate to a real room here instead of a fixture. Same shape as section 3's boss-room
+        // class — a check keyed on a weaker property than the ledger it enforces passes on content the
+        // ledger forbids.
+        nav.GoToRoom("ch2_forge_row");
         Check("and allowed at the anvil it names",
             inv.Inspect("recipe_tool_bill_hook") == CraftBlock.None);
         Check("while the mortar's work is not done at the anvil",
@@ -5345,15 +5978,27 @@ public static class SliceVerifier
         Check($"and each has a page authored for it to be written on{Listing(pagelessTools)}",
             pagelessTools.Count == 0);
 
-        // The second: no authored source hands one over. Pockets and placed pages both count, so this goes
-        // red on whichever arrives first, and it cannot be satisfied by a `verify_` fixture.
+        // **The second half was the other self-retiring ledger, and unit 10 retired it, 2026-08-05.** It read
+        // *"but nothing in the world hands one over yet — a pocket or a placed page turns this red"*, and the
+        // fourteen pockets turned it red on cue. The claim it existed to make visible — that the three access
+        // tools were unreachable without `F6` — is now false in the good direction, so it inverts: **each tool's
+        // page is handed over by something in the world.**
+        //
+        // The same `PagesTheWorldHandsOver` sweep, read the other way round, so a pocket repointed at a
+        // different family or an entrance deleted from a screen turns this red rather than quietly returning the
+        // three tools to being debug-only. That is the failure this used to be pointed at, and it is a worse one
+        // now that the mechanism exists: before, unreachable was the honest state.
         var handedOver = PagesTheWorldHandsOver(rooms);
-        var learnable = toolRecipes
-            .Where(r => handedOver.Contains(r.RequiredBlueprintId))
+        var unlearnable = toolRecipes
+            .Where(r => !handedOver.Contains(r.RequiredBlueprintId))
             .Select(r => r.RequiredBlueprintId).ToList();
-        Check($"but nothing in the world hands one over yet — a pocket or a placed page turns this red"
-            + $" ({handedOver.Count} pages reachable){Listing(learnable)}",
-            learnable.Count == 0);
+        Check($"and something in the world hands each of them over"
+            + $" ({handedOver.Count} pages reachable){Listing(unlearnable)}",
+            unlearnable.Count == 0);
+
+        // Unchanged and now doing more work than it was: the pages are reachable, so *knowledge is still the
+        // gate* has to be re-proved rather than assumed. A fresh game has walked nowhere, so every tool is still
+        // unknown — which is the distinction between a page existing in the world and a page being in your hand.
         Check("so every tool is unknown on a fresh game",
             toolRecipes.All(r => inv.Inspect(r.Id) == CraftBlock.Unknown));
 
@@ -5825,17 +6470,30 @@ public static class SliceVerifier
         Check($"and the only one that cannot is still the catalyst{Listing(closedHoles)}",
             closedHoles.Count == 0);
 
-        // Bidirectional like the catalyst entry above, and for the same reason: it goes red the day *any* page
-        // becomes reachable, which is the notice to narrow it rather than a complaint about missing content.
-        // No hardcoded count, so authoring her silent fourth note cannot accuse anybody of anything — the
-        // census that pins the number is the crossing in `GateCraftingPanel`, where it is derived from the
-        // recipes rather than remembered.
-        var reachablePages = pages
-            .Where(i => obtainable.Contains(i.Id))
+        // **This was a self-retiring ledger and it retired on schedule, 2026-08-05.** It read *"and no blueprint
+        // page has a source yet, all 10 of them — a pocket or a placed page turns this red"*, and unit 10's
+        // fourteen pockets turned it red exactly as its own message predicted. Its job was to make an
+        // unreachability visible; the unreachability is gone for his seven families, so the claim is inverted
+        // rather than deleted — a check that only ever said *"nothing yet"* has nothing to say once something
+        // does.
+        //
+        // **Which pages are expected to have a source is derived, not listed.** A knowledge pocket's
+        // `GrantsBlueprintId` *is* the page id (decision 11), so the set of paged-from-a-pocket ids comes from
+        // the pockets themselves — a hardcoded list of seven would go stale the day a pocket is repointed, and
+        // would go stale silently, since a stale list still passes on the content it was written against. Her
+        // three notes are excluded because they are *found*, and placing them is not unit 10's job; the row in
+        // `--verify-content` tracks that.
+        var pagesFromPockets = (PocketManager.Instance?.Pockets.Values ?? new List<PocketData>())
+            .Where(p => p != null && !string.IsNullOrEmpty(p.GrantsBlueprintId))
+            .Select(p => p.GrantsBlueprintId)
+            .ToHashSet();
+
+        var unsourced = pages
+            .Where(i => pagesFromPockets.Contains(i.Id) && !obtainable.Contains(i.Id))
             .Select(i => i.Id).OrderBy(id => id).ToList();
-        Check($"and no blueprint page has a source yet, all {pages.Count} of them"
-            + $" — a pocket or a placed page turns this red{Listing(reachablePages)}",
-            pages.Count > 0 && reachablePages.Count == 0);
+        Check($"every page a pocket grants is reachable from the ground, all {pagesFromPockets.Count} of them"
+            + $"{Listing(unsourced)}",
+            pagesFromPockets.Count > 0 && unsourced.Count == 0);
 
         var unpayable = authored
             .Where(r => r.Inputs.Any(i => i == null || !obtainable.Contains(i.ItemId)))
@@ -5882,7 +6540,13 @@ public static class SliceVerifier
     /// invariant it stands in for.
     /// </para>
     /// </remarks>
-    private static HashSet<string> PagesTheWorldHandsOver(Dictionary<string, RoomData> rooms)
+    /// <remarks>
+    /// <b><c>internal</c> rather than private since 2026-08-05, so <see cref="ContentReport"/> can ask the same
+    /// question.</b> Its *"blueprint-gated recipes with no in-world source"* line had been counting gated
+    /// recipes instead of unreachable ones; the fix needed this exact set, and a second copy of "what the world
+    /// hands over" is the drift `GrantPage` and decision 11 exist to avoid. One home, two tools.
+    /// </remarks>
+    internal static HashSet<string> PagesTheWorldHandsOver(Dictionary<string, RoomData> rooms)
     {
         var pages = new HashSet<string>();
         var inv = InventoryCraftingManager.Instance;
@@ -5902,11 +6566,34 @@ public static class SliceVerifier
                     pages.Add(h.ItemId);
         }
 
+        // **Which pockets the player can actually open, and this clause was missing until 2026-08-05.** The
+        // sweep used to credit every knowledge pocket's page whether or not anything in the world opened that
+        // pocket — so on the day the fourteen `PocketData` files were authored with no entrances placed, it
+        // reported *7 pages reachable* and every page was in fact unreachable. Caught by reading the count in a
+        // passing check's own message, not by a failure.
+        //
+        // **It is the recurring class in its exact form: a check keyed on a weaker property than the thing it
+        // enforces.** *"A pocket grants this page"* is not *"the world hands this page over"* — the missing term
+        // is the door, and the weaker reading is the one that feels like it is not hardcoding anything. Same
+        // shape as the boss placement gate that asked whether a body stood in *some* room, and the station census
+        // that asked whether *some* room built the anvil.
+        var openablePockets = rooms
+            .Where(kv => !kv.Key.StartsWith("verify_") && kv.Value?.Hotspots != null)
+            .SelectMany(kv => kv.Value.Hotspots)
+            .Where(h => h is { Kind: HotspotKind.CrossToDream })
+            .Select(h => h.PocketId)
+            .ToHashSet();
+
         foreach (var (pocketId, pocket) in PocketManager.Instance?.Pockets
                                           ?? new Dictionary<string, PocketData>())
         {
             if (pocketId.StartsWith("verify_") || pocket == null) continue;
             if (pocket.Kind != PocketKind.Knowledge) continue;
+
+            // The door, and it is the term that was missing. A pocket nothing opens hands nothing over,
+            // whether it is walked or taken on a click — unit 10 changed which of those happens, not whether
+            // an entrance is required.
+            if (!openablePockets.Contains(pocketId)) continue;
 
             // `PocketManager.GrantPage` hands over the page for whatever it just taught, on the strength of
             // the id being the same string. So the grant field *is* the page id — reading it as one here is
@@ -7413,6 +8100,31 @@ public static class SliceVerifier
 
         NavigationManager.Instance.GoToRoom("verify_cues");
         Check("the unpainted screen is cueing", _view == null || _view.CuesVisible);
+
+        // -- The room card keeps out of the HUD's corner (2026-08-05) --
+        //
+        // Jeremy, from a screenshot: *"I don't like how the room display lines up with the debug one."* The card
+        // drew its plate at a flat `(24, 24)` and the HUD's `TopLeft` VBox sits at `(40, 32)`, so the shipping
+        // room name lay across the debug id and the card's second line lay across "WAKING WORLD".
+        //
+        // **Checkable only because the position is a pure function now.** A headless run lays nothing out, so
+        // `Size` is zero and the drawn rect is unavailable — the same blind spot that hid the crafting panel's
+        // softlock earlier the same day. `RoomCard.PlateOrigin` takes the viewport height and the plate height
+        // and returns the corner, so a gate can ask it at a nominal 1080 with no viewport at all.
+        //
+        // The claim is a **relationship**, not a coordinate: the plate's top must fall below the bottom of the
+        // HUD's top-left block, whatever either one's size. `HudTopLeftBottom` is measured from the HUD's own
+        // constants rather than guessed, so restyling either one keeps the check honest instead of stale.
+        const float NominalHeight = 1080f;
+        const float PlateHeight = 200f;
+        const float HudTopLeftBottom = 32f + 30f + 20f + 8f; // position, room label, realm label, spacing
+        var plateTop = RoomCard.PlateOrigin(NominalHeight, PlateHeight).Y;
+        Check($"the room card's plate clears the HUD's top-left block "
+            + $"(plate top {plateTop}, HUD block ends {HudTopLeftBottom})",
+            plateTop > HudTopLeftBottom);
+        Check($"and stays on screen rather than falling off the bottom (plate bottom "
+            + $"{plateTop + PlateHeight} of {NominalHeight})",
+            plateTop + PlateHeight < NominalHeight);
 
         var live = Live();
         Check("the open hotspot is on screen", Blind || Present(live, "verify_cues_open"));

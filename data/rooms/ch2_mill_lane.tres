@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="RoomData" load_steps=12 format=3]
+[gd_resource type="Resource" script_class="RoomData" load_steps=14 format=3]
 
 [ext_resource type="Script" uid="uid://b0jetcphiy2cm" path="res://src/Data/HotspotData.cs" id="1_hs"]
 [ext_resource type="Script" uid="uid://v0juosv2w310" path="res://src/Data/RoomData.cs" id="2_room"]
@@ -66,11 +66,41 @@ InstanceId = "ch2.stable_master_01"
 Entity = ExtResource("4_ent")
 WakingPosition = Vector2(530, 855)
 
+[sub_resource type="Resource" id="hs_pocket_door"]
+script = ExtResource("1_hs")
+Id = "ch2_mill_lane_pocket_door"
+Label = "A Bell, Cracked"
+Kind = 5
+Region = Rect2(1250, 120, 300, 260)
+PocketId = "ch2_forging"
+RequiredFlag = "pocket.ch2_forging.cleared"
+RequiredFlagValue = false
+
+[sub_resource type="Resource" id="hs_pocket_remnant"]
+script = ExtResource("1_hs")
+Id = "ch2_mill_lane_pocket_remnant"
+Label = "The Bell, Silent"
+Kind = 1
+Region = Rect2(1250, 120, 300, 260)
+ExamineText = "[unwritten]"
+RequiredFlag = "pocket.ch2_forging.cleared"
+RequiredFlagValue = true
+
+[sub_resource type="Resource" id="hs_ch2_mill_lane_heartwood"]
+script = ExtResource("1_hs")
+Id = "ch2_mill_lane_heartwood"
+Label = "Heartwood"
+Kind = 3
+Region = Rect2(620, 870, 220, 160)
+ItemId = "mat_heartwood"
+ItemAmount = 2
+RefillsAtMilestone = true
+
 [resource]
 script = ExtResource("2_room")
 Id = "ch2_mill_lane"
 DisplayName = "Mill Lane"
 ChapterId = "ch2"
 PlaceholderStyle = 0
-Hotspots = Array[ExtResource("1_hs")]([SubResource("hs_0"), SubResource("hs_1"), SubResource("hs_2"), SubResource("hs_3"), SubResource("hs_4"), SubResource("hs_5")])
+Hotspots = Array[ExtResource("1_hs")]([SubResource("hs_0"), SubResource("hs_1"), SubResource("hs_2"), SubResource("hs_3"), SubResource("hs_4"), SubResource("hs_5"), SubResource("hs_pocket_door"), SubResource("hs_pocket_remnant"), SubResource("hs_ch2_mill_lane_heartwood")])
 Entities = Array[ExtResource("3_ep")]([SubResource("ep_0")])

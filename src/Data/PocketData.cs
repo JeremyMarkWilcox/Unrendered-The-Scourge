@@ -84,6 +84,28 @@ public partial class PocketData : Resource
     /// </remarks>
     [Export] public string ScenePath { get; set; } = "";
 
+    /// <summary>
+    /// Whether this pocket's 3D scene has been built yet. <b>The one switch unit 10 turns on</b>: false and
+    /// clicking the entrance grants where you stand (<c>PocketManager.TakeFromWaking</c>), true and it crosses
+    /// you in as always.
+    /// </summary>
+    /// <remarks>
+    /// <b>Derived, never authored, and that is the whole reason this is safe to ship.</b> There is no
+    /// <c>IsStandIn</c> flag, because a flag is a second fact that can disagree with the first — and the
+    /// disagreement that matters is *a pocket with a finished scene still handing out its reward on click*,
+    /// which no gate could distinguish from an author's intent. Reading the scene path means the stand-in
+    /// cannot outlive the scene: Jeremy points this field at his pocket and this property flips for that
+    /// pocket alone, in the same commit, with nothing to unset. Unit 1.5's rule, second application.
+    /// <para>
+    /// Deliberately only an emptiness test and <i>not</i> <c>ResourceLoader.Exists</c>. A path that names a
+    /// missing scene is a content error the gates already catch by crossing this collection against the
+    /// filesystem; resolving it here would turn that error into a silent fall back to the stand-in, so a typo
+    /// would hand out the reward and look like it worked. Emptiness is the author saying *not yet*; a bad path
+    /// is the author being wrong, and the two must not share an outcome.
+    /// </para>
+    /// </remarks>
+    public bool HasScene => !string.IsNullOrEmpty(ScenePath);
+
     [ExportGroup("What it grants")]
     /// <summary>
     /// The blueprint remembered here. <see cref="PocketKind.Knowledge"/> only, and this is the mechanism

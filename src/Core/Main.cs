@@ -237,21 +237,53 @@ public partial class Main : Node
             return;
         }
 
-        // First registered rather than a hardcoded id, on `LearnEveryCraftFamily`'s reasoning: a name in
-        // code goes quietly out of date the day the content is renamed, and the symptom is a key that does
-        // nothing, which looks exactly like a broken seam.
-        foreach (var id in pockets.Pockets.Keys)
-        {
-            var verdict = pockets.InspectEnter(id);
-            GD.Print($"[debug] pocket {id}: {verdict}");
-
-            if (verdict != PocketBlock.None) continue;
-            if (pockets.Enter(id)) return;
-        }
+        var target = DebugPocketToCrossInto(pockets);
+        GD.Print($"[debug] pocket target: {(target == "" ? "none with a scene is open" : target)}");
+        if (!string.IsNullOrEmpty(target) && pockets.Enter(target)) return;
 
         EventBus.Instance?.EmitNotify(pockets.Pockets.Count == 0
             ? "[debug] no pockets are registered"
-            : "[debug] nothing to cross into — every pocket is taken, or you are mid-fight");
+            : "[debug] nothing to cross into — every pocket with a scene is taken, or you are mid-fight");
+    }
+
+    /// <summary>
+    /// Which pocket <c>F10</c> would cross into, or <c>""</c> for none. <b>Skips every pocket with no 3D scene
+    /// built for it</b>, which is the whole of this key's judgement.
+    /// </summary>
+    /// <remarks>
+    /// <b>Scene-less pockets are skipped, added with unit 10 (2026-08-05).</b> Thirteen of the fourteen are
+    /// stand-ins whose reward is taken by clicking their entrance, and entering one puts you in a pocket with
+    /// no geometry and no <c>PocketExit</c> — a black screen with no way out, which is the softlock the
+    /// handoff's checklist warns about in the one place it cannot be authored around. The manager deliberately
+    /// still <i>permits</i> it, because a blank <c>ScenePath</c> is <c>PocketHost</c>'s documented headless
+    /// state and every fixture in <c>GatePockets</c> depends on it; choosing which pocket is worth entering is
+    /// this key's job, not the manager's. It reads the same field the routing reads, so the two cannot
+    /// disagree.
+    /// <para>
+    /// First registered rather than a hardcoded id, on <c>LearnEveryCraftFamily</c>'s reasoning: a name in code
+    /// goes quietly out of date the day the content is renamed, and the symptom is a key that does nothing,
+    /// which looks exactly like a broken seam.
+    /// </para>
+    /// <para>
+    /// <b>Split out of <c>TogglePocket</c> on 2026-08-06 so that a gate can ask it.</b> The read-back over unit
+    /// 10 found the skip unwatched and — worse — <i>unwatchable</i>: the whole selection lived inside a private
+    /// handler reachable only from a keypress, so no check could tell the guard from its absence. That is the
+    /// same shape as unit 9a's <c>EndPlayerTurn</c> guard, whose deletion left 1041 checks green. The entering
+    /// stays behind; only the choosing moved, and the choosing is the part with a rule in it.
+    /// </para>
+    /// </remarks>
+    internal static string DebugPocketToCrossInto(PocketManager pockets)
+    {
+        if (pockets == null) return "";
+
+        foreach (var (id, pocket) in pockets.Pockets)
+        {
+            if (pocket is not { HasScene: true }) continue;
+            if (pockets.InspectEnter(id) != PocketBlock.None) continue;
+            return id;
+        }
+
+        return "";
     }
 
     /// <summary>

@@ -91,47 +91,45 @@ public static class Flags
     /// roster counts exactly 24 — which is the property the class comment promises, that a bill checker
     /// can count a class of thing by prefix.
     /// <para>
-    /// <b>"Exactly 24" became "up to 24" in unit 3a</b>, and the missing ones went to
-    /// <see cref="Killed"/> rather than nowhere. The count that survives as an equality is the pair:
-    /// <c>freed.* + killed.* == 24</c>, with <c>defeated.* == 6</c>. See <see cref="Killed"/> for why
-    /// a third domain was cheaper than the alternatives.
+    /// ~~<b>"Exactly 24" became "up to 24" in unit 3a</b>, and the missing ones went to <c>Killed</c>.~~
+    /// <b>It is back to exactly 24, and to a single domain, as of 2026-08-06.</b> The overkill route never
+    /// existed for a person: severing an ordinary creature has no route in the game, so the <c>killed.*</c>
+    /// branch took every regular fight and every hotspot on this side stayed shut. Jeremy's ruling —
+    /// <i>"all non-bosses live… you more or less bonk them on the head and wake them up"</i> — deleted the
+    /// other domain rather than the plumbing. The comment block where <c>Killed</c> stood carries the whole
+    /// account.
     /// </para>
     /// <para>
     /// <b>The 24 did not move when the bosses landed on 2026-08-05, and that is the point of the split.</b>
-    /// <c>defeated.*</c> went 6 → 8 and will reach 9 with Iris, while this side stayed exactly where it was
-    /// — a boss frees nobody, so it cannot appear here even though two of the three were people. The pair
-    /// that is invariant is still <c>freed.* + killed.* == 24</c>; only the other domain grows.
+    /// <c>defeated.*</c> went 6 → 8 and reached 9 with Iris, while this side stayed exactly where it was — a
+    /// boss frees nobody, so it cannot appear here even though two of the three were people. The invariant is
+    /// now the flat <c>freed.* == 24</c>; only the other domain ever grew.
     /// </para>
     /// </remarks>
     public static string Freed(string instanceId) => $"freed.{instanceId}";
 
-    /// <summary>
-    /// A person who died still tethered — killed by overkill rather than freed by severing. The other
-    /// half of <see cref="Freed"/>'s 24, and <b>the only flag in the game that records a failure you
-    /// chose</b>.
-    /// </summary>
-    /// <remarks>
-    /// <b>Added by unit 3a, because the fight had two endings and one name for them.</b>
-    /// <c>tethered-dies-untethered-survives</c> is the rule: cut the tether and the person walks away,
-    /// kill the body while the tether holds and the person dies with it. Both routes end the same fight
-    /// and only one of them frees anybody, so with two domains there was nowhere to write the
-    /// difference.
-    /// <para>
-    /// <b>Not folded into <see cref="Defeated"/>, though it was one line cheaper.</b> That domain's own
-    /// remark says it was split off <see cref="Freed"/> precisely so both counts stay readable; sharing
-    /// it here would have made <c>defeated.*</c> mean "the Beast, plus however many villagers you
-    /// murdered" — unreadable in exactly the way the split was meant to prevent, and it is the ending's
-    /// bill that reads these.
-    /// </para>
-    /// <para>
-    /// <b>Which flag a win writes is derived, never authored.</b> A creature with a blank
-    /// <c>EntityData.PurifiedName</c> was never a person, so it can only be <see cref="Defeated"/>; one
-    /// with a name set gets <see cref="Freed"/> or this, depending on whether the body was
-    /// <c>Severed</c> when it fell. So there is no per-creature field anyone can author wrongly, and
-    /// the moral weight of the overkill route lives in a count rather than in a special case.
-    /// </para>
-    /// </remarks>
-    public static string Killed(string instanceId) => $"killed.{instanceId}";
+    // **`Killed(instanceId)` stood here and was deleted 2026-08-06.** It meant *a person who died still
+    // tethered* — the overkill route — and it was written in unit 3a alongside the rule
+    // `tethered-dies-untethered-survives`. **Nothing could ever write it.** Severing an ordinary creature
+    // has no route in the game: `EntityStateManager.Sever` is called from exactly one place, a boss pocket
+    // cutting its own `TargetEntityId`, and no pocket targets a villager. So every one of the 30 regular
+    // fights took the killed branch and all 24 `freed.*` hotspots stayed shut — found in play on
+    // 2026-08-05 by beating the Apothecary and watching her notes stay locked.
+    //
+    // Jeremy ruled the *premise* wrong rather than the plumbing: **"All non-bosses live — they have minor
+    // demons possessing them. They have no dream worlds to conquer. You more or less bonk them on the head
+    // and wake them up. This is why they don't have auras as well like bosses."** So there is no overkill
+    // route for a person to fail, and severing is what weakens one of the three bosses or reclaims
+    // knowledge. `EncounterManager.Finish` now derives two flags from one question — is there a person in
+    // there — and this domain has nothing left to mean.
+    //
+    // **Deleted rather than kept and documented, and that is the whole lesson of the bug.** A flag with no
+    // writer is a flag any future hotspot can gate on and never open, which is precisely the defect being
+    // fixed; leaving the helper in place would have preserved the trap. `GateContent` now asserts that no
+    // hotspot gates on a flag nothing writes, so re-adding it with content behind it goes red.
+    //
+    // The ending's promise moves with it: **`freed.* + killed.* == 24` becomes `freed.* == 24`**
+    // (`combat.md` §20, `items.md` §10).
 
     /// <summary>
     /// A creature put down that <b>frees nobody</b> — the six Beast sightings and the bosses
@@ -159,10 +157,18 @@ public static class Flags
     /// The Beast is still the only thing you may harvest — Jeremy, the same day: <i>"no loot, since it would
     /// be dishonourable to loot a human corpse."</i> So the harvest argument is now scoped to the Beast
     /// **by what it is**, where it used to ride along on what this domain meant, and the two can no longer
-    /// be conflated: a <see cref="HotspotKind.Harvest"/> behind <c>defeated.ch2.blacksmith</c> would pass
-    /// every gate in the suite and be wrong. The drop is a hotspot the room places behind this flag,
-    /// exactly mirroring the NPC hotspot a freed person appears as; <c>EntityData.HarvestItemId</c> stays
-    /// unused, and both bosses leave it blank.
+    /// be conflated. The drop is a hotspot the room places behind this flag, exactly mirroring the NPC
+    /// hotspot a freed person appears as; <c>EntityData.HarvestItemId</c> stays unused, and both bosses
+    /// leave it blank.
+    /// <para>
+    /// <b>Unenforced, and deliberately so — Jeremy declined a gate on it, 2026-08-05: <i>"don't think it has
+    /// or needs this logic"</i>.</b> The offer was one check reading "a body that projects an aura carries no
+    /// harvest", since <c>EntityData.CorruptionAura</c> marks the three bosses and nothing else and all three
+    /// are people. It buys nothing today: <b>no entity file in <c>data/</c> carries a harvest at all</b>, so
+    /// there is no content for it to hold in place, and the ruling above is the record. Do not read this
+    /// paragraph as a queued chore — if a harvest is ever authored on a boss the suite will not object, and
+    /// that is the accepted cost rather than a missing gate.
+    /// </para>
     /// </para>
     /// </remarks>
     public static string Defeated(string instanceId) => $"defeated.{instanceId}";

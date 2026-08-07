@@ -115,9 +115,25 @@ public static class InteractionService
             // class. The flag set here is `SetsFlag`, the author's own optional one, and **not** the pocket's
             // `cleared` flag: that is written by `PocketManager.Complete` and by nothing else, which is what
             // keeps an abandoned pocket's entrance intact.
+            // Two destinations, and **which one is derived from the pocket, never from the hotspot** (unit 10,
+            // 2026-08-05). A pocket whose `ScenePath` is blank has no 3D scene built yet, so clicking its
+            // entrance grants what it holds where you stand; one that names a scene crosses you in, exactly as
+            // before. Jeremy builds the fourteen Dream levels on his own clock, and pointing a `PocketData` at
+            // a finished scene switches that one pocket over — nothing here changes, and no mode gets turned
+            // off. Unit 1.5's rule again: derive the placeholder from the absence of the real thing.
+            //
+            // **Only one direction is guarded, and that is the correct one.** `TakeFromWaking` refuses a pocket
+            // that has a scene (`PocketBlock.MustBeWalked`), so inverting this condition cannot make a finished
+            // pocket hand its reward over on a click — it just refuses. The other way round is unguarded on
+            // purpose: entering a scene-less pocket is a supported state that every gate fixture lives in, so
+            // the manager permits it and this branch is what keeps play out of it.
             case HotspotKind.CrossToDream:
                 SetFlagIfAny(data.SetsFlag);
-                return PocketManager.Instance?.Enter(data.PocketId) ?? false;
+                var pockets = PocketManager.Instance;
+                if (pockets == null) return false;
+                return pockets.GetPocket(data.PocketId)?.HasScene == true
+                    ? pockets.Enter(data.PocketId)
+                    : pockets.TakeFromWaking(data.PocketId);
 
             // `case HotspotKind.TakeAnchor` stood here and went with the kind in 6b. The objective is inside
             // the 3D scene now — a pocket calls `PocketManager.Complete()` when the player reaches it — so
@@ -318,7 +334,23 @@ public static class InteractionService
     /// content, and an <c>else</c> between them makes authoring a line of prose silently delete a
     /// diagnostic. **Anything that stands in for an unbuilt screen has to be additive.**
     ///
-    /// Delete the second emit when the crafting panel lands; that is the whole demolition.
+    /// ~~Delete the second emit when the crafting panel lands; that is the whole demolition.~~
+    /// <b>Done 2026-08-05, and it was three units late.</b> The scaffold line read *"Your tools are laid out
+    /// here. [the crafting panel is not built yet — F7 crafts]"* and both of its claims stopped being true with
+    /// unit 7a: the panel exists, a bench opens it, and `F7` was deleted the same day. So a player clicking a
+    /// bench was told to press a key that does nothing, about a screen that was already open in front of them.
+    /// Jeremy hit it in a camp on 2026-08-05.
+    ///
+    /// <para><b>It is the third scheduled deletion in two days to be missed the same way</b> — after `[F8] rig`
+    /// in the HUD caption and the two self-retiring ledger gates. Each one wrote down the day it should go, in
+    /// the file it lived in, and none of them could *fire*. The pattern worth naming: **a note that says
+    /// "delete this later" is a reminder to whoever happens to reopen the file, not to whoever finishes the
+    /// work.** The ledger gates are the counterexample and the model — they went red on schedule, because they
+    /// were checks rather than comments.</para>
+    ///
+    /// <para>What stays is the additive shape, which was the real lesson here: flavour text and a diagnostic are
+    /// not alternatives, so this never used an <c>else</c>. With the diagnostic gone the method is just the
+    /// flavour line, and a station with nothing authored now says nothing rather than apologising.</para>
     /// </summary>
     private static void AnnounceCraftingVenue(HotspotData data)
     {
@@ -327,7 +359,5 @@ public static class InteractionService
 
         if (!string.IsNullOrEmpty(data.ExamineText) && data.ExamineText != "[unwritten]")
             bus.EmitNotify(data.ExamineText);
-
-        bus.EmitNotify("Your tools are laid out here. [the crafting panel is not built yet — F7 crafts]");
     }
 }

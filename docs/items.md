@@ -23,10 +23,24 @@ creature grammar and §22 is the screen grammar, and where they disagree the gra
 >
 > **What is still a document:** ~~the three major repairs (§6),~~ *(authored 2026-08-05 — three `Station`
 > hotspots and three `RepairsWorld` recipes; `RequiresBothTracks` is read by two things now, the refusal and
-> the engine)* the eleven `Lore` pages that eight pockets and three notes will be (§8) — **ten of them are
+> the engine)* the eleven `Lore` pages that ~~eight pockets~~ **seven pockets** and three notes will be (§8) — **ten of them are
 > files as of 2026-08-05**, the eleventh being her fourth note — the twelve creatures (§10), and equipping — a
 > coat you can craft and cannot wear is unit 3's problem, the same way a trap you can craft and cannot rig
 > already is.
+>
+> > **"Eight pockets" was wrong, and the ledgers settle it — corrected 2026-08-05.** There are eight
+> > *knowledge* pockets, but only **seven** of them grant a page, because there are only seven craft
+> > families. The eighth is `ledger-ch3` row 22 (`ch3_breach`), whose `▸` column names the exorcism engine
+> > and whose only grant is **+1 max Resolve** — which is consistent with the engine recipe needing no
+> > blueprint of its own (`repair_exorcism_engine.tres` leaves `RequiredBlueprintId` empty and gates on
+> > `RequiresBothTracks`, which rule A answers with *any* page on each side).
+> >
+> > **The arithmetic worked out to eleven either way, which is why it survived.** 8 + 3 and 7 + 4 both make
+> > 11, so the total agreed with `build-plan.md` §2 while the decomposition disagreed — and only §2's
+> > (*7 craft families + her 4 notes*) matches what is on disk: 7 `lore_craft_*`, 3 `lore_physick_*`, and her
+> > fourth note outstanding. **A wrong split hiding behind a right total is worth more than a typo**, because
+> > this one said an eighth craft family was owed. Anyone acting on it would have authored a page, a
+> > blueprint id and a recipe to justify it before finding out nothing wanted them.
 
 > **What is locked and what is sketch, because they are not the same.**
 >
@@ -504,10 +518,20 @@ Each gates **access and nothing else**, which is invariant 5. None makes anythin
 
 ### One forge, and it is in chapter 2 — measured 2026-08-04
 
-**All three tools are forged at the anvil, and there is exactly one anvil in the game: `ch2_smithy`.** One
-mortar too, in `ch2_apothecary`, and that is the entire station list. So the table above is a table of
-**chapter-2 crafts**, whatever chapter the door is in — the Bill Hook's door is `ch1_bramble` and the Bill
-Hook is not makeable until the smithy.
+**All three tools are forged at the anvil, and there is exactly one anvil in the game: ~~`ch2_smithy`~~
+`ch2_forge_row`.** One mortar too, in `ch2_apothecary`, and that is the entire station list. So the table
+above is a table of **chapter-2 crafts**, whatever chapter the door is in — the Bill Hook's door is
+`ch1_bramble` and the Bill Hook is not makeable until Forge Row.
+
+> **The room was corrected 2026-08-05, and the measurement it settles is unaffected.** The station sat in
+> `ch2_smithy` from the day the rooms were authored; `ledger-ch2` row 10 has said *"the anvil — field
+> station"* on **Forge Row** the whole time, and the ledger's own camp-walk argument at row 7 → 8 reasons
+> from that room (*"not at the anvil, which is not reached until row 10"*). Jeremy ruled the file wrong, not
+> the ledger: *"I don't want the smithy to be holding it. Was a mistake that went through and now it sounds
+> pretty odd logically."* The oddness is concrete — the Smithy is the **Blacksmith's** screen, so the one
+> anvil in the game stood in the boss's forge, and the three tools were forged on the boss's own ground.
+> Everything below survives, because it turns on the **chapter**, not the screen: one anvil and one mortar,
+> both in chapter 2, eleven of seventeen recipes behind them.
 
 That was found while asking whether the roster was mis-scheduled, and it says the earlier diagnosis was
 wrong. The suspicion was a **shared gating material** (`mat_scrap_iron`, all sources ch2). The station is

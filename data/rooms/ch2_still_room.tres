@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="RoomData" load_steps=12 format=3]
+[gd_resource type="Resource" script_class="RoomData" load_steps=15 format=3]
 
 [ext_resource type="Script" uid="uid://b0jetcphiy2cm" path="res://src/Data/HotspotData.cs" id="1_hs"]
 [ext_resource type="Script" uid="uid://v0juosv2w310" path="res://src/Data/RoomData.cs" id="2_room"]
@@ -64,11 +64,41 @@ InstanceId = "ch2.apothecary_02"
 Entity = ExtResource("4_ent")
 WakingPosition = Vector2(530, 855)
 
+[sub_resource type="Resource" id="hs_pocket_door"]
+script = ExtResource("1_hs")
+Id = "ch2_still_room_pocket_door"
+Label = "A Still, Gone Cold"
+Kind = 5
+Region = Rect2(1250, 120, 300, 260)
+PocketId = "ch2_fusion"
+RequiredFlag = "pocket.ch2_fusion.cleared"
+RequiredFlagValue = false
+
+[sub_resource type="Resource" id="hs_pocket_remnant"]
+script = ExtResource("1_hs")
+Id = "ch2_still_room_pocket_remnant"
+Label = "The Still, Cold For Good"
+Kind = 1
+Region = Rect2(1250, 120, 300, 260)
+ExamineText = "[unwritten]"
+RequiredFlag = "pocket.ch2_fusion.cleared"
+RequiredFlagValue = true
+
+[sub_resource type="Resource" id="hs_page_corrosive"]
+script = ExtResource("1_hs")
+Id = "ch2_still_room_page_corrosive"
+Label = "Her Notes on the Corrosive Draught"
+Kind = 3
+Region = Rect2(620, 120, 300, 260)
+ItemId = "lore_physick_corrosive_draught"
+ItemAmount = 1
+RequiredFlag = "freed.ch2.apothecary_02"
+
 [resource]
 script = ExtResource("2_room")
 Id = "ch2_still_room"
 DisplayName = "The Still Room"
 ChapterId = "ch2"
 PlaceholderStyle = 1
-Hotspots = Array[ExtResource("1_hs")]([SubResource("hs_0"), SubResource("hs_1"), SubResource("hs_2"), SubResource("hs_3"), SubResource("hs_4"), SubResource("hs_5")])
+Hotspots = Array[ExtResource("1_hs")]([SubResource("hs_0"), SubResource("hs_1"), SubResource("hs_2"), SubResource("hs_3"), SubResource("hs_4"), SubResource("hs_5"), SubResource("hs_pocket_door"), SubResource("hs_pocket_remnant"), SubResource("hs_page_corrosive")])
 Entities = Array[ExtResource("3_ep")]([SubResource("ep_0")])

@@ -704,19 +704,41 @@ public partial class EncounterManager : Node
     }
 
     /// <summary>
-    /// The body goes down. <b>Which flag that writes is derived from the creature, never authored</b> —
-    /// see the table on <see cref="Flags.Killed"/>:
+    /// The body goes down. <b>Which flag that writes is derived from the creature, never authored</b>, and
+    /// there are only two answers:
     ///
     /// <list type="bullet">
-    /// <item>blank <c>PurifiedName</c> — never a person, so <see cref="Flags.Defeated"/> either way</item>
-    /// <item><c>Severed</c> when it fell — the tether was already cut, so <see cref="Flags.Freed"/></item>
-    /// <item><c>Corrupted</c> when it fell — <see cref="Flags.Killed"/>, and the person died with it</item>
+    /// <item>blank <c>PurifiedName</c> — never a person, so <see cref="Flags.Defeated"/></item>
+    /// <item>a name set — a person, so <see cref="Flags.Freed"/>, whatever route the fight took</item>
     /// </list>
     ///
-    /// <para>All three set <see cref="EntityState.Purified"/>, because the enum has three members and that
-    /// is the terminal one. So the screen cleanses whichever route you took: the corruption really is
-    /// gone either way, and the weight of the overkill route lives in the ending's count of
-    /// <c>freed.*</c> rather than in a screen that stays dirty.</para>
+    /// <para>Both set <see cref="EntityState.Purified"/>, because the enum has three members and that is the
+    /// terminal one. So the screen cleanses either way: the corruption really is gone.</para>
+    ///
+    /// <para>
+    /// <b>It was three answers until 2026-08-06, and the third one was unreachable from the first day it
+    /// shipped.</b> A person used to be <c>Freed</c> only if the body was <c>Severed</c> when it fell and
+    /// <c>Killed</c> otherwise — but <see cref="EntityStateManager.Sever"/> has exactly one caller in the
+    /// game, a boss pocket cutting its own <c>TargetEntityId</c>, and no pocket targets an ordinary creature.
+    /// So every one of the 30 regular fights took the <c>Killed</c> branch, and **all 24 <c>freed.*</c>
+    /// hotspots in the world were permanently shut** — including two of her three Physick notes, and with
+    /// them the two fused traps those brews are the blueprints for. Jeremy found it in play by beating the
+    /// Apothecary and watching her notes stay locked.
+    /// </para>
+    /// <para>
+    /// <b>His ruling is the fiction, and it makes the code simpler rather than more complicated:</b>
+    /// <i>"All non-bosses live — they have minor demons possessing them. They have no dream worlds to
+    /// conquer. You more or less bonk them on the head and wake them up. This is why they don't have auras
+    /// as well like bosses."</i> So <b>severing is a boss verb</b> — weakening one of the three, or
+    /// reclaiming knowledge — and it was never the thing that saved a villager. The aura is the marker of a
+    /// body worth severing, which is a rule the content already obeyed.
+    /// </para>
+    /// <para>
+    /// <b>What this retires: <c>Flags.Killed</c>, deleted the same day.</b> With no route writing it, keeping
+    /// the domain would have left a flag any future hotspot could gate on and never open — which is the exact
+    /// defect this ruling is fixing, preserved as a trap for the next person. The ending's promise moves from
+    /// <c>freed.* + killed.* == 24</c> to <c>freed.* == 24</c> (`combat.md` §20).
+    /// </para>
     /// </summary>
     private bool Finish(string instanceId)
     {
@@ -725,28 +747,16 @@ public partial class EncounterManager : Node
         var data = placement?.Entity;
         if (entities == null || data == null) return false;
 
-        var wasSevered = entities.GetState(instanceId) == EntityState.Severed;
+        // The whole derivation. `EntityState` is deliberately not consulted: a severed boss and an
+        // unsevered one write the same flag, because severing weakens the fight rather than deciding who
+        // walks away from it.
         var wasPerson = !string.IsNullOrEmpty(data.PurifiedName);
 
-        string flag;
-        string line;
-
-        if (!wasPerson)
-        {
-            flag = Flags.Defeated(instanceId);
-            line = "It stops. Nothing leaves it — there was never anyone in there to leave.";
-        }
-        else if (wasSevered)
-        {
-            flag = Flags.Freed(instanceId);
-            line = "Without the thing behind it holding on, the body comes apart almost politely.";
-        }
-        else
-        {
-            flag = Flags.Killed(instanceId);
-            line = "It falls, and whatever was riding it goes out through the ceiling. "
-                   + "What is left on the floor was a person a moment ago.";
-        }
+        var flag = wasPerson ? Flags.Freed(instanceId) : Flags.Defeated(instanceId);
+        var line = wasPerson
+            ? "The thing riding it lets go and goes out through the roof. What is left is a person, "
+              + "coming round, with no idea how long they have been standing there."
+            : "It stops. Nothing leaves it — there was never anyone in there to leave.";
 
         WorldStateManager.Instance?.SetFlag(flag);
         entities.Purify(instanceId);

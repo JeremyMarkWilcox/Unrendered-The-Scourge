@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="PocketData" format=3]
+
+[ext_resource type="Script" path="res://src/Data/PocketData.cs" id="1_pocket"]
+
+[resource]
+script = ExtResource("1_pocket")
+Id = "ch2_prying"
+DisplayName = "The Lever Remembered"
+Kind = 0
+ScenePath = ""
+GrantsBlueprintId = "lore_craft_prying"
+GrantsMaxResolve = 1
+TargetEntityId = ""
+GrantsAbility = 0

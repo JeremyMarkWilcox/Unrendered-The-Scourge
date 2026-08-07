@@ -49,7 +49,7 @@ What "all the levels with all their content" is, counted as things that have to 
 | `RoomData` — Waking screens | ~16± | ~19± | ~23± | **~58±** |
 | Camp scenes *(ch2 painted ×3)* | 1 | 1 | 1 | **3** |
 | 3D pocket scenes | 3 | 5 | 6 | **14** |
-| `EntityData` — creatures | 3 + boss | 3 + boss | 3 + boss | **12** *(Beast ×3 variants — see §7)* |
+| `EntityData` — creatures | 3 + boss | 3 + boss | 3 + boss | ~~**12**~~ **11** *(Beast ×3 variants — see §7)* |
 | Entity placements — fights | 10 | 10 | 13 | **33** |
 | Blights | 2 | 4 | 6 | **12** |
 | Jigsaw instances *(3 forms)* | 3 | 5 | 7 | **15** |
@@ -58,9 +58,25 @@ What "all the levels with all their content" is, counted as things that have to 
 | Beast carcass harvests | — | — | 6 | **6** |
 | Commons harvest nodes | thick | thick | Bitterroot/Tallow thick, rest thin | **±** |
 | Her notes | — | ± | ± | **4** *(**3 teach**, one per blueprint-gated Physick recipe, and 1 silent — corrected 2026-08-04, decision 11)* |
-| `ItemData` | | | | **38** — 8 materials, a catalyst, 4 salves and brews, 6 traps, 2 weapons, 3 coats, 3 tools, **11 pages** *(7 craft families + her 4 notes)*. 27 on disk; the 11 pages are **generated from ids the recipes already name**, not authored |
-| `RecipeData` | | | | **~18** — 4 salves, 6 traps, Bell Maul, 3 coats, 3 tools, the engine |
+| `ItemData` | | | | **38** — 8 materials, a catalyst, 4 salves and brews, 6 traps, 2 weapons, 3 coats, 3 tools, **11 pages** *(7 craft families + her 4 notes)*. ~~27~~ **37 on disk** *(re-measured 2026-08-05)*; the 11 pages are **generated from ids the recipes already name**, not authored, and **10 of the 11 exist** — the one owed is her fourth note's page |
+| `RecipeData` | | | | ~~**~18**~~ **20, and complete** — 4 salves, 6 traps, Bell Maul, 3 coats, 3 tools, **and the three major repairs, of which the engine is one** *(corrected 2026-08-05)*. **20 on disk.** The old 18 was 17 + "the engine" written as a separate line; `repair_exorcism_engine.tres` **is** the `ch3_breach` repair — 8 Graveflower per §20, and the one file carrying `RequiresBothTracks` — so the total is 17 + 3, and correcting 18 to 21 would double-count it. The `~` is retired with the number: every recipe is enumerable by name, so there is nothing left for the map to settle |
 | Max-Resolve grants | 2 | 4 | 2 | **8** — one per knowledge pocket, and nothing else may grant one |
+
+> **The creature row said 12 and the answer is 11 — corrected 2026-08-05, and it was arithmetic rather than
+> content.** This row reached 12 as *3 + 3 + 3 = 9 archetypes, **plus** Beast ×3 variants*, which **counts the
+> Beast twice**: once as chapter 3's third type and again as its own variants. `items.md` §10's pair matrix is
+> the authority and has exactly **nine rows**, row 9 being *"The Beast — the only non-human, and the only one
+> seen more than three times"*; `placement.md` rule 16 agrees from the other direction with *"nine creature
+> types, each seen three times (the Beast six)"* — 8×3 + 6 = 30 regular fights, + 3 bosses = **33**, which is
+> the number every other document uses. Nine types, eleven files, because one type is authored as three looks
+> (decision 5).
+>
+> **It went unnoticed for the same reason a target is dangerous at all: it was wrong by one, in the direction
+> that reads as work still to do.** `--verify-content` printed `11 / 12` for as long as the roster existed and
+> nobody asked which creature was missing, because *"one more to author"* is what the whole report looks like.
+> There was no creature to author — all 33 fights were placed and *bodies that free nobody* read 9 of 9. Found
+> by reading the row against the ledgers rather than by any check, which is the third time that has been the
+> method this week.
 
 **Writing bill, counted separately because it is the thing most likely to be underestimated:** 24 freed
 lines, 12 blight descriptions, 3 knot beats keyed to the *ordinal* not the pocket, 4 notes, 3 boss
@@ -1257,6 +1273,58 @@ half work: **Daniel writes those pages himself**, once the Dream gives the knowl
 > that would catch it has no members on either side. Same shape as the 33 dangling harvest nodes, caught
 > one step earlier.
 
+**12. Must a pocket's reward wait for its 3D scene? — NO. THE TWO WORLDS ARE DECOUPLED, AND THE SWITCH IS
+THE SCENE ITSELF.** *(Asked and answered 2026-08-05; built the same day as unit 10.)*
+
+> Jeremy: *"I wonder if it would be worth creating a work around for the pockets so you get the reward for
+> clicking it in 2D without going in the pocket realm? I have a lot to do in the dream world for each and I
+> will be building each one separately and they don't have any impact on the 2D for when we build, so
+> decoupling them but also documenting where they hook up and make it an easy translation later seems like a
+> better option than our constant deferring it… I want to keep things more modular now so we can build
+> without the coupling we do want later when the game is finished for the player."*
+>
+> **The measurement that made it obvious: `PocketData` has nine fields and exactly one of them is 3D.**
+> `ScenePath` is the scene; `Kind`, `GrantsBlueprintId`, `GrantsMaxResolve`, `TargetEntityId` and
+> `GrantsAbility` are all *what the 2D world receives*. So the fourteen entrances, the eight max-Resolve
+> grants, the two verb grants and every blueprint in the game had been parked behind scenes that were only
+> ever needed for the walking. **Nine rows of `--verify-content` were reporting one missing thing.**
+>
+> **A blank `ScenePath` means the reward is taken by clicking the entrance; a named one means you walk in.**
+> Derived, never flagged — unit 1.5's rule for the second time (*a placeholder cue draws when there is no
+> art, not when a flag is set*). Point a `PocketData` at a finished scene and the stand-in disappears for that
+> pocket alone, in the same commit, with nothing to unset and no way to ship it by accident. Pockets convert
+> one at a time, in any order.
+>
+> **The translation is a no-op by construction, which is the part worth insisting on.** The 3D scene already
+> calls `PocketManager.Complete()` on the way back — that contract shipped with unit 6a and did not move. The
+> stand-in calls the same private `GrantOnce`, so there is **one copy of what a pocket gives you and one copy
+> of the once-only rule.** Had the stand-in reimplemented the grant, the two would have drifted in the worst
+> possible direction: the stand-in is what gets played for months, so the *scene* path would have been the
+> untested one when it finally arrived.
+>
+> **One guard, on the dangerous side only.** `TakeFromWaking` refuses a pocket that has a scene
+> (`PocketBlock.MustBeWalked`), so a finished pocket can never hand its reward over on a click. The mirror was
+> built first and reverted: making `Enter` refuse a *scene-less* pocket would have contradicted
+> `PocketHost`'s own documented contract — *"a pocket with no scene is still a pocket as far as every rule is
+> concerned… this is the state a headless gate run lives in permanently"* — and reddened every fixture in
+> `GatePockets`. Entering an empty pocket is merely empty; granting a built one is silent and wrong. The
+> stranding risk that guard was carrying moved to `Main`'s `F10`, which now skips scene-less pockets, because
+> *which pocket is worth entering* is a debug key's judgement and not the manager's.
+>
+> **It knowingly breaks invariant 4 — *you cannot reach the anchor from the Waking world* — and the invariant
+> is not amended.** A boss pocket's grant severs a tether, and under the stand-in that happens on a Waking
+> screen. Jeremy, ruling it acceptable: *"the anchor rewards are always more resolve or abilities that we
+> will test separate in the 3D world, so we should be good. This is until we are ready to connect them."* It
+> comes back intact the hour a boss pocket has a scene, which is the strongest argument for deriving the
+> switch from the scene rather than from anything a person has to remember.
+>
+> **What it deliberately does not buy, recorded because a stand-in that reads as finished is how a project
+> lies to itself.** No verbs, no `PocketGate`, no `DreamCreature`, no anchor, no `Leave`, no ejection or
+> banishment — the Dream half stays wholly unexercised and `F11` still hands out verbs for testing. And **all
+> eight points of max Resolve now arrive for free**, so nothing about Resolve *balance* can be concluded from
+> play until real pockets exist. `--verify-content` carries a row counting how many pockets have a scene, so
+> the debt cannot go quiet.
+
 ---
 
 ## 8. Order of work, and what "done" means
@@ -1317,110 +1385,13 @@ half work: **Daniel writes those pages himself**, once the Dream gives the knowl
 
 ### What remains, in two lanes
 
-**Re-cut 2026-08-04.** The tail of the table above had become four coarse rows, and the first of them —
-*"unit 6c · ch1 pass 2"* — bundled Jeremy's 3D pass with Claude's code into one undefined unit. Units 1
-to 8 were each sized by what they unblocked; the tail was not. The two lanes below touch different files
-(3D scenes and `data/pockets/` on one side, `src/UI/` and `data/items/` on the other), so they run in
-parallel and meet at the vertical slice.
+**Moved to `docs/whats-left.md` on 2026-08-06.** This section held the schedule, `handoff.md` held a second
+copy, and the pair drifted badly enough to be worth recording as a lesson rather than just fixing: the
+snapshot below was re-measured twice **on the same day** and was wrong in three counts the second time,
+because a dated measurement read in the present tense is how a closed gap gets rebuilt. **The tool is the
+snapshot** — `godot --headless --path . -- --verify-content` — and the ordering lives in one file.
 
-**Measured against the code on the day of the re-cut** (2026-08-04), not read out of this document: **1**
-pocket scene of 14, **0** entrances, **0** of 8 max-Resolve grants, **11** creature files of 12, **30** fights
-of 33, **12** jigsaws of 15, **27** items of 38, **17** recipes of 18 — and **no crafting panel in any form**.
-
-> **Re-measured 2026-08-05, because a dated snapshot read in the present tense is how a closed gap gets
-> rebuilt.** Two numbers moved and one sentence is now false. **Items are 37 of 38** (the ten lore pages
-> landed; the last is her fourth note, Jeremy's). **The crafting panel exists** — `src/UI/CraftingPanel.cs`
-> subscribes to `CraftingRequested` and a bench opens the book, so *"clicking the cottage bench does nothing"*
-> is no longer true. Unchanged: 1 pocket of 14, 0 entrances, 0 of 8 grants, 11 creatures of 12, 30 fights of
-> 33, 12 jigsaws of 15, 17 recipes of 18. **Everything still outstanding is authored content, and all of it
-> is Jeremy's** — which is the point of re-measuring rather than patching the numbers in place.
-
-**Four debug keys were four missing verbs**, and each retires against a named piece of work below: `F6`
-learn-all (the first knowledge pocket), ~~`F7` craft-here (the panel)~~ **retired with unit 7a**, ~~`F8`
-rig-here (a satchel *Set* button)~~ **retired with the Set button**, `F10` pocket (the first authored
-entrance). When all four are gone, the game has no mechanism that only a keyboard shortcut can reach —
-**two down, and the two that remain both retire against the first authored pocket.** **`F11` joined them on
-2026-08-04** and retires with the second boss pocket.
-
-> **✅ Unit 9 landed first, 844 → 860, because Jeremy's lane was blocked on it.** `DreamVerbs` was built as
-> *the cost with no button*, so no verb could be held by anything: `DreamVerbHold` turns three rebindable
-> actions (`Q` / `Space` / `E`) into holds, `PocketHost` attaches it so no pocket scene carries anything, and
-> `F11` grants the two grantable verbs so a `PocketGate` is walkable before a boss pocket exists. **Steps 1
-> and 4 of the ladder below are now unblocked**, and the crafting panel stays next in the Claude lane.
->
-> **It shipped wrong first and play caught it in under an hour, which is the ladder working as intended.** The
-> poller was a node to add to each scene; nobody added one, so `F11` reported two verbs learned and no key did
-> anything. The fix moved it into the host — *wiring that can be forgotten fourteen times will be* — and
-> `SliceVerifier.Run` now takes the `PocketHost`, closing the last live node the gates had no handle on.
-
-> **The lanes were re-cut again the same day, and this one is Jeremy's call on how the 3D gets built.**
-> *"I honestly want to build the spirit 3D over time separately and just hook up the different points as I
-> build it. We are over engineering. I rather leave the internal working of the 3D open so that I have more
-> freedom to move it in many directions... I think we should defer the 3D world for now and focus on the 2D
-> as much as we can."*
->
-> **So the 3D lane becomes open-ended rather than scheduled, and nothing further is built *for* it in
-> advance.** The seam is already complete and stable — `PocketManager.Complete()` / `Leave()`,
-> `DreamVerbs.BeginHold` / `EndHold` / `IsHolding`, the four nodes, `PocketData` — so a pocket can be built
-> against it at any pace and new hooks added when a level asks for one rather than before. Two consequences
-> recorded rather than acted on: **`PocketGate`'s learned-vs-held semantics stay as they are** (handoff §3),
-> and **what Flare *is* stays undecided** until playing a pocket says what the levels need.
->
-> **The 2D queue is almost entirely Claude's**, which is what makes the deferral free: the two lanes were
-> never competing for the same hands.
-
-| | Jeremy — the editor and the 3D pass | Claude — code, gates, derivable content |
-|---|---|---|
-| **now** | **open-ended.** Build the 3D world at your own pace and hook points up as they arise; nothing in the 2D queue waits on it | ~~**unit 7a — the journal / crafting panel**~~ **landed 2026-08-05, 860 → 913 checks** — `F7` retired, a bench opens the book, contract published in `handoff.md` §2. **The pages landed 2026-08-05, 913 → 929 checks** — ten of the eleven authored, `PocketManager.GrantPage` hands one over beside the knowledge, and decision 11's crossing is gated both ways. **The satchel *Set* button landed 2026-08-05, 929 → 945 checks** — `%SetButton` beside Use and Equip, `F8` and `RigEverythingPossibleHere` retired, and the *one creature per screen* invariant the key had leaned on for two units is finally gated (`GateFights`, 30 peopled screens). **Claude's half of this row is now closed.** Not Claude's: **her fourth note** (reopened 2026-08-05 — it may be the exorcism engine's Physick page rather than pure story; the `lore_` prefix rule handles both answers without amendment, and rule A means the engine does not need it either way) and **placing her three notes** as `Harvest` hotspots, without which the ten are authored-but-unreachable by design |
-| **then** | the first `CrossToDream` entrance pair and its `PocketData` → retires `F6` and `F10` → **play the chapter 1 arm end to end**: walk in, fight, take the pocket, mend the blight, cleanse the screen, camp | ~~the three major repairs — a `Station` hotspot and a `SetsFlag` recipe each, plus the two passage doors that are **currently ungated**, all of it waiting on the boss flags. Authoring only. ~~so **no code**~~ — **the boards are the exception, corrected 2026-08-05 under decision 10**: a `MendPuzzle` has no carrier on a station, and authoring the three as `Kind = Mend` would redden the twelve-blight bill rather than take jigsaws 12 → 15~~ **landed 2026-08-05, 1042 → 1073 checks.** Three stations, three `RepairsWorld` recipes, both passage doors gated, and the carrier built: `MendManager.CarriesABoard` — a station opens the **book** until its repair is assembled and the **board** after, with `SetsFlag` withheld from the click so a passage cannot open because you looked at it. **Only that one predicate widened**, so a repair still does not foul a screen and pays no Graveflower. ~~Two things are Jeremy's and are named in the row below: **the two boss placements**, which is what lets `RequiredFlag` go back onto the span and the cart (a gate naming an unplaced creature is red, correctly, so the obligation is recorded as a check that fires the hour a boss is placed) — and **whether the Blacksmith is `freed.` or `defeated.`**, which decides whether people goes 24 → 25~~ **both closed the same day, and only one of them was ever Jeremy's.** He ruled on the Blacksmith — `defeated.`, because the spirit breaks in the Dream and the body dies with the demon, so people stays at 24 — and then asked why the bosses could not be placed the way the enemies were. **They could.** `items.md` §10 fixes both display names and all three damage types, `combat.md` §6 fixes the aura, and the ledgers fix the screen; only `Durability` and `Damage` were uninvented. That is the derivable half of content, which is mine, and calling it his was the mistake — see `handoff.md`'s bullet for the room I then got wrong and the gate that now holds it |
-| **then** | clone to 14 pockets · ~~**the 3 bosses and the 12th creature file — and the bosses now need `CorruptionAura` typed on them, because the default is `0` and an aura is opt-in**~~ **two of the three bosses landed 2026-08-05 with their auras typed, on `ch1_trap_yard` and `ch2_smithy`; what remains is Iris (her damage pair is deliberately unfixed until the finale is authored) and the 12th creature file** · `CampPanel.tscn` and `CraftingPanel.tscn` against their published contracts · **the aura shimmer**, which is the one part of §2 still unbuilt and is art | ~~**the boss aura drain** — `EntityData.CorruptionAura` has no reader today, and the two checks 6b retired as universals over an empty set come back with it~~ **landed early, 2026-08-05, unit 9a, 968 → 1023 checks.** Pulled forward off its own row because the mechanism turned out to be content-independent: a positive `CorruptionAura` *is* the boss marker, so fixtures with one make every rule falsifiable with no boss on the map. **Both halves** — the drain on the player's turn, regeneration on the creature's, one tether condition over both — plus mid-fight rigging deleted (§22 had struck it). The two retired checks came back **rewritten rather than restored**: the bar now *does* move in the Waking world, so the surviving claim is that nothing about it is a clock |
-| **then** | chapter 1 sealed — `--verify-content`'s ch1 block turns from a report into gates | |
-| **then** | chapter 2 | ~~**unit 7b** — one rule with exactly one customer: `RecipeData.RequiresBothTracks` and the engine, the only recipe that wants it. **Half-read since unit 7a**: `BelongsToSide` puts the engine on both sides of the journal, but `Inspect` still ignores the field, so knowing one hand is currently enough to make it. The *refusal* is what is left~~ **the refusal landed 2026-08-05, 945 → 968 checks** — `CraftBlock.HalfKnown`, returned by `Inspect` immediately after `Unknown` because it is the same question asked of the other hand, and `Craft` refuses through it unchanged. **Rule A** (Jeremy, same day): the other hand means *any* page on it, answered by `KnowsAnyPageOn` off the flat discovery set, so no field was authored — see `items.md` §6. **The engine recipe itself is deferred, deliberately**: `combat.md` §20 makes it good-ending-only, so it is a side path, invariant 12 does not reach it, and nothing forces her notes or the 8 Graveflower to be placed. What remains of this row is therefore Jeremy's — the recipe, its pocket, and whether her fourth note is the page it names |
-| **then** | chapter 3 · the Snarl · the finale | all three endings reachable |
-| **last** | pass 3 everywhere — art, jigsaw boards, prose | audio · **narration and tutorial** · the chapter-transition beat on the bridge mend |
-
-**Unit 7a also closes a standing question rather than merely scheduling one.** `handoff.md` §1 carried
-*"the journal must land before the first real observation puzzle, though it comes after crafting"*
-(`combat.md` §15) as open. Decision 9 made the journal and the crafting screen **one panel**, and this
-order puts it first — so the constraint is satisfied by the schedule, and the question is deleted from
-that list per its own rule.
-
-**Two play rows are in that table on purpose.** *"Nothing has been played"* has been the stated
-outstanding risk since unit 3a and has never had a row to live in. Unit 5 is the only unit played on the
-day it landed, and **what play found was not in unit 5** — the satchel had no fight guard, and `C`'s
-behaviour was the model it should have copied. A new verb audits the old ones by standing next to it,
-which is the argument for playing after each lane's first item rather than after the chapter.
-
-**What the re-cut found, and it is the reason to do this again at the next tail:** three of the four
-things that looked like remaining *systems* were already built, or needed nothing. The two-track
-knowledge model exists (`KnowledgeTrack`, `ItemData.Track`, `RequiresBothTracks`, all gated), major
-repairs need no mechanism (decision 10), and blueprint pages need no new field (decision 11). **What was
-actually missing was a panel nobody had listed** — the crafting screen, which four documents describe as
-an editor-pass detail, and which is the one thing standing between chapter 1 and being playable.
-
-> **Story and tutorial content is last, ruled 2026-08-04.** Jeremy: *"We don't want to do anything with
-> story or tutorial until everything is built and tested."* Two known items are parked here rather than in
-> the unit that surfaced them: **`RecipeData.CraftNarration`** plus somewhere to draw it (decision 9 — the
-> line that sends you back for the Bill Hook's door), and **the equip tutorial** the deliberately-unequipped
-> starting axe exists to be the subject of (`damage-types-and-equipment`). **Both are notes, not work
-> queued early** — nothing is built now, including the field.
->
-> **Why the field can wait, since the opposite was argued for an hour and it was wrong.** An
-> `[Export] string` with a default does **not** invalidate existing `.tres` files: a resource that never
-> mentions the property just gets the default, so it can be added after all fifteen recipes are authored at
-> no cost. That is different from `DamageType` / `EquipSlot` / `ItemCategory`, which had to land before the
-> content pass — **those are fields the author must fill in, and this one is optional.** The rule worth
-> keeping is that distinction, not "add schema fields early": *a field the author must supply has to exist
-> before authoring; an optional field with a default can be added whenever the thing that reads it is built.*
-
-**The vertical slice is the real milestone**, not chapter 1. It is the first moment the pipeline is
-proven, and everything after it is repetition at known cost. Chapter 1 is where the estimate for
-chapters 2 and 3 comes from.
-
-**The honest costs, stated so they are not discovered later.** ~~Nothing is played until unit 3 lands~~
-— **restated 2026-08-04, because that sentence expired and nothing replaced it.** Unit 3 landed, and the
-game is *playable* without having been *played*: 844 green checks over one unit that was played on the
-day it shipped. Green gates still have never proved playability, and the two play rows above are the
-only thing in this document that addresses it. The **59-screen art bill** is untouched by any of this
-and remains the longest pole in the project. And the 3D pocket pass is the last place a genuine unknown
-lives; if it runs long, `combat.md` §23's lever applies — **shrink a pocket, do not drop one.**
+The two-lane split itself was the durable part and it stands: **Jeremy authors in the editor and plays;
+Claude writes managers, gates and the derivable half of content.** They touch different files, so the lanes
+run in parallel and meet at the vertical slice. Everything above this line is the record of units 1 to 10
+and stays as it is.

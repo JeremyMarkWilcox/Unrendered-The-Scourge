@@ -63,11 +63,21 @@ ItemId = "herb_graveflower"
 ItemAmount = 1
 MendPuzzle = SubResource("mp_mend")
 
+[sub_resource type="Resource" id="hs_ch2_barn_heartwood"]
+script = ExtResource("1_hs")
+Id = "ch2_barn_heartwood"
+Label = "Heartwood"
+Kind = 3
+Region = Rect2(370, 870, 220, 160)
+ItemId = "mat_heartwood"
+ItemAmount = 2
+RefillsAtMilestone = true
+
 [resource]
 script = ExtResource("2_room")
 Id = "ch2_barn"
 DisplayName = "The Barn"
 ChapterId = "ch2"
 PlaceholderStyle = 1
-Hotspots = Array[ExtResource("1_hs")]([SubResource("hs_0"), SubResource("hs_1"), SubResource("hs_2"), SubResource("hs_3"), SubResource("hs_mend")])
+Hotspots = Array[ExtResource("1_hs")]([SubResource("hs_0"), SubResource("hs_1"), SubResource("hs_2"), SubResource("hs_3"), SubResource("hs_mend"), SubResource("hs_ch2_barn_heartwood")])
 Entities = Array[ExtResource("3_ep")]([SubResource("ep_0")])

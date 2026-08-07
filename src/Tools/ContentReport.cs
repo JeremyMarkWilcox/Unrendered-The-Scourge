@@ -51,7 +51,8 @@ public static class ContentReport
         Pockets();
         Mending(rooms);
         Materials(rooms);
-        Arsenal();
+        Arsenal(rooms);
+        OptionalFights(rooms);
 
         Header("rules that cannot be checked, and are documented instead");
         Unfalsifiable();
@@ -79,14 +80,73 @@ public static class ContentReport
                 approximate: true);
 
         Row("camps (one per chapter)", rooms.Values.Count(CampManager.IsCamp), 3);
+
+        // **Hotspots you cannot click because another one is on top of them.** Reported rather than gated, and
+        // that split is the point: *where* a region sits is judged by eye and is Jeremy's (`handoff.md` §2), so
+        // a check that failed would fight him every time he drags something — but two overlapping regions mean
+        // the lower one is unreachable, which is a real bug he cannot see from the inspector.
+        //
+        // **Added 2026-08-05 after placing fourteen pocket doors on one uniform placeholder rect that sat under
+        // the right-hand exit in thirteen of them.** Jeremy found it by playing: *"most of the pockets do
+        // overlap with the doors to the right."* Nothing could have caught it — regions had never been crossed
+        // against each other, which is unit 4b's rule (*whenever one authored collection names an id belonging
+        // to another, the crossing is the check*) applied to a collection crossing **itself**.
+        //
+        // **A pair sharing a flag with opposite values is excluded, because it can never both be live.** That is
+        // the entrance-and-remnant pattern from unit 6a, where the two *should* occupy the same spot: they are
+        // one object at two times. Deriving the exemption from the flags rather than from the ids means the
+        // freed-NPC pattern and anything else built the same way is covered without being listed.
+        var stacked = new List<string>();
+        foreach (var (roomId, room) in rooms)
+        {
+            var spots = (room?.Hotspots ?? new Godot.Collections.Array<HotspotData>())
+                .Where(h => h != null).ToList();
+
+            for (var i = 0; i < spots.Count; i++)
+            for (var j = i + 1; j < spots.Count; j++)
+            {
+                var (a, b) = (spots[i], spots[j]);
+                if (!a.Region.Intersects(b.Region)) continue;
+                if (!string.IsNullOrEmpty(a.RequiredFlag) &&
+                    a.RequiredFlag == b.RequiredFlag &&
+                    a.RequiredFlagValue != b.RequiredFlagValue) continue;
+                stacked.Add($"{roomId}: {a.Id} / {b.Id}");
+            }
+        }
+
+        Note(stacked.Count == 0
+            ? $"no two hotspots overlap, so nothing is unclickable ({rooms.Count} screens swept)"
+            : $"overlapping hotspot regions, so the lower one cannot be clicked: {stacked.Count} "
+              + $"({string.Join("; ", stacked.Take(6))}{(stacked.Count > 6 ? "; …" : "")})", false);
     }
 
     private static void Creatures(Dictionary<string, RoomData> rooms)
     {
         var placements = rooms.Values.SelectMany(r => r.Entities).Where(p => p?.Entity != null).ToList();
 
-        Row("creature and beast files on disk", FilesIn(GameConfig.EntityDataDir, "boss_", excluding: true), 12);
-        Row("— boss files (Iris outstanding)", FilesIn(GameConfig.EntityDataDir, "boss_"), 3);
+        // **12 → 11 on 2026-08-05, and the 12 was an arithmetic error rather than missing content.**
+        // `items.md` §10's pair matrix is the authority and it has exactly **nine rows**, of which row 9 is
+        // *"**The Beast** — the only non-human, and the only one seen more than three times"*. So the Beast is
+        // **one of the nine types**, not an addition to them, and rule 16 agrees from the other side: *"nine
+        // creature types, each seen three times (the Beast six)"*, which is 8×3 + 6 = 30 regular fights + 3
+        // bosses = 33.
+        //
+        // Nine types become **eleven files** because the Beast is authored as three variants (decision 5 — one
+        // archetype, three looks). `build-plan.md` §2 got there as *3 + 3 + 3 = 9 archetypes, plus Beast ×3
+        // variants* = 12, which counts the Beast twice: once as chapter 3's third type and again as its own
+        // variants.
+        //
+        // **It survived because it was off by exactly one in the direction that looks like work to do.** A row
+        // reading `11 / 12` says *author one more creature*, and there is no creature to author — every one of
+        // the 33 fights is placed and *bodies that free nobody* reads 9 of 9. Jeremy, shown the derivation:
+        // *"I think you're correct and it was a mistake written in at some point."* The lesson is the one this
+        // tool's own class comment already states — a disagreement between content and bill means **either** has
+        // moved, and the bill is the one that had.
+        Row("creature and beast files on disk", FilesIn(GameConfig.EntityDataDir, "boss_", excluding: true), 11);
+
+        // The parenthetical said "(Iris outstanding)" until she was placed the same day. Kept as a plain count:
+        // naming the missing one was useful while one was missing and is a stale comment the moment it lands.
+        Row("— boss files", FilesIn(GameConfig.EntityDataDir, "boss_"), 3);
         Row("fights placed", placements.Count, 33);
 
         // Split the way §1 splits it, because 33 = 30 regular + 3 bosses and the bosses are the missing half.
@@ -112,17 +172,71 @@ public static class ContentReport
             .Count(h => h != null && h.SetsFlag.StartsWith("note.")), 4);
     }
 
+    /// <summary>
+    /// The reference pocket, excluded from the content bill by name. <b>It is scaffolding, not one of the
+    /// fourteen</b> — `handoff.md` calls it *"a reference implementation, not content"*, it stands on no screen,
+    /// and it grants nothing so that it spends none of the eight-point Resolve budget.
+    /// </summary>
+    /// <remarks>
+    /// Added 2026-08-05 with unit 10, and it is the same lesson `GateTravel` paid for when a synthetic pocket
+    /// turned a count check red at *2 of 1*: **a count of authored things cannot tell a fixture from content
+    /// unless the fixture is filtered out by name.** Before the fourteen existed the probe read as 1 of 14 and
+    /// looked like progress; the moment they were authored it would have read 15 of 14 and printed `!!`, which
+    /// this tool reserves for the content and the bill genuinely disagreeing.
+    /// <para>
+    /// It is deliberately *not* filtered from `--verify-slice`'s census, which asserts at least one pocket still
+    /// has a scene. There the probe is doing real work: with fourteen stand-ins it is the only thing keeping the
+    /// crossing reachable in play.
+    /// </para>
+    /// </remarks>
+    /// <para>
+    /// <b>Internal rather than private since 2026-08-06</b>, because <see cref="SliceVerifier"/>'s door sweeps
+    /// need the same exclusion and for the same reason. A second copy of the string would be a second answer to
+    /// *which pocket is scaffolding* — and the two would disagree the day the probe is renamed, in the direction
+    /// that makes the reference pocket look like content missing a door.
+    /// </para>
+    internal const string ReferencePocketId = "dream_probe";
+
     private static void Pockets()
     {
         var pockets = PocketManager.Instance?.Pockets
-            .Where(kv => !kv.Key.StartsWith("verify_"))
+            .Where(kv => !kv.Key.StartsWith("verify_") && kv.Key != ReferencePocketId)
             .Select(kv => kv.Value)
             .ToList() ?? new List<PocketData>();
 
-        Row("pocket files on disk", FilesIn(GameConfig.PocketDataDir), 14);
+        // Counted from the registry rather than off `FilesIn`, so the reference pocket can be excluded by name.
+        // `FilesIn` cannot do that, and the two agree on everything else because the "every file registered"
+        // crossing in `--verify-slice` says so.
+        Row("pocket files on disk", pockets.Count, 14);
         Row("— knowledge pockets", pockets.Count(p => p.Kind == PocketKind.Knowledge), 8);
         Row("— knot pockets", pockets.Count(p => p.Kind == PocketKind.Knot), 3);
         Row("— boss pockets", pockets.Count(p => p.Kind == PocketKind.Boss), 3);
+
+        // **The 3D debt, and after unit 10 this is the only row that carries it.** Authoring the fourteen
+        // `PocketData` files closes every row above and the entrances row below, because all of that is what a
+        // pocket *gives* — 2D content that was parked behind 3D scenes it never needed. What is genuinely
+        // outstanding is the walking, and this is the row that says so.
+        //
+        // Without it the report would read `14 / 14` pockets and be lying by omission: the rows above cannot
+        // tell a pocket you walk from one you click, and nine `todo` rows collapsing to `ok` in a single
+        // sitting is exactly the shape that reads as *finished*. §3's blind-spot classes are mostly this —
+        // a measurement that stopped being able to see the thing it was hired to watch.
+        Row("— of those, with a 3D scene built (the rest grant on click — unit 10)",
+            pockets.Count(p => p.HasScene), 14);
+
+        // **The one thing unit 10 leaves genuinely owed, recorded so it fires rather than being remembered.**
+        // A boss pocket severs `TargetEntityId` and that is the only way a tether is ever cut, so a boss pocket
+        // naming nobody is a fight that can never be won. `ch3_demon` is authored blank on purpose because Iris
+        // is not placed — `items.md` §10 leaves her damage pair unfixed until the finale is written — and
+        // naming her here would be a pocket pointing at a creature that does not exist.
+        //
+        // Written in the direction that **survives**, which is the repair stations' lesson from earlier the same
+        // day: it is quiet while she is unplaced and becomes a to-do row the moment a third boss body exists.
+        // Naming the id today would have been red for something that is not a defect.
+        var bossPockets = pockets.Where(p => p.Kind == PocketKind.Boss).ToList();
+        var severing = bossPockets.Count(p => !string.IsNullOrEmpty(p.TargetEntityId));
+        Row("— boss pockets that sever somebody (blank until that boss is placed)",
+            severing, bossPockets.Count);
 
         // Rule 6, and the one row where being *over* is as wrong as being under: eight pockets, eight
         // upgrades, and nothing else in the game may add to that count.
@@ -169,11 +283,140 @@ public static class ContentReport
             ? $"verbs: each granted once, by a boss pocket, and never Suppress ({verbGrants.Count} checked)"
             : $"verb grants VIOLATED by {string.Join(", ", verbOffenders)}", verbOffenders.Count > 0);
 
-        Row("pocket entrances authored on Waking screens",
-            NavigationManager.Instance?.Rooms
-                .Where(kv => !kv.Key.StartsWith("verify_"))
-                .SelectMany(kv => kv.Value.Hotspots)
-                .Count(h => h is { Kind: HotspotKind.CrossToDream }) ?? 0, 14);
+        // **Counted as *pockets that have a door*, not as doors — corrected 2026-08-06.** It read
+        // `Count(h => h is { Kind: CrossToDream })`, and a count of doors cannot see a door pointed at the wrong
+        // pocket: retyping one entrance's `PocketId` left the finale unreachable and this row still printed
+        // `14 / 14`. That is the report's version of the gate `GateContent` grew the same day, and the honest
+        // form of the row is the one that matches the rule — *every pocket is opened by something* — rather than
+        // the one that matches the file count.
+        var doorsTo = NavigationManager.Instance?.Rooms
+            .Where(kv => !kv.Key.StartsWith("verify_"))
+            .SelectMany(kv => kv.Value.Hotspots)
+            .Where(h => h is { Kind: HotspotKind.CrossToDream })
+            .Select(h => h.PocketId)
+            .ToHashSet() ?? new HashSet<string>();
+
+        Row("pockets with an entrance on a Waking screen", pockets.Count(p => doorsTo.Contains(p.Id)), 14);
+    }
+
+    /// <summary>
+    /// <b>`placement.md` rule 17 — every optional fight must be worth having taken.</b> The last placement rule
+    /// with no witness anywhere, measurable since the three bosses were placed.
+    /// </summary>
+    /// <remarks>
+    /// <b>"Optional" is derived from the door graph: a fight is optional when the finale is still reachable with
+    /// its screen taken out of the world.</b> That reading is not a guess — it reproduces the rule's own
+    /// arithmetic exactly. §1 says *"the reward may be a blight (9 of the 13 are)"*, and this walk finds
+    /// **13** optional fights of which **9** carry a mend board (8 blights plus the exorcism engine, whose board
+    /// hangs on a `Station` — `MendManager.CarriesABoard`, widened 2026-08-05). A definition that lands on both
+    /// numbers is the one the sentence was written against.
+    /// <para>
+    /// <b>The competing reading was measured and rejected.</b> *"Optional means removing the screen loses no
+    /// screen at all"* — the leaf-node reading — finds **7**, matches neither number, and would have made the
+    /// rule vacuously satisfied. It is recorded because it is the reading a second pass would arrive at, and
+    /// because the two differ on exactly one screen that matters.
+    /// </para>
+    /// <para>
+    /// <b>A row and not a gate, on purpose.</b> `ch1_bramble` fails it: the messenger stands in the corridor to
+    /// the Stonefield and the screen pays **nothing else** — and §1 is explicit that freeing a person does not
+    /// count, since all 30 regular fights do that. Whether that is a hole to author into or a screen that should
+    /// not have been counted optional is a design call, so this states the measurement and names the offender
+    /// rather than turning Jeremy's map red. **It becomes a `--verify-slice` gate the day that screen is
+    /// settled**, which is the direction that survives: a report that already names the one exception is
+    /// cheaper to promote than a gate authored around it.
+    /// </para>
+    /// <para>
+    /// The finale is derived rather than typed — the chapter 3 screen holding a body that projects an aura,
+    /// which is the boss marker (`combat.md` §6) — so renaming a room moves the anchor with it. With no chapter
+    /// 3 boss placed there is nothing to measure against and the row says so instead of quietly passing.
+    /// </para>
+    /// </remarks>
+    private static void OptionalFights(Dictionary<string, RoomData> rooms)
+    {
+        var unpaid = OptionalFightsPayingNothing(rooms, out var optional, out var boards);
+
+        Note(optional < 0
+                ? "rule 17 — no chapter 3 boss is placed, so there is no finale to measure 'optional' against"
+                : unpaid.Count == 0
+                    ? $"rule 17 — every optional fight pays something ({optional} optional, {boards} of them a board)"
+                    : $"rule 17 — {optional} optional fights, {boards} carrying a board, but "
+                      + $"{string.Join(", ", unpaid)} pays nothing but the person it frees",
+            unpaid.Count > 0);
+    }
+
+    /// <summary>
+    /// The derivation behind rule 17, shared with <see cref="SliceVerifier"/>. Returns the optional fights that
+    /// pay nothing; <paramref name="optional"/> comes back <c>-1</c> when there is no finale to measure against.
+    /// </summary>
+    /// <remarks>
+    /// <b>One derivation with two consumers, and the split is deliberate.</b> The row above prints the counts
+    /// because they are how anyone checks the definition is still the one §1 was written against (13 and 9);
+    /// the gate in <c>GateContent</c> asserts the list is empty, because since 2026-08-06 it is. Copying the
+    /// walk into the verifier would have been two answers to *which fights are optional*, and the two would
+    /// have drifted the first time a door moved.
+    /// </remarks>
+    internal static List<string> OptionalFightsPayingNothing(
+        Dictionary<string, RoomData> rooms, out int optional, out int boards)
+    {
+        optional = -1;
+        boards = 0;
+
+        var finale = rooms
+            .Where(kv => kv.Value?.ChapterId == "ch3")
+            .Where(kv => kv.Value.Entities.Any(p => p?.Entity is { CorruptionAura: > 0f }))
+            .Select(kv => kv.Key)
+            .OrderBy(id => id)
+            .FirstOrDefault();
+
+        if (finale == null) return new List<string>();
+
+        var doors = rooms.ToDictionary(
+            kv => kv.Key,
+            kv => kv.Value.Hotspots
+                .Where(h => h is { Kind: HotspotKind.Navigate } && !string.IsNullOrEmpty(h.TargetRoomId))
+                .Select(h => h.TargetRoomId)
+                .ToList());
+
+        // Flags are deliberately ignored, exactly as the camp-reachability walk in `GateContent` ignores them:
+        // a door you have to earn is design, and what is being asked here is whether the *map* forces you onto
+        // this screen at all.
+        HashSet<string> ReachableWithout(string missing)
+        {
+            var seen = new HashSet<string> { GameConfig.StartingRoomId };
+            var queue = new Queue<string>(seen);
+            while (queue.Count > 0)
+            {
+                if (!doors.TryGetValue(queue.Dequeue(), out var exits)) continue;
+                foreach (var next in exits)
+                    if (next != missing && seen.Add(next)) queue.Enqueue(next);
+            }
+            return seen;
+        }
+
+        var peopled = rooms
+            .Where(kv => kv.Value.Entities.Any(p => p?.Entity != null))
+            .Select(kv => kv.Key)
+            .OrderBy(id => id)
+            .ToList();
+
+        var optionalRooms = peopled
+            .Where(id => id != finale && ReachableWithout(id).Contains(finale))
+            .ToList();
+
+        // What §1 accepts as payment: a blight, a major repair's station, a Dream pocket, a field station, one
+        // of her notes or a material cache — the last two both being `Harvest`. Freeing a person is **not** on
+        // this list and must never be added to it: every regular fight frees someone, so counting it would make
+        // the rule true by construction, which is precisely the trap §1 calls out in its own wording.
+        bool Pays(string id) => rooms[id].Hotspots.Any(h => h is
+        {
+            Kind: HotspotKind.Mend or HotspotKind.Station or HotspotKind.CrossToDream or HotspotKind.Harvest,
+        });
+
+        optional = optionalRooms.Count;
+        boards = optionalRooms.Count(id => rooms[id].Hotspots.Any(h =>
+            h is { Kind: HotspotKind.Mend or HotspotKind.Station }));
+
+        return optionalRooms.Where(id => !Pays(id)).ToList();
     }
 
     private static void Mending(Dictionary<string, RoomData> rooms)
@@ -181,8 +424,19 @@ public static class ContentReport
         var blights = rooms.Values.SelectMany(r => r.Hotspots)
             .Where(h => h is { Kind: HotspotKind.Mend }).ToList();
 
+        // Counted over *every* hotspot rather than off `blights`, because the three major repairs hang their
+        // board on a `Station` (`MendManager.CarriesABoard`, widened 2026-08-05) while this row was keyed on
+        // `HotspotKind.Mend` alone. So it read `12 / 15` for the whole day after the boards landed, naming in
+        // its own label the three things it could not see — the same blind-spot class as the anvil census that
+        // asked only whether *some* room built the station. **The kind is not what makes a board; the board
+        // is.** Deliberately *not* asked through `CarriesABoard` itself, which additionally requires the
+        // repair to have been assembled: that is live flag state, and a census of authored content must not
+        // move when a player crafts something.
+        var boards = rooms.Values.SelectMany(r => r.Hotspots)
+            .Where(h => h?.MendPuzzle != null).ToList();
+
         Row("blights", blights.Count, 12);
-        Row("jigsaws (12 blights + 3 major repairs)", blights.Count(h => h.MendPuzzle != null), 15);
+        Row("jigsaws (12 blights + 3 major repairs)", boards.Count, 15);
 
         foreach (var (chapter, want) in new[] { ("ch1", 2), ("ch2", 4), ("ch3", 6) })
             Row($"— {chapter}", rooms.Where(kv => kv.Value.ChapterId == chapter)
@@ -220,12 +474,36 @@ public static class ContentReport
             false);
     }
 
-    private static void Arsenal()
+    private static void Arsenal(Dictionary<string, RoomData> rooms)
     {
         var inv = InventoryCraftingManager.Instance;
 
-        Row("items", FilesIn(GameConfig.ItemDataDir), 39, approximate: true);
-        Row("recipes", FilesIn(GameConfig.RecipeDataDir), 18, approximate: true);
+        // Both targets were reconciled against `build-plan.md` §2 on 2026-08-05, and each was wrong in a
+        // different direction. **Items: 39 → 38, and the row is no longer approximate.** §2 derives the total
+        // item by item — 8 materials, a catalyst, 4 salves and brews, 6 traps, 2 weapons, 3 coats, 3 tools,
+        // 11 pages — and the 27 non-page files on disk match the 27 non-page entries exactly, so the only
+        // thing owed is the eleventh page (her fourth note). 39 was never derived from anything; it was typed.
+        // The `±` convention belongs to targets the map is allowed to settle, and §2 marks the screens and the
+        // commons that way while writing this one as a flat 38 — so an off-by-one here is a missing file, not
+        // slack, and `~` would file it under intentional. This row is the one this file's own `Slack` remark
+        // warns about (twelve unwritten items behind a friendlier glyph); exact is the direction that remark
+        // argues for.
+        Row("items", FilesIn(GameConfig.ItemDataDir), 38);
+
+        // **Recipes: 18 → 20, exact, and the roster is complete.** §2's list reads *4 salves, 6 traps, Bell
+        // Maul, 3 coats, 3 tools, the engine* = 18, written before the three major repairs landed on
+        // 2026-08-05 — but **the engine is one of those three repairs, not a recipe beside them**:
+        // `repair_exorcism_engine.tres` is the `ch3_breach` station's recipe, priced at §20's 8 Graveflower,
+        // and it is the one file carrying `RequiresBothTracks`. So the total is 17 + 3 = 20, and the naive
+        // correction to 21 double-counts it. Every recipe in the game is now enumerable by name, which is why
+        // the `~` §2 carried is retired with the number: a tilde means *the map may still settle this*, and
+        // there is nothing left here for a map to settle.
+        //
+        // **This retires "the engine recipe is deferred" wherever it is still written** (`build-plan.md` §8's
+        // chapter-2 row, `handoff.md`'s 17-of-18 count). What §20 defers is the *route* — the engine is
+        // good-ending-only, so nothing forces her notes or the 8 Graveflower to be placed — and that was read
+        // as deferring the file. It rode in with the repairs the same day and nobody moved the count.
+        Row("recipes", FilesIn(GameConfig.RecipeDataDir), 20);
 
         // Rule 15, and it is checkable today because the arsenal is complete. Everything that is not a Salve
         // must be an object you own for the rest of the game.
@@ -237,12 +515,27 @@ public static class ContentReport
             : $"rule 15 VIOLATED by {string.Join(", ", consumables)}", consumables.Count > 0);
 
         // Which recipes cannot be reached at all — the honest measure of what F6 is standing in for.
+        //
+        // **It was not measuring that, and unit 10 is what exposed it (2026-08-05).** It counted
+        // `r.NeedsBlueprint` — every blueprint-*gated* recipe, not every *unreachable* one — so it printed a
+        // flat `16` whether the world handed over nothing or everything, and went on printing 16 on the day
+        // fourteen pockets made thirteen of those recipes learnable by playing. The label had always said "with
+        // no in-world source" and the arithmetic had never asked about a source.
+        //
+        // **A count that cannot move is not a measurement**, and this one was load-bearing: it is the number
+        // that decides whether `F6` can retire. I read it as 16 and told Jeremy the key was free to go, which
+        // was wrong in the direction that deletes a debug key the game still needs.
+        var pagesHandedOver = SliceVerifier.PagesTheWorldHandsOver(rooms);
         var unreachable = inv?.Recipes.Values
-            .Count(r => r != null && r.NeedsBlueprint) ?? 0;
+            .Where(r => r != null && r.NeedsBlueprint && !pagesHandedOver.Contains(r.RequiredBlueprintId))
+            .Select(r => r.Id).OrderBy(id => id).ToList() ?? new List<string>();
+
         // Outstanding work rather than a contradiction, so it does not count against the summary — the
-        // mechanism is built and gated, it simply has nothing to grant yet.
-        Note($"blueprint-gated recipes with no in-world source: {unreachable} "
-            + "(F6 is the only opener until a knowledge pocket is authored)", false);
+        // mechanism is built and gated, and what is left is placement.
+        Note(unreachable.Count == 0
+            ? $"every blueprint-gated recipe has an in-world source ({inv?.Recipes.Values.Count(r => r?.NeedsBlueprint == true) ?? 0} checked) — F6 has nothing left to stand in for"
+            : $"blueprint-gated recipes with no in-world source: {unreachable.Count} "
+              + $"({string.Join(", ", unreachable)}) — F6 is still the only opener for these", false);
     }
 
     // ---- What this tool deliberately does not do -------------------------
@@ -270,8 +563,10 @@ public static class ContentReport
         Note("rule 10 — every screen can be cleansed → `mending` section", false);
         Note("rule 12 — battles are 1v1 → `encounters` section", false);
         Note("rule 14 — fifteen mends, no skip route → `mending` section", false);
-        Note("rule 17 — every optional fight pays something → not yet gated anywhere; "
-            + "needs 'optional' to be derivable, which the door graph can answer once bosses land", false);
+        // Rule 17 stood here reading *"not yet gated anywhere; needs 'optional' to be derivable, which the door
+        // graph can answer once bosses land"*. **The bosses landed, and 2026-08-06 cashed the promise** — see
+        // `OptionalFights` above, which measures it. It is a row rather than a gate for one reason, recorded
+        // there: one screen violates it today, and which way that resolves is Jeremy's call.
     }
 
     // ---- Plumbing --------------------------------------------------------

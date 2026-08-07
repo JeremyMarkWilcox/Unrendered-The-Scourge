@@ -104,6 +104,55 @@ public partial class CraftingPanel : Control
     public string HeadingText => _heading?.Text ?? "";
 
     /// <summary>
+    /// The height the book <i>demands</i>, in pixels — the combined minimum size of the outermost sized
+    /// container. <b>The one layout fact a headless run can honestly answer</b>, and the readout that holds the
+    /// 2026-08-05 softlock shut.
+    /// </summary>
+    /// <remarks>
+    /// <c>Size</c> is 0 without a layout pass, which is why every other readout on this class asks about anchors
+    /// and offsets instead — and why the overflow that made ✕ unreachable was invisible to all of them.
+    /// <c>GetCombinedMinimumSize</c> is different: it is *computed* from children rather than assigned by a
+    /// layout pass, so it is meaningful with no viewport at all.
+    /// <para>
+    /// The gate does not compare it to a number. It reads it with an empty book and again with a full one and
+    /// requires the two to be equal — **a demand that grows with content is the defect**, whatever the pixel
+    /// value happens to be. That survives Jeremy restyling the panel, which a bound like *"under 480"* would not.
+    /// Returns 0 when nothing is bound, so a broken panel cannot pass by being absent.
+    /// </para>
+    /// </remarks>
+    /// <remarks>
+    /// <b>Measured on the container that holds ✕, which is the symptom rather than a proxy for it.</b> The first
+    /// version of this walked up to the outermost <c>Control</c> — the full-rect root — whose combined minimum
+    /// size ignores its children entirely, so it would have answered ~0 forever and the check would have been
+    /// vacuous in the *"asserts that a creature which cannot hit anything did not hit anything"* sense. The
+    /// defect was **the close button being pushed out of the box it shares with the list**, so the box they
+    /// share is the thing to measure, and it works for any authored scene that arranges them that way.
+    /// </remarks>
+    public float DemandedHeight =>
+        _closeButton?.GetParent() is Control box ? box.GetCombinedMinimumSize().Y : 0f;
+
+    /// <summary>
+    /// The width the book demands, the twin of <see cref="DemandedHeight"/> and added the same day for the
+    /// same defect on the other axis.
+    /// </summary>
+    /// <remarks>
+    /// <b>The height fix shipped with no width check and the identical bug was sitting beside it.</b> A row's
+    /// text is one line — *name · inputs · why-not* — and a <c>Button</c>'s minimum width includes its text, so
+    /// the exorcism engine's row (three inputs plus *"One side of the book is still blank. This needs both
+    /// hands"*) pushed the column's minimum past the 800 the offsets ask for. Minimums beat offsets, the panel
+    /// grew rightwards off the screen, and because it grows from an anchor-derived top-left it also **stopped
+    /// looking centred** — which is how Jeremy reported it: *"seems like the crafting menu should be more
+    /// centered?"* It was centred; it was too wide.
+    /// <para>
+    /// The lesson is narrower than "check both axes": <b>a fix that constrains one dimension should be gated on
+    /// the dimension it did not constrain</b>, because the reason the first one broke — content-driven minimum
+    /// size — is axis-agnostic and was still live.
+    /// </para>
+    /// </remarks>
+    public float DemandedWidth =>
+        _closeButton?.GetParent() is Control box ? box.GetCombinedMinimumSize().X : 0f;
+
+    /// <summary>
     /// Whether a tint is actually drawn over the room, at a rect that covers it.
     /// <see cref="CampPanel.DimsTheRoom"/> field for field, including the part that looks like timidity:
     /// it asks about <b>anchors and offsets</b> rather than <c>Size</c>, because a headless run never lays
@@ -479,15 +528,56 @@ public partial class CraftingPanel : Control
 
         column.AddChild(new Label { Name = "Heading", Text = "" });
 
-        var list = new VBoxContainer { Name = "RecipeList" };
-        column.AddChild(list);
+        // **The list scrolls, and this was a softlock until 2026-08-05.** Found in play by Jeremy: *"when it is
+        // full of the craft recipes it is so long you cannot see the bottom or scroll on the menu so you cannot
+        // exit the screen."* Exactly right, and the mechanism is minimum-size propagation — a `PanelContainer`'s
+        // minimum size is its child's, so once the `VBoxContainer` of rows was taller than the 480 these offsets
+        // ask for, **the minimum won and the backing grew past its own rect**, carrying `CloseButton` — the last
+        // child of the column — off the bottom of the screen. `MouseFilter = Stop` means a click cannot reach the
+        // room behind, and nothing in the project binds Escape, so ✕ was the only exit and it was unreachable.
+        //
+        // A `ScrollContainer` fixes it at the cause rather than by moving the button: a scroll container's
+        // minimum size deliberately does **not** include its content's, so the backing keeps the size these
+        // offsets ask for however long the book gets, the tabs stay at the top and ✕ stays at the bottom.
+        //
+        // **Why 1092 green checks could not see it.** `DimsTheRoom` and its neighbours already work around the
+        // fact that a headless run lays nothing out — they assert *anchors and offsets* precisely because `Size`
+        // answers 0 — so the panel's arrangement was checked and its *layout under content* was not. That is
+        // `handoff.md`'s standing warning made concrete: the gates prove structure, and this was the first thing
+        // play found that structure could not express. The check that now holds it is a **relationship between
+        // two measurements** rather than a pixel bound: the backing's combined minimum height must not grow when
+        // the book fills up.
+        var scroll = new ScrollContainer
+        {
+            Name = "RecipeScroll",
+            HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled,
+            SizeFlagsVertical = SizeFlags.ExpandFill,
+            CustomMinimumSize = new Vector2(740f, 300f),
+        };
+        column.AddChild(scroll);
+
+        var list = new VBoxContainer
+        {
+            Name = "RecipeList",
+            SizeFlagsHorizontal = SizeFlags.ExpandFill,
+        };
+        scroll.AddChild(list);
 
         // Inside the container it fills, so a duplicate lands beside its siblings with no re-parenting —
-        // `CampPanel`'s CampTemplate, same reason.
+        // `CampPanel`'s CampTemplate, same reason. `Bind` searches recursively, so nesting the list one level
+        // deeper inside the scroll costs the contract nothing.
+        // **`AutowrapMode` is what stops a long row widening the whole book**, added 2026-08-05 with the width
+        // half of the overflow fix. A `Button`'s minimum width includes its text, and a row is one line of
+        // *name · inputs · why-not* — the exorcism engine's runs past 140 characters — so without this the
+        // column's minimum beat the offsets and the panel grew off the right of the screen. Wrapping bounds the
+        // minimum to the longest **word** and spends the overflow on height instead, which the `ScrollContainer`
+        // above already absorbs. Clipping with an ellipsis was the other option and is worse here: the tail of
+        // that row is the *reason you cannot make it*, which is the panel's whole job (§2).
         list.AddChild(new Button
         {
             Name = "RecipeTemplate",
             Text = "",
+            AutowrapMode = TextServer.AutowrapMode.WordSmart,
             CustomMinimumSize = new Vector2(720f, 0f),
         });
 

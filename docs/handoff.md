@@ -35,7 +35,7 @@ times.
 
 ## Now
 
-**Last verified: `ALL GATES PASSED (1080 checks)`, exit 0, `dotnet build` clean with 0 warnings — and
+**Last verified: `ALL GATES PASSED (1117 checks)`, exit 0, `dotnet build` clean with 0 warnings — and
 uncommitted.** Every pass is left verified for Jeremy to commit; nothing here commits.
 
 **Run the suite with the `--` separator: `godot --headless --path . -- --verify-slice`.** `Boot` reads
@@ -61,7 +61,8 @@ ladder order.
 
 **What is actually on disk, and this is the line to trust when a doc disagrees: 59 rooms, 13 entities,
 12 blights, 3 major repairs, 32 fights, 3 camps, 2 general field stations + 3 repair stations, 37 items,
-20 recipes, 1 pocket.** *(Items were
+20 recipes, ~~1 pocket~~ 15 pockets *(the 14 of the bill + the reference probe)*, 14 pocket entrances,
+1 pocket with a 3D scene.** *(Items were
 27 until the ten lore pages landed on 2026-08-05; recipes 17 until the three repairs landed the same day; entities
 11 and fights 30 until the Lost Trapper and the Blacksmith were placed, also the same day. **Iris is the one
 creature still unwritten**, which is what keeps entities off 14 and fights off 33 — `items.md` §10 leaves her
@@ -80,6 +81,233 @@ created the directory, rather than after the first silent failure.
 leaves it — not `F4`, which the probe scene already binds to its own readout toggle.
 
 ### What just landed
+
+- **Two play findings, and the first one had shut a quarter of the game (2026-08-06).** Jeremy played to the
+  end of chapter 2 and reported two things. Both were real, both were invisible to 1113 green checks, and
+  between them they moved the suite to **1116**.
+  - **"I defeated the NPC but the note didn't become clickable."** Not that screen: a win wrote `freed.*`
+    **only if the body was `Severed` when it fell**, and severing an ordinary creature has no route in the
+    game — `EntityStateManager.Sever` has exactly one caller, a boss pocket cutting its own
+    `TargetEntityId`, and no pocket targets a villager. So every one of the 30 regular fights wrote
+    `killed.*` and **all 24 `freed.*` hotspots in the world were permanently shut**, two of her three
+    Physick notes among them, and with those the two fused traps whose blueprints they are.
+    - **Jeremy ruled the premise wrong rather than the plumbing**: *"All non-bosses live — they have minor
+      demons possessing them. They have no dream worlds to conquer. You more or less bonk them on the head
+      and wake them up. This is why they don't have auras as well like bosses."* So severing is a **boss**
+      verb — weakening one of the three, or reclaiming knowledge — and never the thing that saved anybody.
+      `Finish` now derives two flags from one question, `Flags.Killed` is **deleted**, and the ending's bill
+      goes from `freed.* + killed.* == 24` to the flat `freed.* == 24`. See `combat.md` §20.
+    - **The ruling is not new — it is what §21 has said since 2026-07-31, and unit 3a mis-generalised it.**
+      *"Tethered dies, untethered survives"* is about **the three the demon personally tethered**; the same
+      paragraph says in as many words that *"the nine regular creatures are freed when beaten, the three
+      bosses die."* Unit 3a read it as a per-fight **choice** and built `Flags.Killed` to record the losing
+      half of a choice that does not exist. So the doc was right for five days while the code disagreed, and
+      **the check that closes it is the one that asks whether the flag can be written** — not a new rule.
+    - **The durable fix is one new check: *every flag a hotspot waits on has something that writes it*.**
+      Every earlier sweep asked whether the **creature was placed**, which was true throughout;
+      `--verify-content` printed *people freed 24 / 24* because it counted hotspots. §3's nineteenth class,
+      and the most expensive instance the project has had. The check models the *writers* rather than the
+      names — `freed.X` is writable only for a body with a `PurifiedName`, `defeated.X` only for one
+      without, because that is the single question `Finish` asks.
+  - **"I upgraded everything and I don't have the resources to build the cart."** Also real, and it is
+    `items.md` §19 violated in its own words — *"a common must never be the reason a craft is refused."*
+    **Chapter 2 contained no Heartwood at all** (7 in ch1, 0 in ch2, 3 in ch3) while the mandatory bridge
+    takes 4 of the 7, so everything craftable in the window wanted **13 Heartwood against a supply of 7**.
+    Scrap Iron was short by 2 on the same walk.
+    - **Six Heartwood and six Scrap Iron were authored into chapter 2** — the mill lane, the barn and the
+      drying yard for timber; the smithy, the cellar and the shambles for iron — **plus a Heartwood cache on
+      `ch1_bramble`**, which was also rule 17's one violation, so one hotspot closed two findings.
+      **Regions are on the standard bottom-row grid and are Jeremy's to nudge.**
+    - **The gate is scoped to the failure that bit, not to the general rule, and the difference is the
+      interesting part.** *No chapter window is ever short of any common* is **false today and correctly
+      so** — chapter 1 is woodland and holds no Scrap Iron, so two traps wait for the village, which is a
+      timing choice decision 9 is built on. What is never acceptable is a **repair that opens the next
+      chapter** being unaffordable, so the check asks that of the materials each repair itself names.
+    - **It caught a defect in my own arithmetic on its first run.** My hand-count had Scrap Iron balanced at
+      12/12; the gate read 14 wanted, because the script I measured with skipped ingredients that omit
+      `Amount` and take the default of 1. **The tool was right and the analysis it was written from was
+      wrong**, which is the argument for writing the check rather than the spreadsheet.
+
+- **Rule 17 is measured for the first time, and it found one screen (2026-08-06).** `placement.md` §1's last
+  rule with no witness — *every optional fight must be worth having taken* — was blocked on **'optional' being
+  derivable**, which the door graph could answer once the bosses were placed. It answers: **a fight is optional
+  when the finale is still reachable with its screen taken out of the world.**
+  - **The definition is not a guess, because it reproduces the rule's own arithmetic.** §1 says *"the reward may
+    be a blight (9 of the 13 are)"*; the walk finds **13** optional fights of which **9** carry a mend board —
+    8 blights plus the exorcism engine, whose board hangs on a `Station`. The competing reading (*optional means
+    removing the screen loses no other screen*) finds **7**, matches neither number, and would have made the
+    rule vacuously true. Both were measured before either was written down.
+  - **`ch1_bramble` fails it, and the fix is a ruling rather than code.** The messenger stands in the corridor
+    to the Stonefield, and the screen pays nothing else — no blight, no cache, no note, no station, no pocket.
+    §1 is explicit that **freeing a person does not count**, because all 30 regular fights do that. So either
+    something small gets authored onto that screen, or that fight is not really optional and the rule's 13
+    should be 12. **Jeremy's call — it is in his queue below.**
+  - ~~**It is a `--verify-content` row and deliberately not a gate yet.**~~ **Promoted to a gate the same day**,
+    once Jeremy settled `ch1_bramble` by taking the heartwood cache the material pass put there. The row stays
+    beside the gate because its counts — 13 optional, 9 of them a board — are how anyone checks the derivation
+    is still the one §1 was written against; the walk itself lives in `ContentReport` and is *called* by the
+    verifier rather than copied, so there is one answer to which fights are optional.
+
+- **A read-back over unit 10, the fourteen pockets and Iris — 1101 → 1113 checks (2026-08-06).** Not a feature.
+  The question was the one that paid after 7a–9a: *what did those sittings ship that nothing watches.* Method
+  unchanged — enumerate the new surface, then **break-test anything thin** instead of counting references.
+  The mechanism came back well covered; the `pockets` section drives 90-odd checks through it. **Four gaps were
+  found and all four were in what the mechanism was pointed at rather than in the mechanism.**
+  - **The finale can lose its door and the suite does not notice.** Pointing `ch3_tear`'s entrance at a second
+    pocket left `ch3_demon` — where Iris's tether is cut — with **no entrance anywhere in the world**, and all
+    1101 checks passed. `--verify-content` went on printing *pocket entrances authored 14 / 14* over a game that
+    cannot be finished, because **moving a door does not change how many doors there are.** The existing check
+    was *every door leads somewhere*; the missing one is *everywhere is reached by a door*, and the two stop
+    being one claim the moment a pocket can be named twice. A **knowledge** pocket was already covered by
+    accident — the roster's page-reachability sweep asks whether anything opens the pocket teaching each page —
+    so the six that were invisible were the knot and boss pockets, which are the three chapter endings and the
+    finale. Three checks now: every pocket has a door, no two doors lead to one pocket, and every door leaves
+    its remnant behind.
+  - **A pocket that severs can name a body that does not exist.** `ch3_demon`'s `TargetEntityId` retyped as
+    `ch3.iris_typo` was green everywhere: `Sever` takes any string, writes the state of an instance nobody
+    placed and returns true, so the finale would *report* cutting the tether while Iris stood where she was.
+    The bill's *boss pockets that sever somebody* asks whether the field is **non-empty** — honest when it was
+    written and the bosses were unplaced, and the weaker property now that all three are on the map.
+  - **`PocketManager.Describe` could return "nothing" for every pocket in the game.** It is named nowhere in
+    the verifier, and on the stand-in path it is the **entire** reward feedback — no scene runs, so the click
+    produces one line of text and that line is the event. A player taking the Trapper's Tether would have been
+    told they got nothing. Six checks, one per arm, each break-tested to its own red. Its doc comment also
+    claimed *"`Describe` is what the entrances' labels use too"*, which was never true — labels are authored per
+    hotspot — and that kind of sentence is what makes a string read as watched from elsewhere.
+  - **`F10`'s skip of scene-less pockets was not merely unwatched but *unwatchable*.** It is the only thing
+    between that key and a black screen with no `PocketExit`, and it lived inside a private input handler no
+    check could call. The choosing is now `Main.DebugPocketToCrossInto`; the entering stayed behind. Deleting
+    the skip reddens two checks that name `ch1_edges` — the pocket it would have stranded you in.
+  - **Two new §3 classes, and the second is the one to read**: the **nineteenth** finally numbers the shape
+    that has now bitten five times (keyed on a weaker property than the rule), and the **twentieth** is a guard
+    with no seam to reach it, which is strictly worse than an uncovered one because break-testing it produces
+    no evidence either way.
+  - **And the sixteenth class caught me mid-pass**: a run whose build had failed reported the *previous*
+    build's failures, and for a moment I read them as the new checks misbehaving. Checking `dotnet build`'s
+    exit before reading a verifier run is not optional.
+
+- **Three scheduled deletions had all been missed, and play found the third (2026-08-05).** Clicking a camp
+  bench printed *"Your tools are laid out here. [the crafting panel is not built yet — F7 crafts]"* —
+  **both claims false since unit 7a**, which built the panel and deleted `F7`. So the game told a player to
+  press a dead key about a screen already open in front of them. `InteractionService.AnnounceCraftingVenue`'s
+  own doc comment had said *"delete the second emit when the crafting panel lands; that is the whole
+  demolition"*, three units earlier.
+  - **The pattern is worth more than the fix.** With `[F8] rig` in the HUD caption and this one, that is two
+    user-visible strings that named the day they should die and outlived it — against the two self-retiring
+    **ledger gates**, which went red exactly on schedule. The difference is not diligence: **a note saying
+    "delete this later" is a reminder to whoever reopens the file, and a check is a reminder to whoever runs
+    the suite.** Anything scheduled for deletion should be a check if it can be.
+  - **Both camp bench overlaps cleared**, so `--verify-content` now reads *no two hotspots overlap* across all
+    59 screens — the first time that line has been clean since it was written this morning.
+
+- **Play found a resurrection, 1098 → 1101 checks (2026-08-05).** Jeremy took the Lost Trapper by the
+  **overkill route** — no sever first, aura draining the whole fight — then clicked the pocket entrance
+  afterwards. The boss branch severed a body that was already `Purified`, the severed form draws, and the
+  corpse stood back up minus its aura.
+  - **`Purified` had been documented as terminal since unit 3a and nothing enforced it.**
+    `EncounterManager.Finish`'s own summary reads *"all three set `Purified`, because the enum has three
+    members and that is the terminal one"* — §3's recurring shape, a paragraph standing in for a guard. One
+    line in `EntityStateManager.Sever` now says what the paragraph said.
+  - **The guard is on the verb, not on `SetState`, and that was the whole design question.** The raw setter has
+    two callers that *must* move an entity backwards — `Main`'s debug state cycler and every arena fixture in
+    the suite that resets a creature to `Corrupted` between checks — so a monotonic setter would have broken
+    both to fix neither. What is wrong is **severing a corpse**, which is a statement about the verb.
+    `ImportStates` writes the dictionary directly, so a save load is untouched.
+  - **Jeremy's ruling had two halves and the second is the one a fix could quietly eat.** *"We want it so that
+    if you do it that way that the form is gone. And you just complete the 3D for the ability."* A guard that
+    skipped the whole grant satisfies the first sentence and **silently deletes a Dream verb** — and the verbs
+    are a budget of exactly two, so that would be unrecoverable rather than merely wrong. Both are asserted;
+    the break-test reddens the two corpse checks and leaves *"still pays the verb"* green, which is the
+    evidence that the ability grant is independent rather than merely currently-working.
+  - **It needed no flag**, against the first guess (*"easy flag adds I would think"*). `EntityState` already
+    records that the body went down, and a second fact meaning the same thing is the drift decision 11 and
+    `IsSanctuary` both warn about. The cost of the overkill route stays where §20 puts it — in the ending's
+    count of `freed.*` — rather than in a new flag.
+
+- **The first playtest of unit 10, and it found a softlock plus three gate defects — 1092 → 1095 checks
+  (2026-08-05).** Jeremy played it and asked one question and reported one bug; both were worth more than the
+  unit's own break-tests.
+  - **The journal could not be closed once the book filled up**, which is the standing *"green gates have never
+    proved playability"* risk arriving in person. Full reasoning at §2's contract table — the short version is
+    minimum-size propagation beating fixed offsets, `%CloseButton` pushed off the bottom, `MouseFilter = Stop`
+    over the room and no Escape binding anywhere. `BuildFallback` wraps the list in a `ScrollContainer` now.
+    **The break-test measured the bug: 1014px demanded inside a 480px box.**
+  - **The gate that holds it is a relationship, not a bound** — an empty book and a full one must demand the
+    same combined minimum height. `GetCombinedMinimumSize` is *computed* rather than assigned by a layout pass,
+    so unlike `Size` it means something headless. My first attempt measured the full-rect root, whose minimum
+    ignores its children, and would have been vacuous forever; it measures the box that holds ✕, because *that
+    button leaving that box* is the defect rather than a proxy for it.
+  - **Iris is placed, and the pair was a ruling I made on Jeremy's *"I'm open to whatever makes sense"*.**
+    `boss_iris.tres` in `ch3_tear`, **Vulnerable Fire / Resistant Blunt**, echoing the Miner. **The prettiest
+    answer was illegal**: the echo gate excludes `beast_`, so Caustic — the Corrosive Draught, taught by Iris's
+    own mentor — would have left her echoing nobody. Of the two legal pairs, §20 picks Fire: the full-strength
+    Demon is the *unprepared and stubborn* route and invariant 12 forbids dead saves, so the counter must be the
+    reachable one — Burning Oil comes from freeing a **path** NPC, the Bell Maul wants a pocket plus contested
+    Cairnstone. Resisting Blunt then halves the weapon a hoarding player brings, which is §20's own position on
+    overkill. `Durability 42 / Damage 16` continue 34→38 and 12→14; `Deals` is Caustic, giving the tanner's coat
+    a job in the finale.
+  - **`PurifiedName` stays blank even though she survives the good ending**, and the roster bill moved
+    `defeated.* 8 → 9` exactly as `items.md` §10 predicted. She lives because the **engine releases the tether**
+    — a repair, not a fight outcome — so no route to her fight frees anybody. Reading her survival as `freed.*`
+    would have put her in the 24 and made the good ending double-count the person it saves.
+  - **Her three Physick pages are placed, and doing it exposed a gate keyed the wrong way round.** §19's
+    eight-material ceiling was implemented as *no `Harvest` may pay out anything but the eight*, but the rule is
+    about **materials** and a page is knowledge made into an object. §2's queue instructs placing her notes as
+    exactly this, so **the check would have gone red on anyone who followed the written instruction** — which is
+    how it was found. Widened to *material or `Lore` page*, never to *anything in the catalogue*, so a node
+    paying out a Bell Maul is still caught. **It is today's recurring class with the polarity flipped**: keyed on
+    a *stronger* property than its rule, so it failed on content the rule permits — the direction that gets a
+    correct gate deleted by someone in a hurry.
+  - **`F6` can finally retire, and the number that said so had been lying.** `--verify-content`'s *"blueprint-gated
+    recipes with no in-world source"* counted every *gated* recipe rather than every *unreachable* one, so it
+    printed a flat `16` no matter what the world offered — including on the day fourteen pockets made thirteen of
+    them learnable. **A count that cannot move is not a measurement**, and this one decides whether a debug key
+    is free to delete: I read 16, told Jeremy the key could go, and was wrong in the direction that removes
+    something the game still needed. Fixed, it named her three Physick recipes; with those placed it now reads
+    *every gated recipe has an in-world source*.
+  - **The report is down to 3 rows**, and one of them may be a bill error rather than content — see below.
+
+- **Unit 10 — the two worlds are decoupled, 1080 → 1092 checks (2026-08-05).** `build-plan.md` §7 decision 12.
+  **A `CrossToDream` click routes on whether the pocket has a scene**: blank `ScenePath` grants what the pocket
+  holds where you stand (`PocketManager.TakeFromWaking`), a named one crosses you in as always. All **14
+  `PocketData` files and 14 entrance pairs are authored**, derived from the three ledgers' pocket-door column —
+  so the eight max-Resolve grants, the two verb grants, every blueprint in the game and the three knots are
+  reachable in play for the first time. **`--verify-content` went 12 rows to 7**, and the 7 are three things:
+  Iris (+ the 12th creature file), her fourth note, and the fourteen 3D scenes.
+  - **One shared `GrantOnce`, which is the whole translation story.** The 3D scene already calls `Complete()`
+    on the way back and that contract did not move; the stand-in calls the same private method, so there is one
+    copy of what a pocket gives and one copy of the once-only rule. **The stand-in is what gets played for
+    months, so a second copy would have left the *scene* path as the untested one** when it finally arrived.
+  - **The guard is on one side only, and the symmetric version was built first and reverted.** Making `Enter`
+    refuse a scene-less pocket would have contradicted `PocketHost`'s documented headless state and reddened
+    every fixture in `GatePockets`. Only `TakeFromWaking` refuses (`PocketBlock.MustBeWalked`), because only
+    that direction is dangerous — granting a *built* pocket on a click is silent and wrong, while entering an
+    empty one is merely empty. The stranding risk moved to **`F10`, which now skips scene-less pockets**.
+  - **Three ledger gates retired on schedule and one was found overclaiming.** `GateRoster`'s *"no blueprint
+    page has a source yet"* and `GateStations`' *"nothing in the world hands one over yet"* both went red
+    exactly as their own messages predicted, and are **inverted rather than deleted**. But
+    `PagesTheWorldHandsOver` credited a knowledge pocket's page **without asking whether anything opened that
+    pocket** — so on the day the 14 files landed with 0 entrances it reported *7 pages reachable* and every one
+    was unreachable. Found by reading a **passing** check's own message. §3's recurring class in its exact
+    form: *a pocket grants this page* is not *the world hands this page over*, and the missing term is the door.
+  - **A break-test caught one of my own new checks measuring nothing.** *"Clicking the spent entrance a second
+    time grants nothing"* stayed green with `GrantOnce`'s flag guard deleted, because a spent entrance is not
+    `IsAvailable` — so the click never reached the manager. §3's seventh class. Split into the two claims that
+    are really there, and **`GrantOnce`'s guard is belt to `AlreadyTaken`'s brace on this path**, only reachable
+    through `Complete`, where the check that *did* redden has covered it since unit 6a.
+  - **Invariant 4 is knowingly broken and deliberately not amended** — a boss pocket's grant severs a tether,
+    and here that happens from a Waking screen. Jeremy: *"the anchor rewards are always more resolve or
+    abilities that we will test separate in the 3D world… this is until we are ready to connect them."* It comes
+    back the hour a boss pocket has a scene, which is why the switch is derived from the scene and not from a
+    flag. **`ch3_demon`'s `TargetEntityId` is blank** because Iris is unplaced; the obligation is a
+    `--verify-content` row that goes to 3/3 the day she is.
+  - **`dream_probe` is excluded from the content bill by name.** It is the reference implementation, so at 14
+    authored pockets it would have read *15 / 14* and printed `!!` — `GateTravel`'s *2 of 1* lesson, that a
+    count cannot tell a fixture from content unless the fixture is filtered out. It is **not** filtered from the
+    gate suite, where it is the last pocket keeping the crossing reachable in play.
+  - **Still open, and it is small: `F6` has nothing left to stand in for.** Learn-all was the only opener for
+    the 16 gated recipes and pockets now grant them for real, so by §8's own rule it retires — but deleting a
+    key Jeremy plays with is his call, not a derivation.
 
 - **Unit 7a — the journal, and it is the crafting screen. 860 → 913 checks.** `src/UI/CraftingPanel.cs`,
   built to decision 9: **one book, two sides**, his Craft and her Physick, and each side is where you make
@@ -274,6 +502,18 @@ leaves it — not `F4`, which the probe scene already binds to its own readout t
     document forbids** — and the weaker reading is the one that feels like it is not hardcoding anything.
     (The `▸` column in the ledgers is the **pocket door**, not the body; the blank under *Held by* is why I
     misread it, and both rows now name the body too.)
+  - **The same class had a second, older instance, and placing the boss is what exposed it.** The one anvil
+    in the game was in `ch2_smithy` — which is now the **Blacksmith's screen**, so the three tools were
+    forged on the boss's own ground. `ledger-ch2` row 10 has said *"the anvil — field station"* on **Forge
+    Row** since the rooms were authored, and the ledger's camp-walk argument reasons from that room. Green
+    for the same reason: the station census keys on the station **id** and asks only whether *some* room
+    built it. Jeremy ruled the file wrong rather than the ledger (*"was a mistake that went through and now
+    it sounds pretty odd logically"*), and the station moved to `ch2_forge_row`. **No new gate** — the venue
+    check already navigates to a real room, so pointing it at Forge Row makes it the one assertion about
+    which screen the anvil stands on; the break-test putting the anvil back reddens exactly that check and
+    nothing else. Worth reading twice: **two instances of one blind-spot class, found on the same day** —
+    this one had been green since the rooms were authored on 2026-08-02. Both were found by reading a
+    ledger, not by a gate.
   - **And one defect that cost twenty checks going dark with nothing red.** §3's **eighteenth** class,
     and the most expensive kind of green — the two-click fixture selected *the repair nothing is holding shut*,
     so gating the last ungated station deleted the block. It constructs its state now instead of discovering
@@ -319,164 +559,29 @@ session can trip over.
   smaller reading contradicts §20's revised good ending. The **citation gate** rode along — it walks `src/`
   for references to this file's sections, which is why renaming §2 or §3 reddens the suite.
 - **Decision 9, the equipment-gating ruling** (`build-plan.md` §7). Equipment may gate content in the chapter
-  before the chapter that makes it. The measurement that settled it: **one anvil, in `ch2_smithy`; one mortar,
-  in `ch2_apothecary`** — so chapter 1 can craft **the six traps and nothing else**, and is **sleep-only for
-  healing**, both salves being mortar recipes. Know this before authoring anything in chapter 1.
+  before the chapter that makes it. The measurement that settled it: **one anvil, in ~~`ch2_smithy`~~
+  `ch2_forge_row`; one mortar, in `ch2_apothecary`** — so chapter 1 can craft **the six traps and nothing
+  else**, and is **sleep-only for healing**, both salves being mortar recipes. Know this before authoring
+  anything in chapter 1. *(The anvil's room was corrected 2026-08-05 — see `items.md` §5. The decision is
+  untouched: it turns on the chapter, not the screen.)*
 
 ### What is next
 
-**The remaining work was re-cut into two lanes on 2026-08-04 — `build-plan.md` §8's *"What remains"* is the
-schedule, and this is the summary.** The tail of that table had become four coarse rows whose first entry
-bundled Jeremy's 3D pass with Claude's code into one undefined unit. The lanes touch different files, so
-they run in parallel: **Jeremy builds pocket 1 and plays it**, **Claude builds the crafting panel**.
+**Moved to `docs/whats-left.md` on 2026-08-06, and this section is now a pointer on purpose.** It held a
+queue, `build-plan.md` §8 held another, and both drifted — three of §8's counts were stale within a day of
+being written, and this section still listed a rule as ungated hours after it had been gated. **One list,
+and it is that file**; the reasoning behind each item stays here and in the ratified docs, where it belongs.
 
-### Jeremy's queue — the exact shape of each
+**What is *not* in that file, deliberately:** counts of authored content. Run
+`godot --headless --path . -- --verify-content`, which measures the disk instead of remembering.
 
-**Written 2026-08-05, when Claude's half of unit 7a closed.** Everything below is blocked on a judged call
-or on the editor, so none of it is Claude's to do. Ordered by what unblocks the most; each says what turns
-green, because two of them turn something **red** and that red is the design working rather than a mistake.
-
-1. **Her fourth note** — one `.tres` in `data/items/`, and **the first decision is whether it teaches**,
-   which reopened on 2026-08-05: *"you say there is an extra note I'm sure it is for it. You need graveflowers
-   to build it so you probably miswrote that blueprint part back then."* Both answers are cheap and the naming
-   rule covers each without amendment, because `lore_` means *it teaches*:
-   - **If it is story only** — any id **not** beginning `lore_`. That prefix is what the decision-11 crossing
-     sweeps, so a narrative page carrying it would be accused of teaching a family that does not exist.
-   - **If it is the engine's Physick page** — `lore_physick_<family>`, plus a recipe naming it, and then it is
-     not a one-file job any more. **Note that rule A means you do not need it to be**: her three existing
-     notes each satisfy the engine's Physick half already, so the fourth can stay pure story and the engine
-     still works. Deferred with the engine either way.
-
-   Otherwise a `Lore` item like any other — `Category = 4`, `Track = 1` (Physick), and whatever `DisplayName`
-   / `Description` you want. Nothing goes red on the story reading; the shelf gates count it and the
-   naming-rule gate confirms it teaches nothing.
-
-2. **Place her three notes** — one `Harvest` hotspot each in `data/rooms/`, with `ItemId` set to the page id
-   exactly: `lore_physick_burning_oil`, `lore_physick_corrosive_draught`, `lore_physick_deepmend`. Any
-   Waking screen; her notes are found, not learned. **Two gates go red when the first one lands, on
-   purpose** — `GateRoster`'s *"and no blueprint page has a source yet, all 10 of them"* and
-   `GateStations`' *"but nothing in the world hands one over yet — a pocket or a placed page turns this
-   red"*. They are a **self-retiring ledger**: they exist to make the unreachability visible, and their
-   going red is the signal to delete them, which is Claude's ten-second job. **It is not your bug and it is
-   not a merge conflict — say the word and the ledger comes out.** His seven pages cannot be placed this
-   way; they come from Dream pockets, which is item 4.
-
-3. **Optionally, the satchel's three verb buttons** — `%EquipButton`, `%SetButton` and `%CategoryTabs` are
-   now published in §2's contract table above. All three are stopgapped, so **the satchel is fully usable
-   today** and authoring them is a layout improvement rather than a dependency. Worth doing while you have
-   the scene open for anything else.
-
-4. **Pocket 1, and play it** — unchanged, still the largest thing in your lane and still the thing that
-   unblocks the most: it retires `F6` and `F10`, gives his seven pages a source, and starts the eight
-   max-Resolve budget. The checklist is below and it needs no scripting.
-
-5. **The rest, unchanged and further out** — `CampPanel.tscn` and `CraftingPanel.tscn` against their
-   published contracts; ~~the three bosses and the 12th creature file~~ **the 12th creature file, and Iris —
-   the other two bosses came off this list on 2026-08-05** when you asked why they could not be placed the
-   way the enemies were, and the answer was that they could: the docs fix everything but two numbers, so it
-   was the derivable half of content and mine to write. **Iris genuinely is still blocked**, but on a
-   *design* call rather than a 3D one — `items.md` §10 leaves her damage pair unfixed until the finale is
-   authored, so she is not waiting on your pocket pass. Then chapter 1 sealed, at which point
-   `--verify-content`'s ch1 block turns from a report into gates.
-
-**One thing worth knowing before you play the satchel:** *Set* is a **before-the-fight verb only**. The
-satchel refuses to open once a fight starts, so you rig traps by standing in front of a creature and
-setting them *before* engaging. **Rigging mid-fight is not a missing verb, it is a deleted one** — unit 9a
-struck it on 2026-08-05 (`combat.md` §22) and replaced the priced branch with a refusal, so *"you cannot rig
-a trap once the fight has started"* is the rule rather than a gap. See §2's table.
-
-**Chapter 1 pass 2 — the vertical slice.** Walk in, fight, take the pocket, mend the blight, cleanse the
-screen, camp. **Every listed beat is reachable**: camp landed with unit 5, the pocket with 6a, and 6b left
-the Dream with exactly one model rather than two. What remains is authored content plus **Jeremy's own 3D
-pass**, which is a separate workflow by his own framing — *"3D dream world is its own project."*
-
-~~**But the bench you camp at does nothing** — `CraftingRequested` fires with nothing subscribed and `src/UI/`
-holds no `CraftingPanel.cs`.~~ **Closed by unit 7a on 2026-08-05:** the panel exists (`src/UI/CraftingPanel.cs`),
-a bench opens the book, and `BuildFallback` stands in until `scenes/ui/CraftingPanel.tscn` is authored against
-§2's contract. It was the one thing standing between chapter 1 and being playable, and what stands there now is
-authored content — the bosses and the pockets.
-
-**Two decisions closed with the re-cut, and both cost nothing to build** — `build-plan.md` §7. **Decision
-10:** a major repair is gated on the boss flag, not a key item, and the *puzzle* is what makes it major —
-which the ch1 and ch2 ledgers had already drawn (*"Gated on the boss memory"*) and nobody had read back.
-**Decision 11:** a blueprint page is an item whose id **is** the blueprint id, so the page is a view of
-the knowledge rather than a second copy that could disagree; the Lore tab in the satchel is what it is
-for, and it is checkable anywhere while crafting needs a venue.
-
-**And `--verify-content` now answers "what is chapter 1 short of" without anyone guessing.** Its first run
-says everything outstanding traces to **two things — the three bosses and the fourteen pockets**: the major
-repairs want a reclaimed memory, the eight max-Resolve grants want knowledge pockets, and most of the twelve
-missing items are the lore pages those pockets hand out. Eleven rows, not eleven independent jobs. **Both of
-those clauses have since moved and in opposite directions**: the repairs no longer want a memory at all
-(decision 10 made the boss *flag* the gate) and two of the three bosses are placed, so what is left of the
-first thing is Iris alone — while the fourteen pockets have not moved at all. **The report is down to 12
-rows, and it is one job now rather than two.**
-
-**The one thing no content can do yet: nothing grants a blueprint.** `Main.LearnEveryCraftFamily()` (`F6`) is
-still the only way to open any of the 16 gated recipes. The mechanism that will grant them is built and gated
-— a `Knowledge` pocket's `Complete()` calls `Discover` and `RaiseMax` — it simply has nothing to grant until a
-real knowledge pocket is authored. Authoring the first one retires `F6` and `F10` together.
-
-**What a pocket needs, as a checklist — and it needs no scripting as of 2026-08-04:**
-
-1. A scene shaped like `DreamProbe.tscn` — a `Control` wrapping a full-rect `SubViewportContainer`.
-2. A **`PocketAnchor`** node on an `Area3D`. Reaching it finishes the pocket. That is the placeholder anchor.
-3. A **`PocketExit`** node on an `Area3D`. Walking into it leaves, writing nothing. **Every pocket wants one** —
-   without it the only way out is finishing, and the Dream has no death to fall back on, so *"I'll come back
-   when I can Float"* becomes *"I am stuck in here."*
-4. Optionally **`PocketGate`** nodes, with `Requires = Float` or `Flare`, on anything a verb should gate.
-4a. **Nothing, for the verbs.** `Q` / `Space` / `E` work in every pocket because `PocketHost` attaches the
-   poller — there is no node to add and nothing to forget. *(This checklist briefly said to add a
-   `DreamVerbHold` yourself; the first pocket played had no verbs because nobody did.)*
-4b. Optionally **`DreamCreature`** nodes, each pointing at a `DreamCreatureData` `.tres`. Minor ones cost a
-   chunk of Resolve on contact and pursue only while your light is on; a boss's `Banishes` throws you out. The
-   **cooldown** is the field that matters — how aggressively anything chases is your pass, not the node's.
-5. A `PocketData` `.tres` in `data/pockets/` naming the scene — **after** the scene exists, or the ScenePath
-   crossing check goes red.
-6. A `CrossToDream` hotspot on a Waking screen naming the pocket, paired with a second `Examine` on
-   `pocket.<id>.cleared` as the broken remnant.
-
-**Those three nodes exist so a clone carries no logic.** Fourteen scenes each holding their own call to
-`Complete()` would be fourteen copies that drift — and cloning is exactly how they would drift, silently and
-identically, which the 59 generated rooms already paid for once. Build one pocket, **play it**, then clone.
-
-**The verbs are `Suppress` / `Float` / `Flare`, and only two are ever granted.** Suppress is held from the
-first frame and carries no flag; Float and Flare come from pulling the anchors of boss pockets 1 and 2. Boss
-pocket 3 grants nothing. And the rule that cannot be gated: **every boss pocket must be completable with the
-verbs you already hold when you get there** — pocket 1 with Suppress alone, since Float is what is inside it.
-
-**The eight max-Resolve grants are a hard budget.** One per knowledge pocket, nothing else in the game may
-grant a point, and `data/pockets/dream_probe.tres` deliberately grants zero so the reference pocket spends
-none of it.
-
-**Story, narration and tutorial content are dead last** — behind pass 3, beside audio, ruled 2026-08-04.
-Two notes are parked in `build-plan.md` §8's **last** row and neither is work queued early: `RecipeData.CraftNarration`
-with somewhere to draw it, and the equip tutorial the deliberately-unequipped starting axe exists to be
-the subject of. An `[Export]` with a default does not invalidate existing `.tres` files, so **neither
-needs building now** — the field can arrive with the thing that reads it.
-
-**The outstanding risk is that none of it has been played.** Unit 3a shipped a fight loop with 655 green
-gates and a defect no gate could see, because every check in that section stands still in one room. The
-gates prove structure; they have never proved playability.
-
-**Unit 5, three units back, is the one data point on what play finds — and what it found was not in unit 5.**
-Jeremy noticed the satchel opening during a fight because `C` had just refused to, and behind that cosmetic
-report was a free heal: `InventoryCraftingManager.UseItem` had no fight guard, so the Use button healed with
-no turn spent and nothing counted against `SalveSlotsPerFight` — a second currency inside a fight, behind a
-key, for a unit and a half. Fixed as `UseBlock.InFight` plus an `asFightTurn` flag only `Treat` passes,
-defaulting to the refusing direction. **Full reasoning in `combat.md` §19's callout**, including the trap
-that hid it; the guard-declined-on-bad-reasoning lesson is now §3's mirror of the seventh class. The one
-line to carry forward: **a new verb audits the old ones by standing next to it** — two keys behaving
-differently is far easier to notice than one key behaving wrongly, which is the argument for playing every
-unit rather than only the risky ones.
-
-`CampPanel` still has no authored scene, so what is on screen is `BuildFallback`'s code-built tree. Its
-*behaviour* is driven headlessly — it opens, lists, refuses, and its rows are pressed by firing the signal,
-because a `Pressed` connected from C# is not introspectable from C# — and the tint is asserted by anchors
-and offsets rather than by `Size`, since a headless run lays nothing out. **So the arrangement is checked
-and the appearance is not**, which is exactly how a dim sat at 0×0 for a whole unit. It has been looked at
-now and it reads as a menu — but it is a placeholder tree, and `scenes/ui/CampPanel.tscn` authored against
-the contract in §2 is what retires the builder.
+**The one piece of that queue worth keeping in front of a reader, because it is the largest single thing
+left and it needs no scripting:** a pocket needs a scene shaped like `DreamProbe.tscn`, a `PocketAnchor`
+on an `Area3D` to finish it, a `PocketExit` to leave by, optional `PocketGate`s, optional `DreamCreature`s,
+a `PocketData` naming the scene **after** the scene exists, and a `CrossToDream` hotspot paired with an
+`Examine` remnant. **Nothing for the verbs** — `PocketHost` attaches the poller, which is the one thing
+that got forgotten the first time. Build one, **play it**, then clone; fourteen clones of an unplayed
+scene drift identically, which the 59 generated rooms already paid for once.
 
 ---
 
@@ -528,6 +633,28 @@ Three standing rules that make this work, all learned the hard way:
   > placing everything roughly and me altering it would be a faster workflow."* So the sequence is
   > **agree, place roughly, he alters** — the agreement is what replaced the file-existence test, and it
   > is cheap because what needs agreeing is usually one line of *what goes in which room*.
+  >
+  > **Where a roughly-placed hotspot goes: the band above `y = 390`, added 2026-08-05.** Every authored
+  > region in the game lives in **y 390..1030** — exits at `y 390`, the centre look at `550`, harvest nodes
+  > around `870` — so the top of the screen is empty on all 59 screens and a placeholder put there cannot
+  > cover anything. **This was learned by doing it wrong twice in one sitting**: fourteen pocket doors on one
+  > uniform rect landed under the right-hand exit in thirteen rooms, and then her three Physick pages landed
+  > under the left exit and the freed-NPC hotspot. Jeremy found the first by playing (*"most of the pockets do
+  > overlap with the doors to the right"*) and `--verify-content`'s new overlap line found the second
+  > immediately after — **including the four I had just told him were not mine**, because my own ad-hoc check
+  > had filtered on ids containing *"pocket"* and the pages are called *"page"*.
+  >
+  > The general form is worth more than the coordinates: **an overlap is invisible from the inspector and
+  > invisible to the gates, and it makes the lower hotspot unclickable.** It is reported rather than gated
+  > because *where* a region sits is judged by eye and is Jeremy's — a check that failed would fight him every
+  > time he drags something. ~~Two overlaps remain and both are his~~ **Cleared the same day, and the report
+  > now reads *no two hotspots overlap* across all 59 screens.** Both were the **camp bench under the
+  > right-hand exit** (`ch2_first_house`, `ch3_dry_store`) — 240×240 of the one hotspot a camp exists for,
+  > unclickable. The generated bench rect `1400,560,400,320` only ever collided where a room *has* a
+  > right-hand exit, which is why `ch1_cottage` was fine and its bench is **still at the original spot**:
+  > moving a working file to match is churn, so the three camps have the bench in two places until Jeremy
+  > says otherwise. The two moved to `1240,560,300,320` — the clear gap between the centre look (ends 1220)
+  > and the exit (starts 1560), 20px either side.
   >
   > **What did not change is the reason the old rule existed.** Two hazards survive it and both are
   > mechanical rather than about ownership: a `.tres` open in the editor will be written back over
@@ -597,7 +724,7 @@ side tabs — which is the point of recording it rather than quietly swapping it
 
 | `%UniqueName` | Type | Script does |
 |---|---|---|
-| `%RecipeList` | any `Container` | one row per page **on the open side**; emptied and rebuilt on every open, every craft and every turn of the tab |
+| `%RecipeList` | any `Container` | one row per page **on the open side**; emptied and rebuilt on every open, every craft and every turn of the tab. **Put it inside a `ScrollContainer`** — see the warning below, this one was a softlock |
 | `%RecipeTemplate` | `Button`, a child of the list, `Visible = false` | duplicated per page. **The row is the verb** — pressing it makes the thing, and there is no *Craft* button, on the camp menu's reasoning above. The whole line is one `Text`: name · inputs · why-not. No child labels, so nothing inside it is part of the contract |
 | `%CraftTab` | `Button` | his Craft side. Set `ToggleMode`; the script draws the open side **pressed** rather than disabled, so it reads as *you are here* and not *unavailable* |
 | `%PhysickTab` | `Button` | her Physick side, same treatment |
@@ -607,6 +734,30 @@ side tabs — which is the point of recording it rather than quietly swapping it
 
 Three things about this one that the layout has to leave room for:
 
+- **Set `AutowrapMode` on `%RecipeTemplate`, for the same reason on the other axis.** A row is one line of
+  *name · inputs · why-not* and a `Button`'s minimum width **includes its text**, so the exorcism engine's row
+  — three inputs plus *"One side of the book is still blank. This needs both hands"* — pushed the panel's
+  minimum width past its offsets and it grew off the right of the screen. Because it grows from an
+  anchor-derived corner it also stopped looking centred, which is how it was reported: *"seems like the
+  crafting menu should be more centered?"* It **was** centred; it was too wide. Wrapping bounds the minimum to
+  the longest word and spends the overflow on height, which the scroll already absorbs. **Clipping with an
+  ellipsis is the wrong fix** — the tail of that row is the reason you cannot make the thing, which is this
+  panel's whole job. Measured: demanded width fell from **1107 to 740**, inside the 800 the offsets ask for.
+- **The two fixes above are one defect on two axes, and the second shipped un-gated for a day.** The scroll
+  landed with a height check and no width check, so the identical failure was sitting beside it and took one
+  playtest to surface. The rule worth carrying: **a fix that constrains one dimension should be gated on the
+  dimension it did not constrain**, because content-driven minimum size is axis-agnostic.
+- **The list must scroll, and this is the one item on this page that was a softlock rather than a
+  preference.** Found in play 2026-08-05: *"when it is full of the craft recipes it is so long you cannot
+  see the bottom or scroll on the menu so you cannot exit the screen."* The mechanism is minimum-size
+  propagation — a bare `VBoxContainer` of rows makes its parent's *minimum* height grow with the book,
+  minimums beat offsets, so the panel grows past its own rect and carries `%CloseButton` off the bottom.
+  The panel takes the mouse and **nothing in this project binds Escape**, so ✕ is the only way out and it
+  was unreachable. `BuildFallback` now wraps `%RecipeList` in a `ScrollContainer`; **author yours the same
+  way.** A gate holds it: an empty book and a full one must demand the same height, and the break-test that
+  removed the scroll reported **1014px demanded inside a 480px box**. Note what it cost to find — 1092 green
+  checks could not see it, because a headless run lays nothing out, which is why every other readout on this
+  panel asks about *anchors and offsets* rather than `Size`.
 - **A page he has not learned is not in the book at all** — not greyed, not a "you don't know this
   yet" row. `CraftBlock.Unknown` means absent, because Daniel writes these pages himself once the
   Dream gives the craft back (decision 11), and because a greyed row would make the journal readable
@@ -1102,6 +1253,42 @@ selection succeeded — `Check("there is a repair to drive the two clicks throug
 turns a disappearance into a red. And when a break-test's prediction comes out 2 reds against 3 predicted, the
 missing red is the finding: it means an assertion is riding on ambient state rather than on the fixture, which is
 the fifteenth class waiting to happen in a block that currently looks fine.
+
+**A nineteenth, and it is the one that keeps happening: a check keyed on a *weaker property* than the rule it
+enforces passes on content the rule forbids.** It has been called "the recurring class" in six code comments
+without ever being numbered, which is part of why it kept recurring. Five instances so far, and the family
+resemblance is exact — in each, the weaker reading is the one that *feels* like it is not hardcoding anything:
+
+| the rule | what was checked | what got through |
+|---|---|---|
+| each boss stands one screen before its repair | the boss is placed in *some* room | both bodies on the wrong screens, 1080 green |
+| the anvil stands on Forge Row | *some* room builds the anvil | the anvil in the Blacksmith's smithy, green since the rooms were authored |
+| the world hands this page over | *a pocket* grants it | 7 pages "reachable" on the day there were 0 doors |
+| a boss pocket severs somebody | the field is **non-empty** | `ch3.iris_typo`, a tether cut on nobody |
+| every pocket is reached by a door | *how many doors there are* | the finale unreachable, both counts still 14 / 14 |
+
+**The tell is grammatical.** The rule is a *pairing* — this body on that screen, this page through that door —
+and the check is a *count* or an existence test over one side of it. So: when a rule names two things, a check
+that mentions only one of them is measuring something else, however green it is. And the correction is never
+"add a stronger check" in the abstract — it is to write down the missing term, which is always the boring half
+(the room, the door, the body) that felt too obvious to name.
+
+**A twentieth, from the same read-back: a guard with no seam to reach it is worse than an uncovered guard,
+because break-testing it produces no evidence in either direction.** `F10`'s skip of scene-less pockets — the
+only thing between that key and a black screen with no way out — sat inside `Main`'s private input handler.
+Nothing but a keypress could call it, so deleting it changed no measurable behaviour anywhere: the suite could
+not go red, and it also could not go green *for the right reason*. The fifteenth class is a check that cannot
+fail; this is a **behaviour that cannot be checked**, and it is invisible to every technique in this section
+because all of them start by running something.
+
+**How to spot it without writing a gate first: ask what a break-test of this line would look like, before
+writing the line.** If the answer is *"nothing observable changes"*, the logic is in the wrong place — not
+because it is wrong, but because it is now load-bearing and unfalsifiable at once. The fix is the smallest
+possible extraction: `Main.DebugPocketToCrossInto` took the *choosing* out of the handler and left the
+*entering* in it, because the choosing is the part with a rule in it. Debug keys are the usual offenders — they
+are written as handlers by reflex, and they are exactly where a softlock guard ends up, since a debug key is
+what reaches half-built content. (`InventoryPanel.DebugSelectTab` and `CaptionLayoutOnATile` are the same move
+made earlier for the same reason.)
 
 ---
 

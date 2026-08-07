@@ -74,8 +74,45 @@ public partial class EntityStateManager : Node
         EventBus.Instance?.EmitEntityStateChanged(instanceId, state);
     }
 
-    /// <summary>Cut the anchor. The host deforms but is not yet free.</summary>
-    public void Sever(string instanceId) => SetState(instanceId, EntityState.Severed);
+    /// <summary>
+    /// Cut the anchor. The host deforms but is not yet free. <b>Refuses a body that has already gone down</b>,
+    /// and returns whether anything was cut.
+    /// </summary>
+    /// <remarks>
+    /// <b>Found in play 2026-08-05, and it put a dead boss back on his feet.</b> Jeremy took the Lost Trapper
+    /// by the overkill route — no sever first, aura draining the whole fight — and then clicked the pocket
+    /// entrance afterwards. <see cref="Managers.PocketManager"/>'s boss branch severed him, which moved
+    /// <see cref="EntityState.Purified"/> **backwards** to <see cref="EntityState.Severed"/>, and the severed
+    /// form draws — so the corpse reappeared, minus its aura.
+    /// <para>
+    /// <b>`Purified` was already documented as terminal and nothing enforced it.</b>
+    /// <c>EncounterManager.Finish</c>'s own summary says *"all three set `Purified`, because the enum has three
+    /// members and that is the terminal one"*, which is §3's recurring shape exactly: prose describing a guard
+    /// is not a guard. One line of code now says what the paragraph said.
+    /// </para>
+    /// <para>
+    /// <b>The guard is on this verb and deliberately not on <see cref="SetState"/>.</b> The raw setter has two
+    /// callers that must be able to move an entity backwards — <c>Main</c>'s debug state cycler, which would
+    /// stop cycling past `Purified`, and every fixture in <c>--verify-slice</c> that resets an arena creature to
+    /// `Corrupted` between checks. Making the setter monotonic would have broken both to fix neither: what is
+    /// wrong here is *severing a corpse*, which is a statement about the verb, not about assignment.
+    /// <c>ImportStates</c> writes the dictionary directly and so is untouched, which is what a save load needs.
+    /// </para>
+    /// <para>
+    /// <b>Jeremy's ruling on what should happen instead</b>, the same day: *"we want it so that if you do it
+    /// that way that the form is gone. And you just complete the 3D for the ability."* So the pocket is still
+    /// completable and still pays — the ability grant and <c>pocket.&lt;id&gt;.cleared</c> sit outside this call
+    /// and are untouched by the refusal. **Only the resurrection is cancelled.** That falls out for free rather
+    /// than needing a flag: killing the boss first costs you nothing but the harder fight you already chose.
+    /// </para>
+    /// </remarks>
+    public bool Sever(string instanceId)
+    {
+        if (GetState(instanceId) == EntityState.Purified) return false;
+
+        SetState(instanceId, EntityState.Severed);
+        return true;
+    }
 
     /// <summary>Complete the exorcism. The host reverts to what it was before the vault opened.</summary>
     public void Purify(string instanceId) => SetState(instanceId, EntityState.Purified);

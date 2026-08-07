@@ -44,11 +44,21 @@ InstanceId = "ch1.messenger_01"
 Entity = ExtResource("4_ent")
 WakingPosition = Vector2(530, 855)
 
+[sub_resource type="Resource" id="hs_ch1_bramble_heartwood"]
+script = ExtResource("1_hs")
+Id = "ch1_bramble_heartwood"
+Label = "Heartwood"
+Kind = 3
+Region = Rect2(120, 870, 220, 160)
+ItemId = "mat_heartwood"
+ItemAmount = 2
+RefillsAtMilestone = true
+
 [resource]
 script = ExtResource("2_room")
 Id = "ch1_bramble"
 DisplayName = "The Bramble Choke"
 ChapterId = "ch1"
 PlaceholderStyle = 0
-Hotspots = Array[ExtResource("1_hs")]([SubResource("hs_0"), SubResource("hs_1"), SubResource("hs_2"), SubResource("hs_3")])
+Hotspots = Array[ExtResource("1_hs")]([SubResource("hs_0"), SubResource("hs_1"), SubResource("hs_2"), SubResource("hs_3"), SubResource("hs_ch1_bramble_heartwood")])
 Entities = Array[ExtResource("3_ep")]([SubResource("ep_0")])

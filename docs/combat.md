@@ -1793,11 +1793,25 @@ load safe. It has to be free: a collapse navigates too, and billing a death for 
 
 Six more things the build settled that the ratified text above did not:
 
-- **Overkilling a possessed villager writes `Flags.Killed`, and the screen still cleanses.** All three
-  win routes set `Purified` — the enum has three members and that is the terminal one — so the moral
-  weight lives in the ending's count of `freed.*` and never in the colour of the ground. The count
-  promise becomes **`freed.* + killed.* == 24`** with **`defeated.* == 6`**, measured off `PurifiedName`
-  rather than off a list of names.
+- ~~**Overkilling a possessed villager writes `Flags.Killed`, and the screen still cleanses.**~~
+  **Reversed 2026-08-06, and the reason is that the overkill route never existed for a villager.**
+  A win wrote `Killed` unless the body was `Severed` when it fell, and **severing an ordinary creature has
+  no route in the game** — `EntityStateManager.Sever` is called from exactly one place, a boss pocket
+  cutting its own `TargetEntityId`, and no pocket targets a villager. So every one of the 30 regular fights
+  took the `Killed` branch and **all 24 `freed.*` hotspots stayed shut**, including two of her three
+  Physick notes. Found in play: Jeremy beat the Apothecary and her notes never became clickable.
+  - **Jeremy ruled the premise wrong rather than the plumbing:** *"All non-bosses live — they have minor
+    demons possessing them. They have no dream worlds to conquer. You more or less bonk them on the head
+    and wake them up. This is why they don't have auras as well like bosses."* So **severing is a boss
+    verb** — it weakens one of the three, or reclaims knowledge — and it was never what saved a villager.
+    The aura is the marker of a body worth severing, which the content already obeyed.
+  - Both surviving win routes still set `Purified`, so the screen cleanses either way. `Flags.Killed` is
+    **deleted**: a flag with no writer is one any future hotspot can gate on and never open, which is the
+    defect being fixed. The count promise is now the flat **`freed.* == 24`** with **`defeated.* == 9`**,
+    still measured off `PurifiedName` rather than a list of names.
+  - The gate that would have caught it without a playthrough is `GateContent`'s *every flag a hotspot waits
+    on has something that writes it*. Every earlier sweep asked the weaker question — whether the creature
+    was **placed** — which was true the whole time.
 - **Collapsing inside a fight ends the fight, and `CampManager` refills both pools *synchronously*
   inside `VitalityDepleted`.** So the guard after the creature's strike has to be `if (!InFight)` and
   **not** `if (vitality.IsEmpty)` — by the time control returns, the bar is full again and the naive

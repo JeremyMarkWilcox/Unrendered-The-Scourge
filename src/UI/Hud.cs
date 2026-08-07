@@ -212,9 +212,20 @@ public partial class Hud : CanvasLayer
         //
         // `[C] camp` is **not** on the demolition list — it is §17's return-to-camp verb, a shipping
         // control, and it sits first with the satchel rather than with the F-keys for that reason.
+        // **Corrected 2026-08-05, and it was stale in both directions at once** — found while fixing the
+        // room-card overlap, because both live in this corner. It advertised **`[F8] rig`**, whose handler was
+        // deleted the day the satchel grew a *Set* button, and omitted **`[F11]`**, which has granted the two
+        // Dream verbs since unit 9. So the one key a player could not discover any other way was the one missing,
+        // and a dead key was being offered in its place.
+        //
+        // **The lesson is that the two halves of retiring a key are in different files.** The branch in
+        // `Main._UnhandledInput` goes, the *action* in `project.godot` deliberately stays (an unbound action costs
+        // nothing; a deleted one is a merge conflict in Jeremy's input map) — and this caption is a **third**
+        // place, which the F7 and F8 retirements both updated the comment block for and neither updated. The
+        // comment above each says which key comes off when; nothing said the label had to follow.
         var hint = MakeLabel(
             "[I] satchel   [C] camp   [F3] debug   [F5] save   [F9] load   "
-            + "[F6] learn   [F8] rig   [F10] pocket",
+            + "[F6] learn   [F10] pocket   [F11] verbs",
                              16, new Color(0.62f, 0.62f, 0.66f, 0.65f));
         hint.SetAnchorsPreset(Control.LayoutPreset.BottomLeft);
         hint.Position = new Vector2(40, -44);

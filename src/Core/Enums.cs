@@ -469,6 +469,38 @@ public enum PocketBlock
     /// authored onto one pocket, or a debug key.
     /// </summary>
     AlreadyTaken = 4,
+
+    /// <summary>
+    /// <b>This pocket has a 3D scene, so it must be walked rather than taken from out here.</b> The one
+    /// refusal <c>PocketManager.TakeFromWaking</c> adds, and unit 10's whole safety property: a finished
+    /// pocket can never hand its reward over on a click.
+    /// </summary>
+    /// <remarks>
+    /// <b>It guards one direction, and the asymmetry is deliberate — I built it both ways first and the
+    /// symmetric version was wrong.</b> The tempting shape was for <c>Enter</c> to refuse a *scene-less*
+    /// pocket too, so the two paths refused each other and a routing mistake was impossible. But
+    /// <c>PocketHost.OnPocketEntered</c> already documents a blank <c>ScenePath</c> as a supported state —
+    /// *"a pocket with no scene is still a pocket as far as every rule is concerned… this is the state a
+    /// headless gate run lives in permanently"* — so refusing it in the manager would have contradicted the
+    /// host's own contract and reddened every fixture in <c>GatePockets</c>, all of which are scene-less by
+    /// design.
+    /// <para>
+    /// <b>Only one direction was ever dangerous, which is why one guard is enough.</b> Granting a
+    /// scene-built pocket's reward on a click would silently keep the stand-in alive past the thing that was
+    /// supposed to retire it — unnoticeable, and it would hand out max Resolve for a pocket you were meant to
+    /// walk. Entering a scene-less one is merely empty, and no authored path can do it: the routing in
+    /// <c>InteractionService</c> sends those to <c>TakeFromWaking</c>, and <c>Main</c>'s debug key skips them
+    /// so it cannot strand you. Get the routing condition backwards and this refusal still catches the half
+    /// that matters.
+    /// </para>
+    /// <para>
+    /// <b>The switch retires per pocket with nothing to remember.</b> It is derived from
+    /// <see cref="Data.PocketData.HasScene"/>, on unit 1.5's precedent — a placeholder cue draws when there is
+    /// no art, not when a flag is set — so pointing a <c>PocketData</c> at a finished scene deletes the
+    /// stand-in for that pocket alone. No mode to turn off, and no way to ship it by accident.
+    /// </para>
+    /// </remarks>
+    MustBeWalked = 5,
 }
 
 /// <summary>

@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="PocketData" format=3]
+
+[ext_resource type="Script" path="res://src/Data/PocketData.cs" id="1_pocket"]
+
+[resource]
+script = ExtResource("1_pocket")
+Id = "ch1_lost_trapper"
+DisplayName = "The Trapper's Tether"
+Kind = 2
+ScenePath = ""
+GrantsBlueprintId = ""
+GrantsMaxResolve = 0
+TargetEntityId = "ch1.lost_trapper"
+GrantsAbility = 2

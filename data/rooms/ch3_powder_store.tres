@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="RoomData" load_steps=15 format=3]
+[gd_resource type="Resource" script_class="RoomData" load_steps=16 format=3]
 
 [ext_resource type="Script" uid="uid://b0jetcphiy2cm" path="res://src/Data/HotspotData.cs" id="1_hs"]
 [ext_resource type="Script" uid="uid://v0juosv2w310" path="res://src/Data/RoomData.cs" id="2_room"]
@@ -82,11 +82,21 @@ ItemId = "herb_graveflower"
 ItemAmount = 1
 MendPuzzle = SubResource("mp_mend")
 
+[sub_resource type="Resource" id="hs_page_deepmend"]
+script = ExtResource("1_hs")
+Id = "ch3_powder_store_page_deepmend"
+Label = "Her Notes on Deepmend"
+Kind = 3
+Region = Rect2(620, 120, 300, 260)
+ItemId = "lore_physick_deepmend"
+ItemAmount = 1
+RequiredFlag = "note.deepmend.read"
+
 [resource]
 script = ExtResource("2_room")
 Id = "ch3_powder_store"
 DisplayName = "The Powder Store"
 ChapterId = "ch3"
 PlaceholderStyle = 1
-Hotspots = Array[ExtResource("1_hs")]([SubResource("hs_0"), SubResource("hs_1"), SubResource("hs_2"), SubResource("hs_3"), SubResource("hs_4"), SubResource("hs_5"), SubResource("hs_mend")])
+Hotspots = Array[ExtResource("1_hs")]([SubResource("hs_0"), SubResource("hs_1"), SubResource("hs_2"), SubResource("hs_3"), SubResource("hs_4"), SubResource("hs_5"), SubResource("hs_mend"), SubResource("hs_page_deepmend")])
 Entities = Array[ExtResource("3_ep")]([SubResource("ep_0")])

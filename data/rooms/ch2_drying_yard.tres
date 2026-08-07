@@ -29,10 +29,20 @@ ItemId = "mat_scrap_iron"
 ItemAmount = 2
 RefillsAtMilestone = true
 
+[sub_resource type="Resource" id="hs_ch2_drying_yard_heartwood"]
+script = ExtResource("1_hs")
+Id = "ch2_drying_yard_heartwood"
+Label = "Heartwood"
+Kind = 3
+Region = Rect2(370, 870, 220, 160)
+ItemId = "mat_heartwood"
+ItemAmount = 2
+RefillsAtMilestone = true
+
 [resource]
 script = ExtResource("2_room")
 Id = "ch2_drying_yard"
 DisplayName = "The Drying Yard"
 ChapterId = "ch2"
 PlaceholderStyle = 0
-Hotspots = Array[ExtResource("1_hs")]([SubResource("hs_0"), SubResource("hs_1"), SubResource("hs_2")])
+Hotspots = Array[ExtResource("1_hs")]([SubResource("hs_0"), SubResource("hs_1"), SubResource("hs_2"), SubResource("hs_ch2_drying_yard_heartwood")])

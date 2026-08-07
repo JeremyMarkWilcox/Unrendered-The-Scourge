@@ -39,10 +39,20 @@ ItemId = "mat_scrap_iron"
 ItemAmount = 3
 RefillsAtMilestone = true
 
+[sub_resource type="Resource" id="hs_ch2_cellar_scrap_iron_bin"]
+script = ExtResource("1_hs")
+Id = "ch2_cellar_scrap_iron_bin"
+Label = "Scrap Iron"
+Kind = 3
+Region = Rect2(620, 870, 220, 160)
+ItemId = "mat_scrap_iron"
+ItemAmount = 2
+RefillsAtMilestone = true
+
 [resource]
 script = ExtResource("2_room")
 Id = "ch2_cellar"
 DisplayName = "The Cellar"
 ChapterId = "ch2"
 PlaceholderStyle = 1
-Hotspots = Array[ExtResource("1_hs")]([SubResource("hs_0"), SubResource("hs_1"), SubResource("hs_2"), SubResource("hs_3")])
+Hotspots = Array[ExtResource("1_hs")]([SubResource("hs_0"), SubResource("hs_1"), SubResource("hs_2"), SubResource("hs_3"), SubResource("hs_ch2_cellar_scrap_iron_bin")])

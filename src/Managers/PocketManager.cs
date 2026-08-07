@@ -174,11 +174,50 @@ public partial class PocketManager : Node
         if (WorldStateManager.Instance?.GetFlag(Flags.PocketCleared(pocket.Id)) == true)
             return PocketBlock.AlreadyTaken;
 
+        // **No `HasScene` test here, and that was a considered reversal.** A scene-less pocket is enterable:
+        // `PocketHost.OnPocketEntered` treats a blank `ScenePath` as a supported state rather than an error,
+        // and every fixture in `GatePockets` relies on it — being *inside a pocket* is what those guards probe,
+        // and geometry is a separate concern by construction. So the stand-in's guard lives on the other path
+        // only (`InspectTakeFromWaking`), where the dangerous direction is. See `PocketBlock.MustBeWalked`.
         return PocketBlock.None;
     }
 
     /// <summary>Whether the way in is open. See <see cref="InspectEnter"/>.</summary>
     public bool CanEnter(string pocketId) => InspectEnter(pocketId) == PocketBlock.None;
+
+    /// <summary>
+    /// Why <see cref="TakeFromWaking"/> would refuse. Shares every refusal with <see cref="InspectEnter"/> and
+    /// adds exactly one: <b>a pocket that has a scene must be walked</b>
+    /// (<see cref="PocketBlock.MustBeWalked"/>).
+    /// </summary>
+    /// <remarks>
+    /// <b>This is the whole of unit 10's guarantee that the stand-in cannot outlive the 3D pass.</b> The day a
+    /// <c>PocketData</c> points at a finished scene, this method starts refusing it — so the reward for that
+    /// pocket can only be had by walking it, whatever any caller asks for. Nothing has to be remembered,
+    /// removed or unset.
+    /// <para>
+    /// The <c>InFight</c> refusal is inherited rather than dropped, and it matters more here than on
+    /// <c>Enter</c>: a boss pocket's grant <i>severs a tether</i>, and severing mid-fight is exactly what
+    /// `combat.md` rules out by reading the tether when a fight <b>ends</b>. A stand-in that granted mid-fight
+    /// would be a behavioural difference from the real path in the one place a fight could notice.
+    /// </para>
+    /// </remarks>
+    public PocketBlock InspectTakeFromWaking(string pocketId)
+    {
+        if (InPocket) return PocketBlock.AlreadyInside;
+        if (EncounterManager.Instance?.InFight == true) return PocketBlock.InFight;
+
+        var pocket = GetPocket(pocketId);
+        if (pocket == null) return PocketBlock.NoSuchPocket;
+
+        if (WorldStateManager.Instance?.GetFlag(Flags.PocketCleared(pocket.Id)) == true)
+            return PocketBlock.AlreadyTaken;
+
+        // The one refusal this path adds, and the only guard the stand-in needs. See the remark above.
+        if (pocket.HasScene) return PocketBlock.MustBeWalked;
+
+        return PocketBlock.None;
+    }
 
     // ---- Going in and coming out -----------------------------------------
 
@@ -236,28 +275,157 @@ public partial class PocketManager : Node
     /// <para>Returns whether anything happened, so the scene can tell a completion from a double call.</para>
     /// </summary>
     /// <remarks>
-    /// <b>The grant and the flag are one act, and the flag is checked first.</b> That is what makes it
-    /// atomic in the only sense that matters here: a second <c>Complete</c> — from a re-entry, a doubled
-    /// signal, or a scene that calls it twice — grants nothing. Without it a knowledge pocket would be a
-    /// max-Resolve farm, and eight is the entire budget (`build-plan.md` §6 rule 6).
+    /// <b>The grant and the flag are one act, and the once-only guard now lives in <see cref="GrantOnce"/></b>
+    /// — moved there 2026-08-05 when <see cref="TakeFromWaking"/> became its second caller, so the rule has one
+    /// home rather than a copy per route. It used to be inline here, and the reasoning is on that method.
+    /// <para>
+    /// <b>What is still this method's own is the return</b>, which is why it is not simply
+    /// <c>TakeFromWaking</c> with a navigation bolted on: this one is called <i>from inside a pocket</i> by the
+    /// 3D scene and hands you back to the screen you left. The stand-in is called from that screen and never
+    /// goes anywhere.
+    /// </para>
     /// </remarks>
     public bool Complete()
     {
         if (!InPocket) return false;
 
         var pocket = Current;
-        var world = WorldStateManager.Instance;
-        var flag = Flags.PocketCleared(pocket.Id);
-
-        // Guard before granting, never after. See the remark above.
-        if (world?.GetFlag(flag) != true)
-        {
-            Grant(pocket);
-            world?.SetFlag(flag);
-        }
-
+        GrantOnce(pocket);
         Return(pocket, completed: true);
         return true;
+    }
+
+    /// <summary>
+    /// <b>Take what the pocket holds without going in</b> — unit 10. For a pocket whose 3D scene does not
+    /// exist yet, this is what clicking its entrance does: the same grant, the same flag, no crossing.
+    /// Returns whether anything was granted.
+    /// </summary>
+    /// <remarks>
+    /// <b>It shares <see cref="GrantOnce"/> with <see cref="Complete"/>, and that sharing is the entire
+    /// safety argument.</b> There is one copy of *what a pocket gives you* and one copy of the
+    /// once-only guard, so the day Jeremy points a pocket at a finished scene the reward does not change —
+    /// the route to it does. If this method reimplemented the grant, the two would drift silently, and they
+    /// would drift in the worst possible direction: the stand-in is what gets played for months, so the
+    /// *scene* path would be the untested one when it finally arrived.
+    /// <para>
+    /// <b>Why the whole thing is legitimate rather than a hack.</b> Jeremy, 2026-08-05: *"I have a lot to do
+    /// in the dream world for each and I will be building each one separately and they don't have any impact
+    /// on the 2D for when we build, so decoupling them but also documenting where they hook up and make it an
+    /// easy translation later seems like a better option than our constant deferring it."* The measurement
+    /// behind that: <c>PocketData</c> is nine fields of which **one** is 3D — <c>ScenePath</c>. Everything
+    /// else is what the 2D world receives, so it was always 2D content waiting on a 3D excuse. Fourteen
+    /// entrances, eight max-Resolve grants, two verb grants and every blueprint in the game were parked
+    /// behind scenes that only exist for the walking.
+    /// </para>
+    /// <para>
+    /// <b>What it does not do, stated because a stand-in that reads as finished is how a project lies to
+    /// itself.</b> No verbs, no <c>PocketGate</c>, no <c>DreamCreature</c>, no anchor, no <see cref="Leave"/>,
+    /// no <see cref="Eject"/>. Those are the Dream half and they stay unexercised — <c>F11</c> still has to
+    /// hand out verbs for testing. And **all eight points of max Resolve now arrive for free**, so nothing
+    /// about Resolve *balance* can be concluded from play until real pockets exist. `--verify-content` counts
+    /// the scene-less pockets so this cannot quietly read as done.
+    /// </para>
+    /// <para>
+    /// <b>It knowingly breaks invariant 4</b> — *you cannot reach the anchor from the Waking world* — because
+    /// a boss pocket's grant severs a tether, and here that happens from a Waking screen. Ruled acceptable by
+    /// Jeremy the same day: *"the anchor rewards are always more resolve or abilities that we will test
+    /// separate in the 3D world, so we should be good. This is until we are ready to connect them."* The
+    /// invariant is not amended, and it comes back intact the moment a boss pocket has a scene — which is why
+    /// the switch had to be derived from the scene rather than from a flag someone could forget.
+    /// </para>
+    /// </remarks>
+    public bool TakeFromWaking(string pocketId)
+    {
+        switch (InspectTakeFromWaking(pocketId))
+        {
+            case PocketBlock.InFight:
+                // The one refusal that is not silent, and it is the same words `Enter` uses, because it is the
+                // same refusal — you do not turn your back on a body. It also matters more here than there:
+                // a boss pocket's grant severs, and severing mid-fight is precisely what `combat.md` rules
+                // out by reading the tether when a fight *ends*.
+                EventBus.Instance?.EmitNotify("Not with this in front of you.");
+                return false;
+            case PocketBlock.None:
+                break;
+            default:
+                // Silent for the same reasons `Enter` is: a mistyped id is authored data and belongs to the
+                // sweep, a cleared pocket already has its remnant on the screen saying so, and a pocket with
+                // a scene is not this method's business.
+                return false;
+        }
+
+        var pocket = GetPocket(pocketId);
+        GrantOnce(pocket);
+
+        // The only thing this path has that `Complete` does not: something has to say what happened, because
+        // there was no 3D scene to show it. Jeremy asked for the pocket named and the grant named — *"maybe
+        // just write that dream world they are and what they grant"* — so the line is assembled from the
+        // authored data rather than written.
+        //
+        // **This sentence used to end "and `Describe` is what the entrances' labels use too", which was never
+        // true** — an entrance's `Label` is authored per hotspot in its room file, and this call is the only
+        // one in the codebase. Corrected 2026-08-06 by the read-back that gated `Describe`; a claim about a
+        // second caller is worth checking before writing, because it is what makes a reader think the string is
+        // watched from somewhere else.
+        EventBus.Instance?.EmitNotify($"[Dream, unbuilt] {pocket.DisplayName} — {Describe(pocket)}");
+        return true;
+    }
+
+    /// <summary>
+    /// Grant a pocket's contents exactly once. The shared half of <see cref="Complete"/> and
+    /// <see cref="TakeFromWaking"/>.
+    /// </summary>
+    /// <remarks>
+    /// <b>The guard is before the grant, never after, and the flag is the guard.</b> That is what makes it
+    /// atomic in the only sense that matters here: a second call — from a re-entry, a doubled signal, a scene
+    /// that calls <c>Complete</c> twice, or an entrance clicked again before its remnant swaps in — grants
+    /// nothing. Without it a knowledge pocket would be a max-Resolve farm, and eight is the entire budget
+    /// (`build-plan.md` §6 rule 6).
+    /// <para>
+    /// Extracted 2026-08-05 for unit 10. It was inline in <c>Complete</c>, and copying it into the second
+    /// caller would have put the once-only rule in two places — the shape that <c>GrantPage</c>'s remark
+    /// already calls the belt to a brace. One home, two callers.
+    /// </para>
+    /// </remarks>
+    private static void GrantOnce(PocketData pocket)
+    {
+        if (pocket == null) return;
+
+        var world = WorldStateManager.Instance;
+        var flag = Flags.PocketCleared(pocket.Id);
+        if (world?.GetFlag(flag) == true) return;
+
+        Grant(pocket);
+        world?.SetFlag(flag);
+    }
+
+    /// <summary>
+    /// What this pocket gives you, in words, from the authored fields. Used by the stand-in's notification.
+    /// </summary>
+    /// <remarks>
+    /// <b>Derived from the data rather than authored as a string</b>, on decision 11's reasoning: a
+    /// hand-written "what it grants" line beside the fields that grant it is a second copy that can disagree,
+    /// and this one would disagree in the direction that hides a mis-authored pocket. A pocket granting
+    /// nothing says so, which is how a half-filled <c>.tres</c> announces itself in play.
+    /// </remarks>
+    public static string Describe(PocketData pocket)
+    {
+        if (pocket == null) return "nothing";
+
+        var parts = new List<string>();
+
+        if (!string.IsNullOrEmpty(pocket.GrantsBlueprintId))
+        {
+            var page = InventoryCraftingManager.Instance?.GetItem(pocket.GrantsBlueprintId);
+            parts.Add(page != null ? page.DisplayName : pocket.GrantsBlueprintId);
+        }
+
+        if (pocket.GrantsMaxResolve > 0) parts.Add($"+{pocket.GrantsMaxResolve} max Resolve");
+        if (pocket.GrantsAbility != DreamVerb.None) parts.Add($"he can {Words(pocket.GrantsAbility)}");
+        if (pocket.Kind == PocketKind.Knot) parts.Add("a knot cut");
+        if (!string.IsNullOrEmpty(pocket.TargetEntityId)) parts.Add($"{pocket.TargetEntityId} severed");
+
+        return parts.Count == 0 ? "nothing" : string.Join(", ", parts);
     }
 
     /// <summary>

@@ -42,7 +42,7 @@ script = ExtResource("1_hs")
 Id = "ch2_first_house_bench"
 Label = "The Workbench"
 Kind = 7
-Region = Rect2(1400, 560, 400, 320)
+Region = Rect2(1240, 560, 300, 320)
 
 [resource]
 script = ExtResource("2_room")

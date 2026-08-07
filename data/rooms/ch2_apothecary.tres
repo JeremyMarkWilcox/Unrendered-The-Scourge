@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="RoomData" load_steps=12 format=3]
+[gd_resource type="Resource" script_class="RoomData" load_steps=13 format=3]
 
 [ext_resource type="Script" uid="uid://b0jetcphiy2cm" path="res://src/Data/HotspotData.cs" id="1_hs"]
 [ext_resource type="Script" uid="uid://v0juosv2w310" path="res://src/Data/RoomData.cs" id="2_room"]
@@ -63,11 +63,21 @@ Region = Rect2(1260, 620, 280, 240)
 StationId = "mortar"
 ExamineText = "[unwritten]"
 
+[sub_resource type="Resource" id="hs_page_burning_oil"]
+script = ExtResource("1_hs")
+Id = "ch2_apothecary_page_burning_oil"
+Label = "Her Notes on Burning Oil"
+Kind = 3
+Region = Rect2(620, 120, 300, 260)
+ItemId = "lore_physick_burning_oil"
+ItemAmount = 1
+RequiredFlag = "freed.ch2.apothecary_01"
+
 [resource]
 script = ExtResource("2_room")
 Id = "ch2_apothecary"
 DisplayName = "The Apothecary's Shop"
 ChapterId = "ch2"
 PlaceholderStyle = 1
-Hotspots = Array[ExtResource("1_hs")]([SubResource("hs_0"), SubResource("hs_1"), SubResource("hs_2"), SubResource("hs_3"), SubResource("hs_4"), SubResource("hs_5")])
+Hotspots = Array[ExtResource("1_hs")]([SubResource("hs_0"), SubResource("hs_1"), SubResource("hs_2"), SubResource("hs_3"), SubResource("hs_4"), SubResource("hs_5"), SubResource("hs_page_burning_oil")])
 Entities = Array[ExtResource("3_ep")]([SubResource("ep_0")])
