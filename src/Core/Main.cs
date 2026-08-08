@@ -2,6 +2,7 @@
 using System.Linq;
 using Godot;
 using Unrendered.Data;
+using Unrendered.Dream;
 using Unrendered.Managers;
 using Unrendered.Save;
 using Unrendered.Tools;
@@ -367,7 +368,7 @@ public partial class Main : Node
     /// place that has to agree with <c>PocketManager.Holds</c>.
     /// </para>
     /// </remarks>
-    private static void LearnGrantableDreamVerbs()
+    private void LearnGrantableDreamVerbs()
     {
         var world = WorldStateManager.Instance;
         if (world == null) return;
@@ -382,8 +383,16 @@ public partial class Main : Node
             learned++;
         }
 
+        // **A `PocketGate` reads on tree entry, so a verb granted while you are standing in the pocket reaches
+        // nothing.** That is correct for the real game — verbs come from anchors and an anchor ends the pocket
+        // — and this key is precisely the exception. Without the re-read, F11 said *learned 2 Dream verbs* and
+        // every gated ledge stayed missing until you left and came back, which reads as a broken gate rather
+        // than a stale one. This is why the method is no longer static: it needs a tree to walk.
+        var reopened = learned == 0 ? 0 : PocketGate.ReapplyAll(GetTree()?.Root);
+
         EventBus.Instance?.EmitNotify(learned == 0
             ? "[debug] every Dream verb was already held"
-            : $"[debug] learned {learned} Dream " + (learned == 1 ? "verb" : "verbs"));
+            : $"[debug] learned {learned} Dream " + (learned == 1 ? "verb" : "verbs")
+                + (reopened > 0 ? $", re-read {reopened} gate(s)" : ""));
     }
 }

@@ -49,6 +49,39 @@ public partial class PocketGate : Node
     public override void _Ready() => Apply();
 
     /// <summary>
+    /// Re-read every gate in a subtree. Returns how many were found.
+    /// </summary>
+    /// <remarks>
+    /// <b>For the two debug paths that grant a verb while a pocket is already open, which is the one thing the
+    /// tree-entry rule above assumes cannot happen.</b> In the real game it cannot: a verb comes from an
+    /// anchor, an anchor ends the pocket, and the next pocket is a fresh instance. <c>F11</c> and
+    /// <c>PocketStandalone</c> both break that assumption, and the symptom was reported as *"the HighLedge in
+    /// the scene is invisible"* — the gate had read *no Float*, hidden the ledge, and had no reason to ever
+    /// look again.
+    /// <para>
+    /// <b>The fix is here rather than in a <c>_Process</c> poll, because the invariant is still true.</b>
+    /// Polling every frame for a change that only debug code can make would pay for the exception on every
+    /// frame of the shipped game. Whoever grants out of band re-reads; that is one line at each of the two
+    /// call sites and nothing in the real path changes.
+    /// </para>
+    /// </remarks>
+    public static int ReapplyAll(Node from)
+    {
+        if (from == null) return 0;
+
+        var applied = 0;
+        if (from is PocketGate gate)
+        {
+            gate.Apply();
+            applied++;
+        }
+
+        foreach (var child in from.GetChildren()) applied += ReapplyAll(child);
+
+        return applied;
+    }
+
+    /// <summary>
     /// Show or hide the parent's subtree, and stop it colliding when hidden.
     /// </summary>
     /// <remarks>
@@ -73,6 +106,25 @@ public partial class PocketGate : Node
     }
 
     /// <summary>Turn collision on or off through a subtree, since hiding a mesh does not move its shape.</summary>
+    /// <remarks>
+    /// <b>Two kinds of collider, because a CSG shape is not a body and looking only for bodies is how this
+    /// method quietly did nothing.</b> <c>CsgShape3D</c> derives from <c>GeometryInstance3D</c> and carries
+    /// <c>UseCollision</c> with its own layer and mask, so it never matches <c>CollisionObject3D</c> — a
+    /// blockout ledge with *Use Collision* ticked went invisible on a shut gate and stayed solid. That is the
+    /// exact failure the summary above warns about in bold, shipped in the method the warning is attached to,
+    /// and it survived because the only gated thing in the sandbox is a <c>CSGBox3D</c> — the case the walk
+    /// cannot see. Worth remembering when authoring: **every blockout in a pocket is this type.**
+    /// <para>
+    /// <b>The layer writes were <c>SetDeferred</c> and are now direct, because deferred made them unverifiable
+    /// and bought nothing.</b> The message queue flushes on the next idle frame, so a headless gate run — which
+    /// completes inside one — could never observe the change: the collision half of this method was
+    /// unfalsifiable for as long as it existed, which is why a whole missing branch of it went unnoticed.
+    /// Deferring is the right instinct when a collision layer might be written from inside a physics callback,
+    /// and <see cref="Apply"/> never is — it runs from <c>_Ready</c> and from <see cref="ReapplyAll"/>. Direct
+    /// is also better on its own terms: one frame of invisible-but-solid ledge is a frame the player can stand
+    /// on nothing.
+    /// </para>
+    /// </remarks>
     private static void SetCollision(Node node, bool on)
     {
         if (node is CollisionObject3D body)
@@ -80,8 +132,17 @@ public partial class PocketGate : Node
             // Layer 0 is "collides with nothing" — cheaper and less surprising than disabling the node, which
             // would also stop its children processing.
             body.ProcessMode = on ? ProcessModeEnum.Inherit : ProcessModeEnum.Disabled;
-            body.SetDeferred(CollisionObject3D.PropertyName.CollisionLayer, on ? 1 : 0);
-            body.SetDeferred(CollisionObject3D.PropertyName.CollisionMask, on ? 1 : 0);
+            body.CollisionLayer = on ? 1u : 0u;
+            body.CollisionMask = on ? 1u : 0u;
+        }
+
+        // `UseCollision` is left alone and the layers are zeroed instead, matching the body branch. Toggling it
+        // would overwrite what the scene authored, so a gate that opened once would hand back collision to a
+        // shape built without it.
+        if (node is CsgShape3D csg)
+        {
+            csg.CollisionLayer = on ? 1u : 0u;
+            csg.CollisionMask = on ? 1u : 0u;
         }
 
         foreach (var child in node.GetChildren()) SetCollision(child, on);

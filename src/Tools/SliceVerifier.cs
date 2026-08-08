@@ -4693,9 +4693,114 @@ public static class SliceVerifier
         gate.Apply();
         Check("and an unset gate lets the player through rather than walling off a pocket", gate.IsOpen);
 
+        // -- The collision half, on the type that made it a no-op --
+        //
+        // **Everything above this checks `Visible` and nothing checked collision, which is how the bold warning
+        // on `SetCollision` came to be violated by `SetCollision`.** It walked for `CollisionObject3D`;
+        // `CsgShape3D` derives from `GeometryInstance3D` and carries `UseCollision` with its own layer, so a
+        // blockout ledge was skipped entirely — invisible on a shut gate and still solid. **And that is the only
+        // kind of geometry a pocket blockout is**, so the one case in the sandbox was the one case the walk
+        // could not see. A fixture in the tree, because the write is deferred and has to be flushed to be read.
+        var csgGated = new CsgBox3D { UseCollision = true, CollisionLayer = 1, CollisionMask = 1 };
+        var csgGate = new PocketGate { Requires = DreamVerb.Float };
+        csgGated.AddChild(csgGate);
+        (Engine.GetMainLoop() as SceneTree)?.Root.AddChild(csgGated);
+
+        world.SetFlag(Flags.VerbLearned(DreamVerb.Float), false);
+        csgGate.Apply();
+        Check("a shut gate takes a CSG blockout's collision away and not just its mesh, "
+            + $"so you cannot stand on it (layer {csgGated.CollisionLayer}, visible {csgGated.Visible})",
+            !csgGated.Visible && csgGated.CollisionLayer == 0 && csgGated.CollisionMask == 0);
+
+        world.SetFlag(Flags.VerbLearned(DreamVerb.Float));
+        csgGate.Apply();
+        Check("and opening it hands the collision back rather than leaving the ledge a ghost",
+            csgGated.Visible && csgGated.CollisionLayer == 1 && csgGated.CollisionMask == 1);
+
+        (Engine.GetMainLoop() as SceneTree)?.Root.RemoveChild(csgGated);
+        csgGated.Free();
+
+        // The branch that was always there, now that the writes are direct and can actually be read back. It is
+        // checked for the same reason the CSG one is: **an unverifiable half of a method is where a missing
+        // half hides**, and this one guarded the trap the class doc-comment leads with.
+        var bodyGated = new StaticBody3D { CollisionLayer = 1, CollisionMask = 1 };
+        var bodyGate = new PocketGate { Requires = DreamVerb.Float };
+        bodyGated.AddChild(bodyGate);
+
+        world.SetFlag(Flags.VerbLearned(DreamVerb.Float), false);
+        bodyGate.Apply();
+        Check("a shut gate does the same to a StaticBody3D, and stops it processing",
+            bodyGated.CollisionLayer == 0 && bodyGated.CollisionMask == 0
+            && bodyGated.ProcessMode == Node.ProcessModeEnum.Disabled);
+
+        world.SetFlag(Flags.VerbLearned(DreamVerb.Float));
+        bodyGate.Apply();
+        Check("and gives both back when it opens",
+            bodyGated.CollisionLayer == 1 && bodyGated.ProcessMode == Node.ProcessModeEnum.Inherit);
+
+        bodyGated.Free();
+
+        // -- Granting a verb *after* a gate has read, which is what both debug paths do --
+        //
+        // **The reported symptom, gated: "the HighLedge in the scene is invisible".** `PocketGate` reads on tree
+        // entry and that is right — in the real game a verb comes from an anchor and an anchor ends the pocket,
+        // so nothing can be learned while one is open. `F11` and `PocketStandalone` are both exceptions, and
+        // `PocketStandalone` deferred its grant by a frame *specifically* so the gates would read first, on the
+        // belief that this avoided a race. It does not avoid it; it loses it, on every run.
+        var late = new Node3D();
+        var lateGate = new PocketGate { Requires = DreamVerb.Float };
+        late.AddChild(lateGate);
+
+        world.SetFlag(Flags.VerbLearned(DreamVerb.Float), false);
+        lateGate.Apply();
+        Check("a gate that read before the grant is shut", !lateGate.IsOpen && !late.Visible);
+
+        // The middle claim is the one that matters, and it asserts the *absence* of magic: setting the flag is
+        // not enough on its own, so anything granting out of band owes the re-read. Without this line the check
+        // below could pass because gates poll, which they deliberately do not.
+        world.SetFlag(Flags.VerbLearned(DreamVerb.Float));
+        Check("and stays shut on the grant alone, because gates do not poll for a change that cannot happen",
+            !lateGate.IsOpen && !late.Visible);
+
+        Check("re-reading the subtree is what opens it, and it finds every gate in there",
+            PocketGate.ReapplyAll(late) == 1 && lateGate.IsOpen && late.Visible);
+
+        // -- The other half of that deferral: the grant landing after the scene is gone --
+        //
+        // **Found by the gate suite's own output rather than by a check**, which is the only reason it is here:
+        // one `ERROR: Parameter "data.tree" is null` printed after the last line of the run, with a cheerful
+        // *"running 'dream_probe' as a pocket"* under it. `_Ready` queues `Engage` a frame ahead, so the sweep
+        // further down — which builds a pocket scene, drives it and frees it inside one frame — left the call to
+        // fire on a detached node. It entered a pocket from geometry that no longer existed and then asked a
+        // freed tree for its root. Harmless in play, where nothing tears a pocket down that fast, and exactly the
+        // kind of noise that trains you to read past errors in a suite that is meant to be silent.
+        //
+        // The fixture is a bare `Node` wearing a real `ScenePath` so the helper can resolve a pocket from it.
+        // **Without that the check would pass on the "cannot tell which scene this is" warning instead** and
+        // prove nothing — the tree check has to be the only thing left standing between it and entry.
+        var scenedPocket = pockets.Pockets.Values.FirstOrDefault(p => p.HasScene);
+        if (scenedPocket != null)
+        {
+            var orphanHolder = new Node { SceneFilePath = scenedPocket.ScenePath };
+            var orphan = new PocketStandalone();
+            orphanHolder.AddChild(orphan);
+
+            world.SetFlag(Flags.PocketCleared(scenedPocket.Id), false);
+            Check($"'{scenedPocket.Id}' would take a standalone run as things stand, so the refusal below is "
+                + "about the tree and not about the pocket",
+                !PocketManager.InsideTheDream && pockets.InspectEnter(scenedPocket.Id) == PocketBlock.None);
+
+            orphan.Engage();
+            Check("a helper that has left the tree does not cross you into a pocket built from geometry that "
+                + "has been freed", !orphan.Engaged && !PocketManager.InsideTheDream);
+
+            orphanHolder.Free();
+        }
+
         anchor.Free();
         exit.Free();
         gated.Free();
+        late.Free();
         world.SetFlag(Flags.VerbLearned(DreamVerb.Float), false);
 
         // -- Refused inside a fight, and the fight survives the refusal --
@@ -5031,6 +5136,38 @@ public static class SliceVerifier
 
         var unbound = DreamVerbHold.Actions.Values.Where(a => !InputMap.HasAction(a)).ToList();
         Check($"and the project binds every action the node reads{Listing(unbound)}", unbound.Count == 0);
+
+        // -- The readout only claims the verb keys where something can answer them --
+        //
+        // **Reported as *"none of the abilities work anymore when I press F6"*, and the report was against the
+        // look bench.** `DreamProbe.tscn` has no `PocketStandalone` and no poller — correctly, it is not a pocket
+        // and no `PocketData` names it — so the keys did nothing, silently. What made that a defect rather than a
+        // misunderstanding is that `DreamLookTuner`'s readout listed *"Q hide · Space float · E flare"* as static
+        // text in every scene it is dropped into, and the HUD is the only evidence available while playing.
+        // **A debug surface that lists a key it cannot deliver reads as a broken feature, not as the wrong
+        // scene.**
+        var benchLike = new Node();
+        Check("a scene with nothing behind the verb keys is not called wired",
+            !DreamLookTuner.VerbsWiredIn(benchLike));
+
+        // Buried a level down, because a walk that only looked at direct children would pass a fixture built the
+        // obvious way and miss every real scene — the poller hangs off the standalone, not off the root.
+        var deep = new Node();
+        var deepHolder = new Node();
+        deep.AddChild(deepHolder);
+        deepHolder.AddChild(new DreamVerbHold());
+        Check("a poller anywhere in the scene is, at any depth", DreamLookTuner.VerbsWiredIn(deep));
+
+        // The helper counts as well as the poller: it attaches one a frame later, and a label that told the truth
+        // only from frame two would be wrong in exactly the moment it is first read.
+        var helped = new Node();
+        helped.AddChild(new PocketStandalone());
+        Check("and so does the helper that brings one, so the label is right on the first frame too",
+            DreamLookTuner.VerbsWiredIn(helped));
+
+        benchLike.Free();
+        deep.Free();
+        helped.Free();
 
         world.SetFlag(Flags.PocketCleared(PocketKnot), false);
         Check("a pocket to press a key in", pockets.Enter(PocketKnot));
@@ -5495,6 +5632,20 @@ public static class SliceVerifier
             Check($"{pocketScene.Id}'s scene builds", root != null);
             if (root == null) continue;
 
+            // **Clear the verbs before the scene enters the tree, or the gate check below measures nothing.**
+            // `PocketGate._Ready` reads `Holds` the moment `AddChild` runs, and an earlier block in this suite
+            // had left Float learned — so every gate opened on entry, and the check that they are open *after*
+            // the grant passed whether or not anything re-read them. It stayed green with the fix deleted.
+            // §3's seventh class, and the ordinary shape of it: the assertion was fine and the *precondition*
+            // was the thing being taken on trust. A gate over an ordering bug has to establish the ordering.
+            if (WorldStateManager.Instance is { } gateWorld)
+            {
+                foreach (DreamVerb verb in System.Enum.GetValues<DreamVerb>())
+                {
+                    if (verb != DreamVerb.None) gateWorld.SetFlag(Flags.VerbLearned(verb), false);
+                }
+            }
+
             floodTree?.Root.AddChild(root);
 
             var all = new List<Node>();
@@ -5575,9 +5726,31 @@ public static class SliceVerifier
                 // What *is* falsifiable is the half only this node does: working out which pocket the scene
                 // belongs to, from `ScenePath` rather than an authored id, so a copied scene cannot carry a
                 // stale one.
+                // The gates' state *before* Engage is the bug, held still: they read on tree entry, above, with
+                // no verb granted. Captured rather than asserted, because a pocket with no gated geometry is a
+                // legitimate pocket and there is nothing to be shut.
+                var sceneGates = all.OfType<PocketGate>().ToList();
+                var shutBefore = sceneGates.Count(g => !g.IsOpen);
+
                 foreach (var standalone in standalones) standalone.Engage();
                 Check($"{pocketScene.Id}'s helper crosses you in when nothing else has, and picks its own pocket",
                     standalones.All(s => s.Engaged) && pockets.CurrentPocketId == pocketScene.Id);
+
+                // **The reported symptom, in the real scene rather than a fixture: *"the HighLedge in the scene
+                // is invisible"*.** Every gate in the pocket read `Holds` on tree entry, a frame before this
+                // node granted the verbs, so a Float-gated ledge was hidden and nothing re-read it — for the
+                // whole session, since a standalone run never leaves and re-enters. `GrantVerbs` hands over
+                // every verb, so afterwards *no* gate in the scene has grounds to be shut.
+                //
+                // Worth having beside the `ReapplyAll` fixture rather than instead of it: the fixture proves the
+                // mechanism, this proves it is wired to the thing the author sees. The fixture was green through
+                // the entire bug.
+                if (standalones.Any(s => s.Engaged && s.GrantVerbs) && sceneGates.Count > 0)
+                {
+                    Check($"{pocketScene.Id}'s gated geometry is back after the grant, not hidden for the "
+                        + $"session ({shutBefore} of {sceneGates.Count} were shut before it)",
+                        sceneGates.All(g => g.IsOpen));
+                }
 
                 // **Being inside a pocket is not the same as the keys working, and the first version of this
                 // node shipped believing it was.** `DreamVerbHold` is attached by `PocketHost` — the one thing
@@ -5585,6 +5758,69 @@ public static class SliceVerifier
                 // reason in the log* to *silently doing nothing*, which is the worse of the two.
                 Check($"{pocketScene.Id}'s helper also brings a verb poller, or the keys reach nothing",
                     standalones.All(s => s.VerbInputLive));
+
+                // The other side of the bench lesson: here the readout's verb line *should* appear, and it now
+                // appears for a reason. The fixtures above prove the walk; this proves the scene passes it.
+                Check($"{pocketScene.Id} advertises the verb keys because they are wired, not because the text is "
+                    + "static", DreamLookTuner.VerbsWiredIn(root));
+
+                // **The predicate joined to the text it governs**, which is the half that was actually wrong: the
+                // walk could be perfect and the readout still print the same line either way. Asserted only in a
+                // wired scene, because that is the branch a real pocket takes — the unwired branch is the bench,
+                // and the bench is not swept.
+                if (root.GetNodeOrNull<Label>("%Readout") is { } sceneReadout)
+                {
+                    Check($"and its readout names them on screen, where they are read from ({pocketScene.Id})",
+                        sceneReadout.Text.Contains("Q hide") && sceneReadout.Text.Contains("E flare"));
+                }
+
+                // **The F6 path end to end, in the scene the key is actually pressed in.** Everything above and
+                // in the `DreamVerbHold` block is *composed*: this scene has a poller, and a poller somewhere
+                // opens a hold, and a lamp somewhere dims. Composition cannot see a scene where the grant, the
+                // poller and the meter are each fine and the keys still do nothing — which is how *"none of the
+                // abilities work when I press F6"* arrives against a green suite. Through `Input.ActionPress` so
+                // the binding is part of the claim, and through `Poll`/`Tick` because neither `_Process` ticks
+                // meaningfully in a headless run.
+                var poller = standalones
+                    .Select(s => s.GetNodeOrNull<DreamVerbHold>("VerbInput"))
+                    .FirstOrDefault(p => p != null);
+
+                if (poller != null)
+                {
+                    Input.ActionPress("dream_flare");
+                    poller.Poll();
+                    Check($"pressing the Flare key inside {pocketScene.Id} opens the hold, binding and all",
+                        DreamVerbs.IsHolding(DreamVerb.Flare));
+
+                    Input.ActionRelease("dream_flare");
+                    poller.Poll();
+                    Check("and letting the key go closes it", !DreamVerbs.IsHolding(DreamVerb.Flare));
+
+                    // **The visible half, because the report is always about the screen and never about a flag.**
+                    // A hold nobody can see is indistinguishable from a key that does nothing, and the only thing
+                    // Suppress *has* is the lamp.
+                    foreach (var sceneLamp in all.OfType<DreamSuppressibleLight>())
+                    {
+                        Check($"{pocketScene.Id}'s lamp starts lit, so the dimming below is a change",
+                            sceneLamp.BaseRange > 0.0f
+                            && Mathf.IsEqualApprox(sceneLamp.OmniRange, sceneLamp.BaseRange));
+
+                        var dimmed = sceneLamp.BaseRange * Mathf.Clamp(sceneLamp.SuppressedFraction, 0.0f, 1.0f);
+
+                        Input.ActionPress("dream_suppress");
+                        poller.Poll();
+                        sceneLamp.Tick(1.0);
+                        Check($"and holding Suppress in the scene takes it down to {dimmed:0.00} "
+                            + $"from {sceneLamp.BaseRange:0.00} (it is at {sceneLamp.OmniRange:0.00})",
+                            Mathf.IsEqualApprox(sceneLamp.OmniRange, dimmed));
+
+                        Input.ActionRelease("dream_suppress");
+                        poller.Poll();
+                        sceneLamp.Tick(1.0);
+                        Check("and letting go gives the light back",
+                            Mathf.IsEqualApprox(sceneLamp.OmniRange, sceneLamp.BaseRange));
+                    }
+                }
 
                 pockets.Leave();
                 foreach (DreamVerb granted in System.Enum.GetValues<DreamVerb>())

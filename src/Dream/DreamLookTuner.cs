@@ -51,6 +51,12 @@ public partial class DreamLookTuner : Control
     private DreamProbeWalker _walker;
     private Label _readout;
 
+    /// <summary>Cached once true: nothing removes verb wiring from a scene mid-session.</summary>
+    private bool _verbsWired;
+
+    /// <summary>Whether the *"verbs do nothing here"* line has already been said.</summary>
+    private bool _saidUnwired;
+
     /// <summary>
     /// Both creatures, so the shared knobs move together. Their one differing parameter —
     /// <c>screen_space_lines</c> — is authored per material and deliberately not on a key: the point
@@ -328,9 +334,54 @@ public partial class DreamLookTuner : Control
     /// one surface in a pocket where discovery happens.
     /// </para>
     /// </remarks>
+    /// <summary>
+    /// Whether anything in this scene can turn a verb key into a hold.
+    /// </summary>
+    /// <remarks>
+    /// <b>Because the readout promised three keys in a scene that has none of the machinery for them, and was
+    /// believed.</b> Reported as *"none of the abilities work anymore when I press F6"*: a verb needs
+    /// <c>PocketManager</c> to be inside a pocket and needs a <see cref="DreamVerbHold"/> to read the keys, and
+    /// both arrive from <see cref="PocketStandalone"/> — which is in <c>Sandbox.tscn</c> and deliberately not in
+    /// <c>DreamProbe.tscn</c>, a look bench that no <c>PocketData</c> names. So the keys did nothing, silently,
+    /// and *the HUD line saying otherwise was the only evidence available.*
+    /// <para>
+    /// <b>A debug surface that lists a key it cannot deliver is worse than one that lists nothing</b>, because
+    /// it is read as *the feature is broken* rather than as *this scene is not that scene*. Static text is what
+    /// let it lie; this is one tree walk to make it true. Either node counts: the poller is what reads the keys,
+    /// and the standalone is what attaches one a frame later — checking only for the poller would call a scene
+    /// unwired for the frame before it is.
+    /// </para>
+    /// </remarks>
+    public static bool VerbsWiredIn(Node from)
+    {
+        if (from == null) return false;
+        if (from is DreamVerbHold or PocketStandalone) return true;
+
+        foreach (var child in from.GetChildren())
+        {
+            if (VerbsWiredIn(child)) return true;
+        }
+
+        return false;
+    }
+
     private void Refresh()
     {
         if (_readout == null) return;
+
+        _verbsWired = _verbsWired || VerbsWiredIn(this);
+
+        // Once, and only in the scene it is true of. It names the scene that *does* have the verbs rather than
+        // telling him to wire this one: a bench no `PocketData` points at cannot become a pocket, and
+        // `PocketStandalone` dropped in here would only warn that nothing names it.
+        if (!_verbsWired && !_saidUnwired)
+        {
+            _saidUnwired = true;
+            GD.PushWarning(
+                "[probe] Q / Space / E do nothing in this scene. A Dream verb needs to be inside a pocket, and "
+                + "nothing here crosses you in — this is a look bench, not a pocket. Run "
+                + "'scenes/dream/Sandbox.tscn' to hold the verbs, or cross in from the game.");
+        }
 
         _readout.Text =
             $"greys      {Levels,5}      [ ]\n"
@@ -348,7 +399,9 @@ public partial class DreamLookTuner : Control
             + $"flicker    {FlickerScale,5:0.0}      O P\n"
             + $"fl speed   {FlickerSpeed,5:0.0}      N M"
             + "\n\nWASD walk · click to look · Esc release"
-            + "\nB flood light · Q hide · Space float · E flare"
+            + (_verbsWired
+                ? "\nB flood light · Q hide · Space float · E flare"
+                : "\nB flood light · Q/Space/E need a pocket — run Sandbox.tscn")
             + "\nF4 hide readout · F12 shot";
 
         GD.Print(

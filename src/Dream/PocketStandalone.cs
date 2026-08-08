@@ -57,13 +57,27 @@ public partial class PocketStandalone : Node
     /// Enter the pocket this scene belongs to, if nothing has already put us in one.
     /// </summary>
     /// <remarks>
-    /// Deferred by a frame rather than run in <c>_Ready</c>, and public so the gates can call it directly.
-    /// The frame is for the rest of the scene: <c>PocketGate</c> reads <c>PocketManager.Holds</c> when it
-    /// enters the tree, so granting the verbs in <c>_Ready</c> would be a race between this node and every
-    /// gated ledge — won or lost by sibling order, which is not a thing anyone should have to know.
+    /// Deferred by a frame rather than run in <c>_Ready</c>, and public so the gates can call it directly. The
+    /// frame is for the rest of the scene: nothing else is reliably built yet in <c>_Ready</c>.
+    /// <para>
+    /// <b>This remark used to claim the delay avoided a race with <c>PocketGate</c>, and that was exactly
+    /// wrong.</b> Deferring does not avoid the race — it settles it against every gate, deterministically, on
+    /// every run. Each gate read <c>Holds</c> a frame before the grant, hid its subtree, and had nothing to
+    /// make it look again; the sandbox's Float-gated ledge was reported as simply *invisible*. **A guaranteed
+    /// loss is not the fix for an unpredictable one.** The grant now re-reads the gates itself, which is the
+    /// only ordering that does not depend on when anything runs.
+    /// </para>
     /// </remarks>
     public void Engage()
     {
+        // **A detached node has no run to help, and this is not hypothetical.** `_Ready` queues this a frame
+        // ahead; a fixture that instantiates a pocket scene, drives it and frees it inside that same frame
+        // leaves the deferred call to land on a node that is no longer in a tree — which then entered a pocket
+        // nobody was in, from geometry that no longer exists, and asked a freed tree for its root. The gate
+        // suite printed exactly that: one `ERROR: Parameter "data.tree" is null` after the last check, with a
+        // cheerful *"running as a pocket"* under it.
+        if (!IsInsideTree()) return;
+
         var pockets = PocketManager.Instance;
         if (pockets == null) return;
 
@@ -112,7 +126,14 @@ public partial class PocketStandalone : Node
 
         AttachVerbInput();
 
-        GD.Print($"[standalone] Running '{owner.Id}' as a pocket. Verbs, creatures and the exit are live. "
+        // **Granting a verb after the gates have read is what made a Float-only ledge invisible**, and the
+        // remark on this method had the reasoning backwards: deferring does not avoid the race, it decides it
+        // against every gate. `PocketGate._Ready` has already run by now, on flags this method was about to
+        // change, and nothing re-reads on its own. So re-read them here, after the grant.
+        var reopened = PocketGate.ReapplyAll(GetTree()?.Root);
+
+        GD.Print($"[standalone] Running '{owner.Id}' as a pocket. Verbs, creatures and the exit are live "
+            + $"({reopened} gate(s) re-read after the grant). "
             + "This does nothing when you cross in from the game.");
     }
 

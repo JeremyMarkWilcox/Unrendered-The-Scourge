@@ -35,7 +35,7 @@ times.
 
 ## Now
 
-**Last verified: `ALL GATES PASSED (1122 checks)`, exit 0, `dotnet build` clean with 0 warnings — and
+**Last verified: `ALL GATES PASSED (1198 checks)`, exit 0, `dotnet build` clean with 0 warnings — and
 uncommitted.** Every pass is left verified for Jeremy to commit; nothing here commits.
 
 **Run the suite with the `--` separator: `godot --headless --path . -- --verify-slice`.** `Boot` reads
@@ -82,6 +82,69 @@ leaves it — not `F4`, which the probe scene already binds to its own readout t
 
 ### What just landed
 
+- **"None of the abilities work when I press F6" — nothing was broken, and the readout was lying (1188 → 1198,
+  2026-08-08).** The verbs work end to end in `Sandbox.tscn`; the report was against `DreamProbe.tscn`, the look
+  bench, which has no `Standalone` and therefore no pocket and no poller. That much is correct by design — no
+  `PocketData` names the bench, so it cannot be a pocket.
+  - **What made it read as a regression is the one thing on screen while he plays.** `DreamLookTuner`'s readout
+    printed *"Q hide · Space float · E flare"* as fixed text in whichever scene it was dropped into, so the
+    bench advertised three keys it had no machinery behind. **A debug surface that lists a key it cannot deliver
+    reads as a broken feature, not as the wrong scene** — and it is read in preference to any doc, because it is
+    right there. The line is conditional now (`Q/Space/E need a pocket — run Sandbox.tscn`), with a one-time
+    warning naming the scene that does have them.
+  - **The standing HUD rule needs a second half.** *"Always add the debug button labels to the temp hud"* was
+    followed exactly, and following it produced this: a label listing keys that belong to a node the scene does
+    not contain. **A label for a key is a claim about the scene, so it has to be derived from the scene** —
+    `DreamLookTuner.VerbsWiredIn` walks for a `DreamVerbHold` or a `PocketStandalone` and the text follows it.
+  - **The suite was green through all of it, and the reason is worth keeping.** The verb checks were *composed*:
+    this scene has a poller, and a poller somewhere opens a hold, and a lamp somewhere dims. **Nothing pressed a
+    key in a real pocket scene**, so a scene where each part is fine and the whole does nothing was exactly the
+    hole in the middle. There is now an end-to-end pass on every swept pocket scene — `Input.ActionPress` →
+    the scene's own `Poll()` → `IsHolding` → the scene's own lamp down to 0.00 of 6.00 and back — plus a check
+    that the readout text names the keys. Break-tested by withholding Flare from the grant: one red, that line.
+- **The Float-gated ledge was invisible, and it was three faults with one symptom (1178 → 1188, 2026-08-07).**
+  Reported as *"the HighLedge in the scene is invisible, maybe it was cloned from one of the sides?"* — the
+  guess was wrong and the observation was exact. Nothing was cloned; the gate had shut it and never looked
+  again.
+  - **Fault one, the ordering, and my own doc-comment named the hazard and then drew the wrong conclusion.**
+    `PocketStandalone.Engage` is deferred by a frame, and the remark on it said the delay avoided *"a race
+    between this node and every gated ledge — won or lost by sibling order."* **Deferring does not avoid
+    that race, it settles it against the gates, on every run.** Each `PocketGate._Ready` read `Holds` a
+    frame before the grant, hid its subtree, and had no reason to re-read — and a standalone run never
+    leaves and re-enters, so the ledge was gone for the session. `F11` had the identical hole: it announced
+    *learned 2 Dream verbs* and changed nothing you could see. **A guaranteed loss is not the fix for an
+    unpredictable one** — the general shape of the mistake, and the reason it read as a considered decision.
+  - **The fix is `PocketGate.ReapplyAll`, called by whoever grants out of band, and not a `_Process` poll.**
+    The tree-entry rule is still correct for the shipped game: verbs come from anchors, an anchor ends the
+    pocket, so nothing can be learned while one is open. Polling every frame would charge the shipped game
+    for an exception only debug code creates. Two call sites pay for it instead.
+  - **Fault two was worse and nobody had reported it, because it is the failure you cannot see.**
+    `SetCollision` walked for `CollisionObject3D`. **`CsgShape3D` is not one** — it derives from
+    `GeometryInstance3D` and carries `UseCollision` with its own layer and mask — so a shut gate on a
+    blockout hid the mesh and left the collision standing. That is *precisely* the trap the method's own
+    doc-comment leads with in bold, shipped inside the method the warning is attached to. It survived
+    because **every blockout in a pocket is that type**, so the only gated thing in the sandbox was the only
+    case the walk could not see.
+  - **Why the suite was blind to it: the collision half of the gate was unfalsifiable.** Both layer writes
+    were `SetDeferred`, the message queue flushes on the next idle frame, and a headless run finishes inside
+    one — so no check could ever read the result, and none had ever been written. Now direct, which is also
+    better on the merits (one frame of invisible-but-solid ledge is a frame you can stand on nothing), and
+    both branches are gated. **An unverifiable half of a method is where a missing half hides.**
+  - **Fault three came out of the suite's own output, one line below the all-green banner.** `ERROR: Parameter
+    "data.tree" is null`, with a cheerful *"running 'dream_probe' as a pocket"* under it: the same one-frame
+    deferral means the sweep builds a pocket scene, drives it and frees it before `Engage` fires, so the call
+    landed on a detached node — which entered a pocket from geometry that no longer existed and then asked a
+    freed tree for its root. `Engage` now returns unless it is in a tree, and that is gated. **The banner is
+    not the whole output**; a suite meant to be silent earns nothing from an error you have learned to scroll
+    past.
+  - **The scene-level check passed with the fix deleted, and that is the part worth keeping.** A gate
+    asserting the pocket's geometry is back after the grant stayed **green** through the break-test, because
+    an earlier block in the suite had left Float learned — so the ledge was never shut to begin with and the
+    assertion was true for the wrong reason. §3's seventh class in its ordinary shape: **the assertion was
+    fine and the *precondition* was the thing taken on trust.** The sweep now clears every verb flag before
+    the scene enters the tree, and it reports how many gates were shut beforehand (`1 of 1`) so the
+    precondition is visible in the output rather than assumed. **A gate over an ordering bug has to
+    establish the ordering.**
 - **The green was real, and it was the viewport resolution (1176 → 1178, 2026-08-07).** Reported twice —
   *"the fog is green"*, then *"as you move it turns green still where white and grey are"* — and dismissed
   once by me, on the grounds that `DreamLook`'s two exits are both `vec3(x)` so R, G and B are equal by

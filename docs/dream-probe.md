@@ -19,6 +19,22 @@ walls, the landmark. Those are two different sessions and it is worth keeping th
 
 Both carry the tuner, so the look keys below work in either.
 
+> ### ⚠️ The verbs work in the sandbox and nowhere else
+>
+> **Q, Space and E do nothing in `DreamProbe.tscn`, and that is correct rather than broken.** A verb needs
+> `PocketManager` to be inside a pocket and needs a poller to read the keys; both come from the
+> **`Standalone`** node, which the sandbox has and the bench deliberately does not — no `PocketData` names the
+> bench, so it cannot be a pocket, so putting one there would only warn that nothing names it.
+>
+> Reported on 2026-08-08 as *"none of the abilities work anymore when I press F6"*, and **the readout was the
+> reason it read as a regression**: it listed *"Q hide · Space float · E flare"* as fixed text in whichever
+> scene it was dropped into, so the bench advertised three keys it had no machinery for. That line is now
+> conditional — in an unwired scene it says **`Q/Space/E need a pocket — run Sandbox.tscn`**, and a warning
+> says the same in the Output once. **A debug surface that lists a key it cannot deliver reads as a broken
+> feature, not as the wrong scene.**
+>
+> So: **look bench for the look, sandbox for anything you press.**
+
 > **F6 on the sandbox is a real visit** — the verbs work, creatures cost, the exit fires. That is not free:
 > everything in a pocket asks `PocketManager` whether you are inside one first, and running a scene directly
 > never used to set it, so all of them refused and the pocket read as broken. The **`Standalone`** node in the
@@ -219,7 +235,7 @@ exists so far. It is **scaffolding, not content** — nothing in it ships, so ch
 | **`Bounds`** | `PocketBounds` at 60 × 20 × 60. Invisible walls and a lid. **This is the whole containment** |
 | **Structures** | four blocks and a stub wall, as `CSGBox3D` with `use_collision` — things to walk around rather than a room to walk in, which is the open-floor reading |
 | **`Ramp`** | 20°, walkable. `CharacterBody3D` **does not step up**, so this is the only way to gain height on foot |
-| **`HighLedge`** | at y = 7, out of walking reach, carrying a `PocketGate` set to **Float** — so it is not there at all until you have the verb. Press **F11** to grant Float and Flare and watch it appear |
+| **`HighLedge`** | at y = 7, out of walking reach, carrying a `PocketGate` set to **Float** — so it is not there at all until you have the verb. **F6 grants Float on entry, so it should be visible from the first frame**; under F5 press **F11** and it appears as the gate re-reads |
 | **`Signal`** | the white sphere, on the ledge. Red in the editor, white in game — that is the chroma rule, not a bug |
 | **`Landmark`** | a tall prism with its own light, far off, for navigating by silhouette |
 | **Creatures** | one `dream_still` and one `dream_drifter`, both inert until you cross in as a pocket. Neither moves — **AI is the 3D pass and is not written** |
@@ -245,6 +261,23 @@ exists so far. It is **scaffolding, not content** — nothing in it ships, so ch
 > *motion-dependent* and *sitting on a pattern edge*, suspect pixel scale first.
 >
 > Both lines are gated on **every** pocket scene now, so the other thirteen cannot repeat it.
+
+> ### ⚠️ Gating a blockout: `CSGBox3D` is not a body
+>
+> **Every blockout in a pocket is a `CsgShape3D`**, and it is *not* a `CollisionObject3D` — it derives from
+> `GeometryInstance3D` and carries `Use Collision` with its own layer and mask. `PocketGate` handles both
+> types now, but the distinction is worth knowing when authoring: a gate that only knew about bodies hid the
+> `HighLedge`'s mesh and left it **solid**, so Float carried you to a ledge you could stand on and not see.
+>
+> Two smaller things learned with it, both worth repeating if you gate something new:
+>
+> - **A gate re-reads on entering the tree, not every frame**, because a verb comes from an anchor and an
+>   anchor ends the pocket. **`F6` and `F11` break that** — they grant while a pocket is already open — so
+>   both call `PocketGate.ReapplyAll` after granting. Anything else that hands out a verb out of band has to
+>   as well, or its gates stay shut for the session.
+> - The gate's collision writes used to be `SetDeferred`, which **no headless check could ever observe** —
+>   the queue flushes on the next idle frame and a gate run finishes inside one. That is how a whole missing
+>   branch went unnoticed. They are direct now.
 
 ---
 
