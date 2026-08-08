@@ -35,7 +35,7 @@ times.
 
 ## Now
 
-**Last verified: `ALL GATES PASSED (1117 checks)`, exit 0, `dotnet build` clean with 0 warnings — and
+**Last verified: `ALL GATES PASSED (1122 checks)`, exit 0, `dotnet build` clean with 0 warnings — and
 uncommitted.** Every pass is left verified for Jeremy to commit; nothing here commits.
 
 **Run the suite with the `--` separator: `godot --headless --path . -- --verify-slice`.** `Boot` reads
@@ -81,6 +81,212 @@ created the directory, rather than after the first silent failure.
 leaves it — not `F4`, which the probe scene already binds to its own readout toggle.
 
 ### What just landed
+
+- **The green was real, and it was the viewport resolution (1176 → 1178, 2026-08-07).** Reported twice —
+  *"the fog is green"*, then *"as you move it turns green still where white and grey are"* — and dismissed
+  once by me, on the grounds that `DreamLook`'s two exits are both `vec3(x)` so R, G and B are equal by
+  construction. **That reasoning was sound and the conclusion was wrong**, because it answered *"is there
+  green in the framebuffer"* when the report was *"I see green."* Those are different questions and only
+  the second one is the bug.
+  - **The cause:** `Sandbox.tscn`'s `SubViewportContainer` had `stretch` on and **no `stretch_shrink`**, so
+    the container resized the `SubViewport` to the full 1920×1080. `DreamLook` derives its Bayer grid from
+    `textureSize(TEXTURE, 0)`, so an 8×8 cell landed on 8 screen pixels instead of 32. A near-1-pixel
+    alternating pattern lights alternating subpixels on an RGB-striped panel; green is the middle one and
+    carries most of the luminance. Static, the eye integrates it back to grey — **moving, the pattern
+    crawls across the geometry and the fringe reads as colour.** That is the whole report, including why it
+    sat at the white/grey boundary: that is where the dither is 50/50 and the pattern is finest.
+  - **The shader had already written the warning and I built the scene that defeats it.** Its comment says
+    the dither *"must sit on the 480x270 grid, not the 1920x1080 one, or the pattern is four times too fine
+    and reads as noise instead of as texture."* `DreamProbe.tscn` carried `stretch_shrink = 4` and
+    `texture_filter = 1`; the from-scratch rebuild reproduced everything visible in that scene and dropped
+    the two lines that were not. **A rebuild copies what a scene contains, not what it avoids.**
+  - **The lesson that generalises past this bug: a rendering fault that is not in the render is one a
+    screenshot cannot settle.** I had asked for a screenshot to measure the chroma of, and it would have
+    come back pure grey and confirmed nothing. The framebuffer being grey was never in doubt — the panel is
+    downstream of it. When a symptom is reported as *motion-dependent* and *located at a pattern boundary*,
+    suspect sampling and pixel scale before pigment.
+  - **Two gates, on every pocket scene rather than on this one:** `stretch_shrink > 1` and nearest
+    filtering. Asserted as "shrinks at all" rather than "== 4", because 2 or 8 is a look decision and only
+    1 is the accident. Both break-tested by removing each line from the scene.
+- **All three verbs do something now — Float and Flare (1176 checks, 2026-08-07).** Found by playing:
+  *"Q works. I didn't see space do anything."* Correct, and it had been true since unit 8 — `DreamVerbs`
+  priced all three holds, refused them outside a pocket, drained Resolve by the second, and only Suppress
+  had an **act** on the other end. **A verb that is priced but inert is worse than one that is missing**:
+  the meter really moves, every check about it is green, and the only reading available to the player is
+  that the game is broken. Nothing in the suite could have caught it, because nothing was wrong.
+  - **Flare cost one field, because Suppress had already chosen the channel.** §19 calls it *"the exact
+    mirror of Suppress"* — one puts the near field out, the other throws it wide — so it is
+    `FlaredMultiple` on the same radius, not a second mechanism. The general shape: **when the design says
+    a thing is a mirror, the cheap implementation is the one that shares the channel**, and picking the
+    channel for the first verb is what decides the price of the second.
+  - **Holding both resolves to dark, and the player pays for both.** The rates are additive (8/s), and
+    Suppress wins the lamp. Going dark is the safe direction — the alternative gives someone who fumbled a
+    key a tripled lamp in a room that hunts light. Gated as *Suppress's own number* rather than as "the
+    lamp is off", which is the stronger claim: asserting `0.25 × base` cannot pass by the light happening
+    to be dark for an unrelated reason. My first version of that check asserted zero and went red against
+    correct code, because an earlier assertion in the same block had left `SuppressedFraction` at 0.25.
+  - **Float overrides gravity rather than fighting it.** `velocity.Y = FloatRiseSpeed`, not a force added
+    against `Gravity`. Tuning a rise *against* a fall is two numbers holding one decision, and the failure
+    is silent: lower the rise once and the verb becomes a slow descent with no error anywhere.
+  - **Float's movement is deliberately ungated, and that is a limit worth stating.** `_PhysicsProcess` and
+    `MoveAndSlide` do not run headlessly, so a check could only re-assert the arithmetic in the file it is
+    checking. **A gate that can only restate the code is not evidence** — §3's seventh class again. Play is
+    the proof; the sandbox's y = 7 ledge is the instrument.
+  - **Still unbuilt, so Flare is not done:** the hidden-geometry reveal (wants a `PocketGate` reading
+    `IsHolding` rather than `Holds`) and being-seen-while-flared (creature AI). Written into the class doc
+    and `dream-probe.md` rather than left implicit, because "the light works" is exactly how a
+    two-thirds-built verb gets ticked off.
+- **The border is on a key, and every debug key is on the readout (2026-08-07).** The shell's first value
+  shipped at 0.55, reasoned from the posterise threshold near 0.5, and played as *"too bright… just looks like
+  off white panels"* — a flat slab across the horizon. **The reasoning was wrong in kind, not degree**: the
+  shader reads the *rendered luminance* of an unshaded surface, not the albedo typed into the material, and
+  nothing about the number predicted the result. `G` / `H` scrub it live now and it sits in the readout with
+  everything else; the default dropped to 0.30.
+  - **What is being hunted is the dither band.** The ordered dither shifts the threshold per pixel, so between
+    "no pixel crosses" and "every pixel crosses" there is a range where the wall reads as crosshatch — a haze
+    you can see through, which is the thing fog was wanted for. Opaque panel above, nothing below, and the
+    good band is narrow. Worth knowing before tuning anything else drawn flat and unshaded.
+  - **Standing rule, Jeremy's: *"we should always add the debug buttons labels to the temp hud."*** So the
+    readout now lists `B` and the three verbs alongside the tuner's own keys, even though it owns neither.
+    Prompted by `B` being rebound twice — F9 → L → B — and going unfound each time. Recorded on `Refresh`,
+    because the instinct is to keep a key's label next to its owner and that is what loses it.
+- **F6 on a pocket scene is a real visit now — `PocketStandalone` (1167 → 1168, 2026-08-07).** Jeremy, on
+  being told F5→F10 was the way in: *"I was using F6, so I can no longer do that?"* — and the honest answer
+  was that F6 built geometry fine and refused every verb, creature and exit, because they all ask
+  `PocketManager.InsideTheDream` and nothing had told it. `PocketManager` is an **autoload**, so it is running
+  under F6 already; the node just tells it. It also fills the bar and grants Float and Flare, so F11 is not
+  needed either. **Which pocket is derived from the scene's own path**, so a copied scene cannot carry a
+  stale id, and it stands down when `PocketHost` already crossed you in.
+  - **It cannot be attached by the host, and that is the one thing that makes it different from the other
+    four.** The host is precisely what does not exist under F6. Forgetting it costs the F6 convenience and
+    nothing else, which is the safe direction.
+  - **It shipped without a verb poller and that was worse than not shipping it.** `DreamVerbHold` is attached
+    by `PocketHost` too, so entering the pocket moved the verbs from *refused, with a reason in the log* to
+    *silently doing nothing* — the exact symptom the node exists to remove, in a form with no warning. It
+    builds one now, only on the standalone path. **The general shape: being inside a pocket and the pocket
+    working are two claims, and the host supplies both.** Anything replacing the host has to replace both.
+  - **Its F5 guard is deliberately ungated, and finding that out is the useful part.** A check that it stands
+    down when already inside stayed **green** with the guard deleted — `PocketManager.Enter` independently
+    refuses `AlreadyInside`, so nothing observable changes. §3's seventh class, caught by planning the
+    break-test. The check was deleted rather than kept: the guard earns its place by keeping a warning off
+    every legitimate crossing, not by anything a gate can see.
+- **There is a pocket scene now — `scenes/dream/Sandbox.tscn` (1160 → 1167, 2026-08-07).** Jeremy: *"redo the
+  level from scratch, there is nothing I really want to keep."* Built to `PocketHost`'s contract with one of
+  everything that exists: ground, `PocketBounds`, structures to walk around, a 20° ramp (no step-up), a
+  Float-gated ledge, the white signal, a landmark, both minor creatures and a `PocketExit`.
+  **`data/pockets/dream_probe.tres` points at it**, so `F10` crosses into it — which is the only way the verbs,
+  the creatures and the exit are live, since all three refuse outside a pocket. **Scaffolding, not content.**
+  - **No `PocketAnchor`, deliberately.** It would `Complete()`, write `pocket.dream_probe.cleared` and break
+    the entrance for that save — the same reason `F10` was built unable to complete.
+  - **A pocket scene now has a contract gate**, sweeping every scene a `PocketData` names: a `Control` root, a
+    container **wearing the look material** (forget it and the Dream is silently in full colour), a viewport,
+    a way back out, and **no `own_world_3d`** — the trap `dream-probe.md` names in capitals, which costs
+    nothing at runtime and makes the whole pocket invisible in the editor. Break-tested on both.
+  - **`DreamLookTuner` was probe-only and is not any more.** It asked `GetNode` for three creature meshes by
+    unique name, so it threw in any scene that was not the probe — the one harness worth having in every
+    pocket could live in exactly one. Now `GetNodeOrNull` throughout: a pocket with no creatures gets the
+    world keys and quietly no creature keys.
+- **The pocket boundary — `PocketBounds` and one shared environment (1150 → 1160, 2026-08-07).** A
+  `PocketBounds` at floor level takes a `Size` and builds four walls and a lid out of collision and nothing
+  else; `scenes/dream/DreamEnvironment.tres` is the one atmosphere all fourteen point at, `DreamLook.tres`'s
+  argument applied to the other half of the look. **Containing and showing are separate on purpose** — the
+  border can be restyled without touching what stops you walking, and an unstyled pocket is still inescapable.
+  - **The fog was the wrong answer and is off — corrected the same day, from play.** Jeremy: *"the fog is
+    green and moves with the player rather than hide the outside borders."* The second half is the real
+    finding and it is structural: **depth fog measures distance from the camera**, so it travels with you and
+    cannot mark anything fixed. It was recommended for exactly that job on the reasoning that *"inside a
+    closed pocket, distance from the camera is roughly the border"*, which is wrong the moment the player
+    moves. `FogVolume` would have placed it in a box and is Forward+ only. Replaced by
+    **`PocketBounds.BorderShell`** — the walls drawn unshaded grey, which cannot drift from the boundary
+    because it *is* the boundary. `fog_enabled = false`, values intact for atmosphere.
+  - **The green is not the fog and cannot be the shader.** The resource reads back
+    `colour 0.6/0.6/0.6, chroma 0.000`, and `DreamLook.gdshader` has no path that emits a colour — every
+    branch ends `vec3(grey)` or white. So a tint on screen means the pass is not running, and the likeliest
+    cause is the flood light having detached the material. Unresolved, and recorded rather than guessed at.
+  - **A tinted fog would become a white objective marker, and now cannot.** `signal_chroma` is 0.04, so any
+    chroma at all is promoted to the one visual reserved for *go here*. Gated — and **Godot's own default fog
+    colour is bluish enough to trip it**, which is what makes the check non-theoretical.
+  - **Worth knowing before authoring any border: at `levels = 2` there are no gradients.** Fog can only push a
+    pixel across the single threshold, so it reads as a dithered edge, not a fade. That is a look decision to
+    make on purpose rather than discover.
+  - **The author light's key was wrong twice and both were silent.** F9 is `debug_load`; then `L` was
+    `DreamLookTuner`'s dist-comp key — colliding **only inside the probe scene**, which is the one workflow
+    the feature exists for. Now `B`. **The probe reads raw keys that no `InputMap` list knows about**, so grep
+    `src/Dream/` for `Key.` before binding anything.
+- **Suppress puts the lamp out for real (1144 → 1150, 2026-08-07).** `DreamSuppressibleLight` goes on the
+  player's `OmniLight3D` and nothing else. The cost had been gated since unit 8 and **the act had nothing over
+  it at all**, which is the gap shape that leaves a verb feeling unbuilt while every check about it is green.
+  - **It drives the radius, not the energy, and that was forced rather than chosen.** `DreamLightFlicker`
+    writes `LightEnergy` every frame from a base captured at `_Ready`, so an energy-driven suppression is
+    overwritten before it is ever seen — broken on screen, silent in the log. The radius is also the channel
+    both docs already name: §19's *"the near field goes dark"* and `dream-probe.md`'s *"the Resolve degrade in
+    its entirety"*. One channel, two dimmers, no third writer.
+  - **While lit it writes nothing and re-reads instead**, or it would stomp the tuner's `,` / `.` on the frame
+    after each nudge. Break-tested by deleting that branch: three checks red, including the two about the verb
+    itself, because the base it returns to is captured in the same place.
+  - **The 100%-or-90% question is an authored field, not a ruling.** `SuppressedFraction` — 0 is out entirely,
+    0.1 leaves a stub. What must *not* move with it is `DreamCreatureData.PursuesOnlyWhenLit`: that is a
+    boolean about **detection**, so dimming the lamp is not the same as being partly seen, and making it so is
+    a change to the creature model rather than a slider.
+- **The Dream creature roster exists — 3 archetypes and a sweep over them (1138 → 1144, 2026-08-07).**
+  `data/creatures/` holds `dream_still`, `dream_drifter` and `dream_pursuer`. Numbers against a 100-point bar
+  and a 2/s Suppress: 12 for the anchored one on a 2 s window, 8 for the wanderer on 3 s — **cheaper per touch
+  because it can find you, longer window because it can pin you** — and nothing for the banisher.
+  - **The one collection with no registry, and that is why it needed its own sweep.** A `DreamCreature` reads
+    its data through an `[Export]`, so a file that fails to parse is a creature that costs nothing, which the
+    node's own `_Ready` warning says is indistinguishable from one you are avoiding. `GameConfig.`
+    `DreamCreatureDataDir` exists **only** because the verifier reads it — `ZoneDataDir` is the precedent for
+    what a path with no reader turns into.
+  - **The sharpest of the six is *a banisher authors no cost*.** `Touch` ejects before it ever reads
+    `ResolveCost`, so a number there looks tuned and is never consulted — the 33-dangling-harvest-nodes class,
+    a field that means nothing where it sits. Break-tested; so is the mirror, and so is the boss's
+    pursue-only-when-lit, which is a rule with a citation rather than a taste: flipping it makes boss pocket 1
+    unsolvable with what the player holds, and `DreamVerb.Suppress`'s own doc is what says so.
+
+- **The author's flood light — `L` inside a pocket (1122 → 1138, 2026-08-07).** Asked for while greyboxing:
+  *"a light that lights up the inside… one that lights up everything at once and turns off"*. `DreamAuthorLight`
+  raises every `WorldEnvironment`'s ambient **and takes `DreamLook` off the container**, because ambient alone
+  hands a bright room to a 2–5-grey posterise under a clamp and the flood comes out one flat value — brighter
+  and *less* legible. `PocketHost` attaches it beside `DreamVerbHold`, so no pocket scene carries anything.
+  - **The editor half needed no code and should not get any.** *Display Unshaded* in the 3D viewport already
+    does it, per-viewport and non-destructive. The DIY version — `AmbientLightEnergy` in the inspector — writes
+    to the `Environment` embedded in the pocket, so `Ctrl+S` while it is up **ships that pocket lit** and
+    nothing goes red. Recorded in `dream-probe.md` because it is a trap with no gate over it.
+  - **It shipped on a raw key and the gate is what turned it into an action.** A check that a *spare* light
+    stays quiet is vacuous unless the key is really down — and a physical key cannot be put down from code at
+    all (`Input.ParseInputEvent` does not move `IsPhysicalKeyPressed`). So the guard was unmeasurable by
+    construction. `debug_author_light` was already the shape every other debug key uses.
+  - **F9 looked free and is `debug_load`.** F1–F11 are all bound bar F4, which `DreamLookTuner` reads raw.
+    Bound to **`L`**, which is safe only because this node exists **only inside a pocket** and so cannot reach
+    a Waking binding — that is the property to preserve if it ever moves.
+  - **The restore is gated because the light changes nodes it did not create** — the eighth blind-spot class
+    exactly. Break-tested three ways: no restore on exit, no material detach, no attach from the host, each
+    reddening one named check. A fourth was written wrong first: a fixture built as a detached `new Node()`
+    **fails** the exit check, because `_ExitTree` never fires for a node that was never in the tree.
+
+- **Chapter 2 played clean, and the one bug it returned had a green gate defending it (2026-08-07).**
+  Jeremy: *"J1 complete, things work mostly correctly… the only bug worth noting is that you can create
+  equipment items more than once, which didn't trap me with limited resources but still isn't helpful, so
+  I think removing it from the list once made is cleaner."* Suite **1117 → 1122**.
+  - **`AlreadyMade` had an explicit Equipment exemption whose stated reason was already repealed.** Its
+    doc-comment argued *"a second coat is a legitimate thing to want — the cache exists partly so a spare
+    can be banked (§18)"*, and `combat.md` §19 had **retired that purpose** in the same breath as it made
+    equipment survive death. Nothing can take a coat off you, so a second one was a bench row that could
+    only ever spend materials. Equipment now sits on the held arm on exactly a trap's terms.
+  - **The same fix closed a hole in the trap arm that nobody had reported.** `AlreadyMade` asked `Has`,
+    which reads the satchel alone, so `Deposit` laundered it — bank the snare you own and the bench offers
+    another. The question is now *do you own one anywhere*, satchel **or** cache. `Has` is deliberately
+    untouched: every ingredient check calls it and it must keep meaning *to hand*.
+  - **The part worth carrying forward is the gate, not the bug.** `--verify-slice` asserted *"and a spare
+    is allowed — the cache exists partly to bank one"* and had been green through every run since the
+    ruling that struck it. **A check that encodes a repealed decision is worse than a missing one**: it
+    converts the next person's correct instinct into a red they will read as their own mistake. §3's new
+    **twenty-first** class. Break-tested both arms, two predicted reds each, both exact.
+  - **C1 is deferred with it.** Jeremy: *"C1 and story should be deferred until we do the story sweep… a
+    tutorial/story/sound type polish pass towards the end."* The ending's rules are ratified (`combat.md`
+    §20); what is missing is the machine and the prose, and the prose decides the machine's shape. It now
+    lives at the top of `whats-left.md`'s **Last** section with a note that it is the one item there the
+    game cannot ship without.
 
 - **Two play findings, and the first one had shut a quarter of the game (2026-08-06).** Jeremy played to the
   end of chapter 2 and reported two things. Both were real, both were invisible to 1113 green checks, and
@@ -1289,6 +1495,27 @@ possible extraction: `Main.DebugPocketToCrossInto` took the *choosing* out of th
 are written as handlers by reflex, and they are exactly where a softlock guard ends up, since a debug key is
 what reaches half-built content. (`InventoryPanel.DebugSelectTab` and `CaptionLayoutOnATile` are the same move
 made earlier for the same reason.)
+
+**A twenty-first, and it is the only one where the suite is not silent but *wrong*: a check can outlive the
+ruling it encodes, and stay green doing it.** `--verify-slice` asserted *"a coat is made… and a spare is
+allowed — the cache exists partly to bank one"*. The reason in that sentence was struck by `combat.md` §19
+five days before Jeremy hit the bug in play: retiring the shared cache's purpose retired the only argument
+for a repeatable coat, and nothing re-read the gates when it landed. So the suite was not failing to cover
+equipment permanence — it was **asserting the opposite of the rule**, in writing, in green, for five days.
+
+**Why this is worse than an uncovered rule rather than equivalent to one.** An uncovered rule is a gap
+anyone can fill. A gate defending a repealed ruling is *active resistance*: the next person to implement the
+correct behaviour gets a red, and the overwhelmingly likely reading of a red in a 1100-check suite is *"I
+broke something"*, not *"this check is stale"*. It costs the fix and then costs the confidence.
+
+**How to catch it, and it is a process rule rather than a check — no gate can gate this.** When a ruling is
+struck or reversed, **grep the gates for the old wording before closing the unit.** Check descriptions are
+prose and they quote their reasoning, which is exactly what makes them greppable: `spare`, `cache`, `banked`
+would each have found this one in seconds. The corollary for writing checks: **put the *why* in the
+description, not only the *what*.** A check reading `equipment is repeatable` is unsearchable; one reading
+`a spare is allowed — the cache exists partly to bank one` names the ruling it depends on and can therefore
+be found when that ruling dies. The nineteenth class is a check keyed on the wrong property; this is a check
+keyed on the right property of a **repealed rule**.
 
 ---
 

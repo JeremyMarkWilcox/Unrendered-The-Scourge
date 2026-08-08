@@ -2255,6 +2255,29 @@ gates stay green and unused until the content pass; if nothing has claimed it by
 come out in one clean pass. Ripping out working gated code to make a design point buys an afternoon of
 red for no gameplay.
 
+> **The consequence this paragraph did not follow through, collected 2026-08-07: equipment is made once.**
+> Jeremy, after playing chapter 2: *"you can create equipment items more than once, which didn't trap me
+> with limited resources but still isn't helpful — removing it from the list once made is cleaner."*
+>
+> Retiring the spare-coat purpose retired the only argument for a repeatable coat, and nobody said so out
+> loud, so `InventoryCraftingManager.AlreadyMade` kept its **Equipment exemption** — with a doc-comment
+> citing the banked spare as the reason, five days after this paragraph struck it. **A weapon or a piece of
+> armour is now permanent on exactly a trap's terms** (§19, and `ItemData.Trap`'s *"an owned thing whose
+> count is 0 or 1 and never more"*). Nothing can take one off you — unit 8 deleted death-loss and §18 says
+> nothing degrades — so a second one was a bench row that could only ever spend materials.
+>
+> **The same fix closed a hole in the trap arm that nothing had reported.** `AlreadyMade` asked `Has`,
+> which reads the satchel alone, so `Deposit` laundered it: bank the snare you own and the bench offered
+> to forge another. Permanence now asks *do you own one anywhere*, satchel or cache — the only reading
+> that cannot be undone by moving an item between two boxes the player controls. `Has` itself is untouched
+> and still means *to hand*, because materials in the cache are not on the bench.
+>
+> **The part worth keeping: a gate was standing guard over the bug.** `--verify-slice` asserted *"and a
+> spare is allowed — the cache exists partly to bank one"*, green, citing a reason this paragraph had
+> already deleted. A check that encodes a repealed ruling is worse than a missing one, because it converts
+> the next person's correct instinct into a red they will assume is their own mistake. When a ruling is
+> struck, grep the gates for its old wording.
+
 ### The four salves, and her cache inverted
 
 **Four recipes, total.** Two healing, two of hers, and that is the whole apothecary side.

@@ -134,47 +134,47 @@ environment = SubResource("Environment_dream")
 use_collision = true
 
 [node name="Floor" type="CSGBox3D" parent="DreamContainer/DreamViewport/Pocket" unique_id=2010603679]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.2, 0)
+transform = Transform3D(10, 0, 0, 0, 10, 0, 0, 0, 10, 0, -15.535933, -0.08942413)
 size = Vector3(11, 0.4, 11)
 material = SubResource("Mat_env")
 
 [node name="Ceiling" type="CSGBox3D" parent="DreamContainer/DreamViewport/Pocket" unique_id=1344631284]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.2, 0)
+transform = Transform3D(10, 0, 0, 0, 10, 0, 0, 0, 10, 0, 18.56527, 0)
 size = Vector3(11, 0.4, 11)
 material = SubResource("Mat_env_dark")
 
 [node name="WallNorth" type="CSGBox3D" parent="DreamContainer/DreamViewport/Pocket" unique_id=1957828724]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, -5.65)
+transform = Transform3D(10, 0, 0, 0, 10, 0, 0, 0, 10, -0.00049209595, 1.4584808, -53.444313)
 size = Vector3(11, 3, 0.3)
 material = SubResource("Mat_env")
 
 [node name="WallSouth" type="CSGBox3D" parent="DreamContainer/DreamViewport/Pocket" unique_id=517750557]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 5.65)
+transform = Transform3D(10, 0, 0, 0, 10, 0, 0, 0, 10, 0, 1.5, 53.426933)
 size = Vector3(11, 3, 0.3)
 material = SubResource("Mat_env")
 
 [node name="WallWest" type="CSGBox3D" parent="DreamContainer/DreamViewport/Pocket" unique_id=242286615]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.65, 1.5, 0)
+transform = Transform3D(10, 0, 0, 0, 10, 0, 0, 0, 10, -53.478165, 1.1820621, -0.021080017)
 size = Vector3(0.3, 3, 11)
 material = SubResource("Mat_env")
 
 [node name="WallEast" type="CSGBox3D" parent="DreamContainer/DreamViewport/Pocket" unique_id=620459928]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.65, 1.5, 0)
+transform = Transform3D(10, 0, 0, 0, 10, 0, 0, 0, 10, 53.506313, 1.5, 0)
 size = Vector3(0.3, 3, 11)
 material = SubResource("Mat_env")
 
 [node name="PillarA" type="CSGBox3D" parent="DreamContainer/DreamViewport/Pocket" unique_id=746606807]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.6, 1.5, -2.2)
+transform = Transform3D(10, 0, 0, 0, 10, 0, 0, 0, 10, -2.6, 1.4393692, -2.2)
 size = Vector3(0.7, 3, 0.7)
 material = SubResource("Mat_env")
 
 [node name="PillarB" type="CSGBox3D" parent="DreamContainer/DreamViewport/Pocket" unique_id=784587932]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.8, 1.5, 1.4)
+transform = Transform3D(10, 0, 0, 0, 10, 0, 0, 0, 10, 1.6476543, 1.4782476, 23.136078)
 size = Vector3(0.7, 3, 0.7)
 material = SubResource("Mat_env")
 
 [node name="Ledge" type="CSGBox3D" parent="DreamContainer/DreamViewport/Pocket" unique_id=1536665866]
-transform = Transform3D(0.79088897, 0.6119597, 0, -0.6119597, 0.79088897, 0, 0, 0, 1, -2.9457834, 0.35127342, 3.2)
+transform = Transform3D(7.90889, 6.119597, 0, -6.119597, 7.90889, 0, 0, 0, 10, 33.18965, -7.584318, 3.570184)
 size = Vector3(2.6, 0.5, 1.8)
 material = SubResource("Mat_env")
 
@@ -184,25 +184,25 @@ mesh = SubResource("Mesh_landmark")
 surface_material_override/0 = SubResource("Mat_env")
 
 [node name="Signal" type="MeshInstance3D" parent="DreamContainer/DreamViewport" unique_id=1426631174]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.2, 1.05, -4.2)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.2, -13.14713, -4.2)
 mesh = SubResource("Mesh_signal")
 surface_material_override/0 = SubResource("Mat_signal")
 
 [node name="CreatureMindless" type="MeshInstance3D" parent="DreamContainer/DreamViewport" unique_id=616119298]
 unique_name_in_owner = true
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 0.95, 1.2)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.400713, -12.474211, 1.2)
 mesh = SubResource("Mesh_creature")
 surface_material_override/0 = SubResource("Mat_creature_body")
 
 [node name="CreatureBoss" type="MeshInstance3D" parent="DreamContainer/DreamViewport" unique_id=802115316]
 unique_name_in_owner = true
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.2, 0.95, -1.6)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.2, -12.593098, 7.221503)
 mesh = SubResource("Mesh_creature")
 surface_material_override/0 = SubResource("Mat_creature_screen")
 
 [node name="CreatureBillboard" type="MeshInstance3D" parent="DreamContainer/DreamViewport" unique_id=152978794]
 unique_name_in_owner = true
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 0.6)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, -12.394739, 4.25402)
 mesh = SubResource("Mesh_billboard")
 surface_material_override/0 = SubResource("Mat_creature_billboard")
 
@@ -218,7 +218,7 @@ Amount = 0.45
 Speed = 7.0
 
 [node name="FarLightSignal" type="OmniLight3D" parent="DreamContainer/DreamViewport" unique_id=1543417759]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.2, 1.5, -3.3)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.3694563, -12.584875, -4.06334)
 light_energy = 1.3
 light_specular = 0.0
 omni_range = 2.8
@@ -230,7 +230,7 @@ Speed = 6.0
 
 [node name="Player" type="CharacterBody3D" parent="DreamContainer/DreamViewport" unique_id=1722207966]
 unique_name_in_owner = true
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 4.2)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 48.782562, -12.829404, 4.2)
 script = ExtResource("2_walker")
 
 [node name="Collision" type="CollisionShape3D" parent="DreamContainer/DreamViewport/Player" unique_id=1898745078]

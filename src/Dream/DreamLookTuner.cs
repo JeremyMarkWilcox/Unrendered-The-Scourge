@@ -64,6 +64,22 @@ public partial class DreamLookTuner : Control
     /// </summary>
     private readonly System.Collections.Generic.List<DreamLightFlicker> _flickers = [];
 
+    /// <summary>
+    /// Every <see cref="PocketBounds"/> in the scene, so the border's brightness is a key like everything
+    /// else here rather than a number to guess in the inspector and re-run for.
+    /// </summary>
+    /// <remarks>
+    /// <b>It earned a key by being un-guessable.</b> The first value shipped at 0.55 on the reasoning that the
+    /// posterise threshold sits near 0.5 — and on screen it saturated to a flat slab, because what the shader
+    /// reads is the rendered luminance of an unshaded surface and not the albedo that was typed. The
+    /// interesting band is *below* the top, where the ordered dither only flips some pixels and the wall reads
+    /// as crosshatch instead of as a panel. That band cannot be worked out from the number; it has to be
+    /// scrubbed.
+    /// </remarks>
+    private readonly System.Collections.Generic.List<PocketBounds> _bounds = [];
+
+    private float BorderValue => _bounds.Count == 0 ? 0.0f : _bounds[0].BorderValue;
+
     private float FlickerScale => _flickers.Count == 0 ? 0.0f : _flickers[0].Scale;
 
     private float FlickerSpeed => _flickers.Count == 0 ? 0.0f : _flickers[0].SpeedScale;
@@ -74,7 +90,7 @@ public partial class DreamLookTuner : Control
 
     private float Dither => _look.GetShaderParameter(ParamDither).As<float>();
 
-    private float LightRange => _playerLight.OmniRange;
+    private float LightRange => _playerLight?.OmniRange ?? 0.0f;
 
     private float Thickness => Creature(ParamThickness);
 
@@ -91,14 +107,19 @@ public partial class DreamLookTuner : Control
 
     public override void _Ready()
     {
-        _look = GetNode<SubViewportContainer>("%DreamContainer").Material as ShaderMaterial;
-        _playerLight = GetNode<OmniLight3D>("%PlayerLight");
-        _walker = GetNode<DreamProbeWalker>("%Player");
-        _readout = GetNode<Label>("%Readout");
+        // **Everything but the container is optional, and that is what makes this droppable into a pocket.**
+        // It shipped asking `GetNode` for three creature meshes by unique name, which threw in any scene that
+        // did not happen to be the probe — so the one harness worth having in every pocket was the one thing
+        // that could only live in one. The probe still has all of them; a pocket with no creatures in it now
+        // gets the world keys and quietly no creature keys, rather than a crash on load.
+        _look = GetNodeOrNull<SubViewportContainer>("%DreamContainer")?.Material as ShaderMaterial;
+        _playerLight = GetNodeOrNull<OmniLight3D>("%PlayerLight");
+        _walker = GetNodeOrNull<DreamProbeWalker>("%Player");
+        _readout = GetNodeOrNull<Label>("%Readout");
 
         foreach (var name in new[] { "%CreatureMindless", "%CreatureBoss", "%CreatureBillboard" })
         {
-            if (GetNode<MeshInstance3D>(name).GetActiveMaterial(0) is ShaderMaterial creature)
+            if (GetNodeOrNull<MeshInstance3D>(name)?.GetActiveMaterial(0) is ShaderMaterial creature)
             {
                 _creatures.Add(creature);
             }
@@ -135,7 +156,7 @@ public partial class DreamLookTuner : Control
         {
             if (Input.MouseMode == Input.MouseModeEnum.Captured)
             {
-                _walker.Look(motion.Relative);
+                _walker?.Look(motion.Relative);
             }
 
             return;
@@ -153,7 +174,7 @@ public partial class DreamLookTuner : Control
                 Input.MouseMode = Input.MouseModeEnum.Visible;
                 return;
             case Key.F4:
-                _readout.Visible = !_readout.Visible;
+                if (_readout != null) _readout.Visible = !_readout.Visible;
                 return;
             case Key.F12:
                 _ = Capture();
@@ -188,6 +209,9 @@ public partial class DreamLookTuner : Control
             case Key.J: NudgeCreature(ParamCompensation, -0.1f, 0.0f, 1.0f); break;
             case Key.L: NudgeCreature(ParamCompensation, +0.1f, 0.0f, 1.0f); break;
 
+            case Key.G: NudgeBorder(-0.02f); break;
+            case Key.H: NudgeBorder(+0.02f); break;
+
             case Key.O: NudgeFlicker(-0.1f, 0.0f); break;
             case Key.P: NudgeFlicker(+0.1f, 0.0f); break;
 
@@ -210,8 +234,29 @@ public partial class DreamLookTuner : Control
             parameter,
             Mathf.Clamp(_look.GetShaderParameter(parameter).As<float>() + step, min, max));
 
-    private void NudgeLight(float step) =>
+    private void NudgeLight(float step)
+    {
+        if (_playerLight == null) return;
+
         _playerLight.OmniRange = Mathf.Clamp(LightRange + step, 0.5f, 30.0f);
+    }
+
+    /// <summary>
+    /// Move every border shell's brightness together, and rebuild so the change is on screen.
+    /// </summary>
+    /// <remarks>
+    /// A rebuild rather than a reach into the material, because <c>PocketBounds</c> owns how the shell is
+    /// made and duplicating that here is the second copy that drifts. It throws away five boxes and builds
+    /// five boxes; at this size that is free, and it means the key exercises the same path the scene does.
+    /// </remarks>
+    private void NudgeBorder(float step)
+    {
+        foreach (var bounds in _bounds)
+        {
+            bounds.BorderValue = Mathf.Clamp(bounds.BorderValue + step, 0.0f, 1.0f);
+            bounds.Rebuild();
+        }
+    }
 
     private float Creature(string parameter) =>
         _creatures.Count == 0 ? 0.0f : _creatures[0].GetShaderParameter(parameter).As<float>();
@@ -230,6 +275,11 @@ public partial class DreamLookTuner : Control
         if (node is DreamLightFlicker flicker)
         {
             _flickers.Add(flicker);
+        }
+
+        if (node is PocketBounds bounds)
+        {
+            _bounds.Add(bounds);
         }
 
         foreach (var child in node.GetChildren())
@@ -266,13 +316,28 @@ public partial class DreamLookTuner : Control
     /// Draws the current values, and prints them, so a value settled by eye can be read back off
     /// either a screenshot or the console rather than remembered.
     /// </summary>
+    /// <remarks>
+    /// <b>Every debug key in a pocket belongs on this readout, including the ones this class does not own.</b>
+    /// Standing rule, asked for on 2026-08-07 after <c>B</c> was rebound twice and went unfound: *"we should
+    /// always add the debug buttons labels to the temp hud"*. So the block below lists the flood light
+    /// (<c>DreamAuthorLight</c>) and the three verbs (<c>DreamVerbHold</c>) alongside the tuner's own keys —
+    /// they are not scrubbed here and they are still the answer to *what can I press*.
+    /// <para>
+    /// The duplication is the point and it is worth naming, because the instinct is to keep each key's label
+    /// next to its owner. A key the player cannot discover is a key that does not exist, and there is exactly
+    /// one surface in a pocket where discovery happens.
+    /// </para>
+    /// </remarks>
     private void Refresh()
     {
+        if (_readout == null) return;
+
         _readout.Text =
             $"greys      {Levels,5}      [ ]\n"
             + $"clamp      {Clamp,5:0.00}      ; '\n"
             + $"dither     {Dither,5:0.00}      - =\n"
             + $"light      {LightRange,5:0.00}      , .\n"
+            + $"border     {BorderValue,5:0.00}      G H\n"
             + "\n"
             + $"thickness  {Thickness,5:0.0}      5 6\n"
             + $"density    {Density,5:0.00}      7 8\n"
@@ -282,10 +347,13 @@ public partial class DreamLookTuner : Control
             + "\n"
             + $"flicker    {FlickerScale,5:0.0}      O P\n"
             + $"fl speed   {FlickerSpeed,5:0.0}      N M"
-            + "\n\nWASD walk · click to look · Esc release · F4 hide · F12 shot";
+            + "\n\nWASD walk · click to look · Esc release"
+            + "\nB flood light · Q hide · Space float · E flare"
+            + "\nF4 hide readout · F12 shot";
 
         GD.Print(
             $"[probe] levels={Levels} clamp={Clamp:0.00} dither={Dither:0.00} light={LightRange:0.00}"
+            + $" border={BorderValue:0.00}"
             + $" | creature thickness={Thickness:0.0} density={Density:0.00} crawl={Crawl:0.0}Hz"
             + $" white={ReachWhite} comp={Compensation:0.0} break={Break:0.0} | flicker={FlickerScale:0.0}x speed={FlickerSpeed:0.0}x");
     }
@@ -318,13 +386,13 @@ public partial class DreamLookTuner : Control
             + $"_t{Thickness:0.0}_n{Density:0.00}_hz{Crawl:0.0}{(ReachWhite ? "_w" : "")}")
             .Replace('.', '-');
 
-        var showing = _readout.Visible;
-        _readout.Visible = false;
+        var showing = _readout?.Visible ?? false;
+        if (_readout != null) _readout.Visible = false;
         await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
         await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
 
         var image = GetViewport().GetTexture().GetImage();
-        _readout.Visible = showing;
+        if (_readout != null) _readout.Visible = showing;
 
         var path = $"{OutputDir}/{name}.png";
         var error = image.SavePng(path);

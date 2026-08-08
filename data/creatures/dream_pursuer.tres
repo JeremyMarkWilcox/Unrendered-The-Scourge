@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="DreamCreatureData" format=3]
+
+[ext_resource type="Script" path="res://src/Data/DreamCreatureData.cs" id="1_creature"]
+
+[resource]
+script = ExtResource("1_creature")
+Id = "dream_pursuer"
+DisplayName = "The hunter"
+ResolveCost = 0
+TouchCooldownSeconds = 0.0
+Banishes = true
+PursuesOnlyWhenLit = true

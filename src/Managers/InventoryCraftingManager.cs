@@ -535,9 +535,9 @@ public partial class InventoryCraftingManager : Node
     }
 
     /// <summary>
-    /// Whether this recipe has already produced its one permanent result. True for a trap you own and
-    /// for a world repair already done; **always false for anything stackable**, which is every salve,
-    /// component and catalyst.
+    /// Whether this recipe has already produced its one permanent result. True for a trap or a piece of
+    /// equipment you own and for a world repair already done; **always false for anything stackable**,
+    /// which is every salve, component and catalyst.
     /// </summary>
     /// <remarks>
     /// Two questions rather than one because the two permanences are stored differently and neither can
@@ -553,9 +553,24 @@ public partial class InventoryCraftingManager : Node
     /// covered the three major repairs and quietly left the tools spammable.
     /// </para>
     /// <para>
-    /// Equipment is deliberately <i>not</i> here. A second coat is a legitimate thing to want — the
-    /// cache exists partly so a spare can be banked (`combat.md` §18) — and §19's reversal made it
-    /// survive death rather than made it unique.
+    /// <b>Equipment joined the held arm 2026-08-07, on Jeremy's ruling after playing chapter 2:</b>
+    /// *"you can create equipment items more than once, which didn't trap me with limited resources but
+    /// still isn't helpful — removing it from the list once made is cleaner."* This paragraph used to say
+    /// the opposite, and its reason was already dead when it was written: it argued *"a second coat is a
+    /// legitimate thing to want — the cache exists partly so a spare can be banked (§18)"*, but §19
+    /// **retired that purpose** in the same breath as it made equipment survive death (`combat.md`, *"the
+    /// shared cache is retired, not deleted… equipment surviving death removes that purpose"*). With
+    /// nothing able to take a coat off you, a second one is a row that can never do anything but spend
+    /// materials. Equipment is now permanent on exactly the terms a trap is.
+    /// </para>
+    /// <para>
+    /// <b>The cache is counted, not just the satchel</b>, and that half is a fix rather than a new rule.
+    /// <see cref="Has"/> reads <c>_stacks</c> alone, so before today <see cref="Deposit"/> was a way to
+    /// launder the trap arm: bank the snare, and the bench offered to forge another. The cache is retired
+    /// but it is not deleted and <c>Deposit</c> still works, so the permanence question has to be *do you
+    /// own one anywhere* — the only reading that cannot be undone by moving an item between two boxes you
+    /// control. Deliberately <i>not</i> folded into <c>Has</c>, which every ingredient check calls and
+    /// which must keep meaning *to hand*: materials in the cache are not on the bench.
     /// </para>
     /// </remarks>
     public bool AlreadyMade(RecipeData recipe)
@@ -566,8 +581,9 @@ public partial class InventoryCraftingManager : Node
             WorldStateManager.Instance?.GetFlag(recipe.SetsFlag) == true)
             return true;
 
-        return GetItem(recipe.OutputItemId)?.Category == ItemCategory.Trap &&
-               Has(recipe.OutputItemId);
+        var made = GetItem(recipe.OutputItemId)?.Category;
+        return made is ItemCategory.Trap or ItemCategory.Equipment &&
+               GetCount(recipe.OutputItemId) + GetStashCount(recipe.OutputItemId) > 0;
     }
 
     /// <summary>

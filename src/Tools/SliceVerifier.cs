@@ -5102,6 +5102,499 @@ public static class SliceVerifier
         pockets.Leave();
         verbInput.Free();
 
+        // -- The author's flood light (`DreamAuthorLight`) --
+        //
+        // **Debug scaffolding, gated for one reason: it changes nodes it did not create.** Everything else in
+        // the Dream owns its own state, so leaving it half-applied is not possible; this reaches into a
+        // `WorldEnvironment` and a `SubViewportContainer` that belong to an authored pocket and puts them
+        // back afterwards. That is the eighth blind-spot class by construction — a half-applied arrangement
+        // that looks applied — and the failure would be silent and permanent-looking: a pocket that stays
+        // washed out and un-posterised until you notice the *look* is gone rather than the light being on.
+        //
+        // Driven on a synthetic tree rather than a pocket scene, because a headless run has no geometry at
+        // all and the thirteen scene-less stand-ins never will. What is being checked is the restore, and the
+        // restore does not care whose nodes they are.
+        // **The fixture is parented into the live scene tree, and that is not tidiness.** Written first as a
+        // detached `new Node()` with children hung off it, the restore-on-exit check below failed — because
+        // `_ExitTree` never fires for a node that was never *in* the tree, so `RemoveChild` on an orphan runs
+        // no teardown at all. The code was right and the fixture was measuring the wrong thing. Same family as
+        // unit 5's check that stayed green with its guard removed, caught here only because this one went red.
+        var floodRoot = new Node();
+        var floodTree = Engine.GetMainLoop() as SceneTree;
+        Check("a live scene tree to hang the fixture in, or its teardown is untestable", floodTree != null);
+        floodTree?.Root.AddChild(floodRoot);
+
+        var floodEnv = new WorldEnvironment { Environment = new Godot.Environment { AmbientLightEnergy = 0.04f } };
+        var floodLook = new ShaderMaterial();
+        var floodContainer = new SubViewportContainer { Material = floodLook };
+        floodRoot.AddChild(floodEnv);
+        floodRoot.AddChild(floodContainer);
+
+        var flood = new DreamAuthorLight();
+        floodRoot.AddChild(flood);
+
+        Check("the flood starts down", !flood.IsFlooded);
+
+        flood.Toggle();
+        Check("pressing it lights the pocket at once",
+            flood.IsFlooded && floodEnv.Environment.AmbientLightEnergy > 1f);
+
+        // **The half that makes it useful, and the half most likely to be dropped as an optimisation.** Ambient
+        // alone hands a bright room to `DreamLook`, which posterises it into a few greys under a clamp — so a
+        // flooded pocket comes out one flat value and the author can see *less* than by lamplight.
+        Check("and takes the monochrome off, or flooding would make it less legible rather than more",
+            floodContainer.Material == null);
+
+        flood.Toggle();
+        Check("pressing it again puts the ambient back exactly",
+            !flood.IsFlooded && Mathf.IsEqualApprox(floodEnv.Environment.AmbientLightEnergy, 0.04f));
+
+        // Reference equality on purpose: the look must be *the same* material, not an equivalent one.
+        // `DreamLook.tres` is shared across every pocket, so a flood that rebuilt it would be a debug key
+        // quietly forking the game's art.
+        Check("and the same look material, not a replacement",
+            ReferenceEquals(floodContainer.Material, floodLook));
+
+        // Leaving while it is up is the realistic mistake — F9 on, then walk out — and the restore has to be
+        // driven by the node going away rather than by the author remembering.
+        flood.Toggle();
+        Check("flooded again, to leave while it is up", flood.IsFlooded);
+        floodRoot.RemoveChild(flood);
+        Check("the light going away restores what it changed, with no second press",
+            Mathf.IsEqualApprox(floodEnv.Environment.AmbientLightEnergy, 0.04f)
+            && ReferenceEquals(floodContainer.Material, floodLook));
+
+        // **Two lights in one tree, because there are two ways to look at a pocket.** Crossing in from the
+        // game gets one from `PocketHost`; pressing F6 on the scene — the way a pocket is actually authored —
+        // has no host, so that workflow wants one in the scene, and a pocket that carries one will then have
+        // both the moment it is crossed into. Both polling would toggle twice in a frame and F9 would read as
+        // dead, which is a silent failure in the one workflow this feature exists for.
+        // Back into the tree: the check above took it out, which released the claim along with the restore.
+        floodRoot.AddChild(flood);
+
+        var second = new DreamAuthorLight();
+        floodRoot.AddChild(second);
+        Check("with two lights in the tree, the first one in holds the key",
+            flood.OwnsTheKey && !second.OwnsTheKey);
+
+        // **The key is actually pressed here, and it has to be.** Polling both with no key down would leave
+        // both dark whether the claim was read or not — a universal over an empty set, which unit 4b already
+        // paid for once. Writing that check is what turned the toggle from a raw key into an action: a
+        // *physical* key cannot be put down from code at all (`ParseInputEvent` does not move what
+        // `IsPhysicalKeyPressed` reports), so the guard underneath it was unmeasurable by construction.
+        Check("the key behind the flood is bound", InputMap.HasAction(DreamAuthorLight.ToggleAction));
+
+        Input.ActionPress(DreamAuthorLight.ToggleAction);
+        second.Poll();
+        flood.Poll();
+        Input.ActionRelease(DreamAuthorLight.ToggleAction);
+        second.Poll();
+        flood.Poll();
+
+        Check("pressing the key reaches the holder", flood.IsFlooded);
+        Check("and not the spare, which would toggle it straight back and read as a dead key",
+            !second.IsFlooded);
+
+        flood.Toggle();
+
+        flood.Free();
+        second.Poll();
+        Check("the key passes on when the holder goes, rather than dying with it", second.OwnsTheKey);
+
+        floodTree?.Root.RemoveChild(floodRoot);
+        floodRoot.Free();
+
+        // The host attaches it for the same reason it attaches the poller: a thing every pocket must have,
+        // that takes no configuration and has no position, is wiring rather than authoring — and this fixture
+        // proves it on a pocket with no scene to have wired one in.
+        world.SetFlag(Flags.PocketCleared(PocketKnot), false);
+        Check("a pocket to author by", pockets.Enter(PocketKnot));
+        Check("and the host gave it a flood light, with no scene authoring one",
+            _host == null || _host.AuthorLight != null);
+
+        pockets.Leave();
+        Check("which goes away with the pocket", _host == null || _host.AuthorLight == null);
+
+        // -- The boundary rig (`PocketBounds`) --
+        //
+        // The same three jobs in all fourteen pockets from one number, so the thing worth gating is that the
+        // number means what it says: the walls stand **outside** the clear volume. Half a thickness the wrong
+        // way and every pocket is quietly a metre smaller than it was authored, along all four sides, with no
+        // symptom but geometry poking through a wall you cannot see.
+        var bounds = new PocketBounds { Size = new Vector3(20.0f, 8.0f, 30.0f), Thickness = 2.0f };
+        floodTree?.Root.AddChild(bounds);
+
+        Check("four walls and a lid", bounds.ShapeCount == 5);
+
+        // A shade inside each face, and a shade outside it. The pair is the check — *inside is clear* alone
+        // passes for a rig that built nothing at all.
+        var justInside = new[]
+        {
+            new Vector3(9.9f, 4.0f, 0.0f), new Vector3(-9.9f, 4.0f, 0.0f),
+            new Vector3(0.0f, 4.0f, 14.9f), new Vector3(0.0f, 4.0f, -14.9f),
+            new Vector3(0.0f, 7.9f, 0.0f), new Vector3(0.0f, 0.1f, 0.0f),
+        };
+        var justOutside = new[]
+        {
+            new Vector3(10.1f, 4.0f, 0.0f), new Vector3(-10.1f, 4.0f, 0.0f),
+            new Vector3(0.0f, 4.0f, 15.1f), new Vector3(0.0f, 4.0f, -15.1f),
+            new Vector3(0.0f, 8.1f, 0.0f),
+        };
+
+        Check("the volume you typed is the volume you get, right up to each face",
+            justInside.All(p => bounds.Contains(p) && !bounds.Blocks(p)));
+        Check("and a step past any face is solid, including straight up, which is what stops Float",
+            justOutside.All(p => bounds.Blocks(p)));
+
+        // **The floor is deliberately open**, so a seam in the authored floor drops you rather than being
+        // silently patched — which is the whole reason the catch volume (C5) is a separate, deferred thing.
+        Check("the floor is left open on purpose", !bounds.Blocks(new Vector3(0.0f, -0.1f, 0.0f)));
+
+        // Doubling is invisible when it happens — the second set of walls sits exactly on the first.
+        bounds.Rebuild();
+        bounds.Rebuild();
+        Check("rebuilding replaces the box rather than stacking another inside it", bounds.ShapeCount == 5);
+
+        bounds.BuildCap = false;
+        bounds.Rebuild();
+        Check("and the lid can be taken off for a pocket with a real ceiling", bounds.ShapeCount == 4
+            && !bounds.Blocks(new Vector3(0.0f, 8.1f, 0.0f)));
+
+        // **The border is drawn where the wall is, which is the whole reason it replaced fog.** Depth fog
+        // travels with the camera and cannot mark anything fixed; a mesh parented to the collision shape is
+        // at the boundary by construction and cannot drift from it.
+        Check("no shell until it is asked for", !bounds.ShellFaces.Any());
+
+        bounds.BuildCap = true;
+        bounds.BorderShell = true;
+        bounds.BorderValue = 0.55f;
+        bounds.Rebuild();
+
+        var faces = bounds.ShellFaces.ToList();
+        Check($"asked for, every wall is drawn and none is drawn twice ({faces.Count} of {bounds.ShapeCount})",
+            faces.Count == bounds.ShapeCount && bounds.ShapeCount == 5);
+
+        // **Unshaded, or the border is black.** A lit surface past the lamp's radius shows nothing at all,
+        // which is exactly the "boundary you cannot see" this exists to fix — so the shading mode is the
+        // feature, not a detail of it.
+        Check("and drawn unshaded, so it reads out past the lamp instead of going black",
+            faces.All(f => f.MaterialOverride is StandardMaterial3D
+            {
+                ShadingMode: BaseMaterial3D.ShadingModeEnum.Unshaded,
+                CullMode: BaseMaterial3D.CullModeEnum.Disabled,
+            }));
+
+        // Grey, for the same reason the fog had to be: chroma is the signal channel.
+        Check("and in grey, because a tinted border would be promoted to the objective white",
+            faces.All(f => f.MaterialOverride is StandardMaterial3D m
+                && Mathf.IsEqualApprox(m.AlbedoColor.R, m.AlbedoColor.G)
+                && Mathf.IsEqualApprox(m.AlbedoColor.G, m.AlbedoColor.B)));
+
+        floodTree?.Root.RemoveChild(bounds);
+        bounds.Free();
+
+        // -- The Dream's shared environment, and the one way fog can go badly wrong here --
+        //
+        // `DreamLook.tres`'s argument applied to the atmosphere: an `Environment` embedded per scene is
+        // fourteen copies that drift, so there is one file and every pocket points at it.
+        var dreamEnv = ResourceLoader.Load<Godot.Environment>("res://scenes/dream/DreamEnvironment.tres");
+        Check("the Dream has one shared environment", dreamEnv != null);
+
+        if (dreamEnv != null)
+        {
+            // **Fog is off, and that is a finding rather than a default.** It was turned on to mark the
+            // border and cannot: depth fog measures distance from the *camera*, so it travels with the player
+            // — always clear for the first `begin` metres in every direction, wherever you stand. `FogVolume`,
+            // which would place fog in a box, is Forward+ only and this project runs `gl_compatibility`.
+            // The border is `PocketBounds.BorderShell` now, which is geometry and therefore stays put.
+            //
+            // This is not asserted either way: fog as *atmosphere* is a live option and turning it back on
+            // should not redden a suite. What is asserted is the trap underneath it.
+            var fog = dreamEnv.FogLightColor;
+            var chroma = Mathf.Max(Mathf.Max(fog.R, fog.G), fog.B) - Mathf.Min(Mathf.Min(fog.R, fog.G), fog.B);
+
+            // **`DreamLook.gdshader` promotes anything with chroma at or above `signal_chroma` to pure
+            // white** — the one visual reserved for *go here*. A tinted fog becomes a glowing wall the player
+            // reads as the objective. Godot's own default fog colour is bluish enough to trip this, which is
+            // what makes it a real check rather than a restatement of the file.
+            Check($"the Dream's fog has no colour in it, on or off (chroma {chroma:0.000}, "
+                + $"enabled {dreamEnv.FogEnabled}, mode {dreamEnv.FogMode}, "
+                + $"{dreamEnv.FogDepthBegin:0.#}→{dreamEnv.FogDepthEnd:0.#})",
+                chroma < 0.04f);
+
+            // Reversed by a typo is silent — the fog simply never appears — and it stays worth checking while
+            // the values sit there waiting to be switched on.
+            Check("and a depth band that runs outward rather than inward",
+                dreamEnv.FogDepthEnd > dreamEnv.FogDepthBegin);
+        }
+
+        // -- Suppress actually puts the lamp out (`DreamSuppressibleLight`) --
+        //
+        // The cost has been gated since unit 8 and the *act* had nothing over it, which is the shape of gap
+        // that leaves a verb feeling unbuilt while every check about it is green.
+        world.SetFlag(Flags.PocketCleared(PocketKnot), false);
+        Check("a pocket to put the lamp out in", pockets.Enter(PocketKnot));
+        resolve.SetTo(resolve.Max);
+
+        var lamp = new DreamSuppressibleLight { OmniRange = 6.0f, FadeSeconds = 0.2f, SuppressedFraction = 0.0f };
+        floodTree?.Root.AddChild(lamp);
+
+        // **The tuner keeps the lamp while you are lit, and this is the check that says so.** A node driving
+        // the radius every frame would stomp `,` / `.` on the frame after each nudge — the lamp would spring
+        // back and the keys would read as broken, with nothing anywhere to explain it.
+        lamp.OmniRange = 9.0f;
+        lamp.Tick(1.0);
+        Check("while you are lit it does not touch the radius, so the tuner still owns it",
+            Mathf.IsEqualApprox(lamp.OmniRange, 9.0f) && Mathf.IsEqualApprox(lamp.BaseRange, 9.0f));
+
+        Check("holding the verb", DreamVerbs.BeginHold(DreamVerb.Suppress));
+        lamp.Tick(1.0);
+        Check("puts the lamp out", Mathf.IsZeroApprox(lamp.OmniRange) && Mathf.IsZeroApprox(lamp.Factor));
+
+        DreamVerbs.EndHold(DreamVerb.Suppress);
+        lamp.Tick(1.0);
+        Check("and letting go brings back the radius it was tuned to, not the one it was built with",
+            Mathf.IsEqualApprox(lamp.OmniRange, 9.0f));
+
+        // **The 100%-or-90% question, kept as a number.** Whether hiding should be total or leave a stub you
+        // can still read the floor by is a feel question that play settles, so it is one authored field —
+        // and this asserts the field is really consulted rather than being a slider wired to nothing.
+        lamp.SuppressedFraction = 0.25f;
+        DreamVerbs.BeginHold(DreamVerb.Suppress);
+        lamp.Tick(1.0);
+        Check("and how much lamp is left while hiding is authored, not fixed at nothing",
+            Mathf.IsEqualApprox(lamp.OmniRange, 9.0f * 0.25f));
+
+        DreamVerbs.EndHold(DreamVerb.Suppress);
+        lamp.Tick(1.0);
+
+        // **Flare is the mirror, on the same channel.** §19 calls it *"the exact mirror of Suppress"*, and
+        // once Suppress owned the radius the mirror was a multiplier rather than a second mechanism. This is
+        // the light only — revealing geometry and being seen are a gate variant and creature AI, neither
+        // written, which is worth a check saying what *is* here rather than assuming the verb is done.
+        world.SetFlag(Flags.VerbLearned(DreamVerb.Flare), true);
+        lamp.FlaredMultiple = 3.0f;
+        Check("holding Flare", DreamVerbs.BeginHold(DreamVerb.Flare));
+        lamp.Tick(4.0);
+        Check("throws the lamp wide instead of putting it out",
+            Mathf.IsEqualApprox(lamp.OmniRange, 9.0f * 3.0f));
+
+        // **Both at once is a contradiction the player can pay for, so it needs a settled answer.** The rates
+        // are additive, so holding Q and E together drains 8 a second; going dark is the safe resolution,
+        // because the alternative hands someone who fumbled a key a tripled lamp in a room that hunts light.
+        // Asserted as *Suppress's own number* rather than as "dark", which is the stronger claim: the lamp
+        // lands on the suppressed fraction still in force (0.25 from the check above), so this cannot pass by
+        // the light happening to be off for some other reason.
+        DreamVerbs.BeginHold(DreamVerb.Suppress);
+        lamp.Tick(4.0);
+        Check("and hiding beats flaring when both are held, rather than the louder one winning",
+            Mathf.IsEqualApprox(lamp.OmniRange, 9.0f * 0.25f));
+        Check("while paying for both, because the meter sums them",
+            Mathf.IsEqualApprox(resolve.CurrentRatePerSecond(),
+                GameConfig.SuppressDrainPerSecond + GameConfig.FlareDrainPerSecond));
+
+        DreamVerbs.EndHold(DreamVerb.Suppress);
+        DreamVerbs.EndHold(DreamVerb.Flare);
+        world.SetFlag(Flags.VerbLearned(DreamVerb.Flare), false);
+        floodTree?.Root.RemoveChild(lamp);
+        lamp.Free();
+        pockets.Leave();
+
+        // -- The creature roster on disk --
+        //
+        // **The fifth blind-spot class, for the one collection that has no registry.** Rooms, items, recipes,
+        // entities and pockets are each loaded by a manager, so an unparseable file shows up as a count that
+        // does not match. A `DreamCreatureData` is reached through a `DreamCreature`'s `[Export]` and nothing
+        // loads them all — so a file that fails to parse is a creature that silently costs nothing, which
+        // `DreamCreature._Ready` already calls out as indistinguishable from one the player is avoiding.
+        var creatureFiles = new List<string>();
+        using (var creatureDir = DirAccess.Open(GameConfig.DreamCreatureDataDir))
+        {
+            if (creatureDir != null)
+            {
+                creatureDir.ListDirBegin();
+                for (var f = creatureDir.GetNext(); f != ""; f = creatureDir.GetNext())
+                    if (!creatureDir.CurrentIsDir() && (f.EndsWith(".tres") || f.EndsWith(".tres.remap")))
+                        creatureFiles.Add($"{GameConfig.DreamCreatureDataDir}/{f.TrimSuffix(".remap")}");
+            }
+        }
+
+        var creatures = creatureFiles
+            .Select(path => ResourceLoader.Load<DreamCreatureData>(path))
+            .Where(c => c != null)
+            .ToList();
+
+        Check($"every creature file on disk loaded ({creatures.Count} of {creatureFiles.Count})",
+            creatureFiles.Count > 0 && creatures.Count == creatureFiles.Count);
+
+        var namelessCreature = creatures
+            .Where(c => string.IsNullOrEmpty(c.Id) || string.IsNullOrEmpty(c.DisplayName))
+            .Select(c => string.IsNullOrEmpty(c.Id) ? "<no id>" : c.Id)
+            .ToList();
+
+        // The display name is not decoration: `DreamCreature.Called` falls back to "Something", so a blank one
+        // degrades the only line the player ever reads about a creature, quietly and everywhere.
+        Check($"each one has an id and something to be called{Listing(namelessCreature)}",
+            namelessCreature.Count == 0);
+
+        var duplicateCreature = creatures
+            .GroupBy(c => c.Id)
+            .Where(g => g.Count() > 1)
+            .Select(g => g.Key)
+            .ToList();
+        Check($"and the ids are distinct{Listing(duplicateCreature)}", duplicateCreature.Count == 0);
+
+        // **The authored lie, and the reason this block is worth its length.** `Touch` ejects before it reads
+        // `ResolveCost` when `Banishes` is set, so a cost on a boss is a number that looks tuned, reads as
+        // tuned, and is never once consulted. Same class as the 33 harvest nodes paying items that did not
+        // exist: a field that means nothing where it sits.
+        var costlyBanisher = creatures
+            .Where(c => c.Banishes && c.ResolveCost != 0)
+            .Select(c => $"{c.Id}: {c.ResolveCost}")
+            .ToList();
+        Check($"a creature that banishes authors no chunk, because nothing would read it{Listing(costlyBanisher)}",
+            costlyBanisher.Count == 0);
+
+        // And the mirror. A minor creature costing zero is not gentle — it is invisible: it drifts about
+        // taking nothing, which looks exactly like one you are successfully avoiding.
+        var freeMinor = creatures
+            .Where(c => !c.Banishes && c.ResolveCost <= 0)
+            .Select(c => c.Id)
+            .ToList();
+        Check($"and one that does not banish costs something, or it is scenery{Listing(freeMinor)}",
+            freeMinor.Count == 0);
+
+        // **A rule with a citation rather than a preference.** `DreamVerb.Suppress` is documented as *"the only
+        // verb boss pocket 1 can be solved with, since Float is what is inside it"* — which is only true while
+        // the thing hunting you there stops hunting when your light goes out. A relentless boss is a legitimate
+        // design and it is not this one: flipping this field makes that pocket unsolvable with what the player
+        // holds, so it should cost a red line and a decision rather than happen quietly.
+        var relentless = creatures
+            .Where(c => c.Banishes && !c.PursuesOnlyWhenLit)
+            .Select(c => c.Id)
+            .ToList();
+        Check($"and it stops hunting when the light goes out, or Suppress is not an answer to it{Listing(relentless)}",
+            relentless.Count == 0);
+
+        // -- What a pocket scene has to be, checked by building one --
+        //
+        // **`PocketHost` asks a scene for four things and complains about none of them.** It hides the room
+        // view, adds the scene and turns the viewports on; if the container has no look material the pocket is
+        // simply in colour, and if there is no way out you are in there until the bar empties. Both are
+        // *authoring* faults with no error and no red line — `whats-left.md`'s "a wrong node name fails
+        // silently", one realm over.
+        //
+        // Only scenes a `PocketData` actually names are swept. That is the honest definition of a pocket
+        // scene, it keeps `DreamProbe.tscn` — a tuning bench, not a pocket — out of it, and it means each of
+        // the fourteen is covered on the day it is pointed at rather than on the day someone remembers.
+        foreach (var pocketScene in authoredPockets.Where(p => p.HasScene && ResourceLoader.Exists(p.ScenePath)))
+        {
+            var packed = ResourceLoader.Load<PackedScene>(pocketScene.ScenePath);
+            var root = packed?.Instantiate();
+
+            Check($"{pocketScene.Id}'s scene builds", root != null);
+            if (root == null) continue;
+
+            floodTree?.Root.AddChild(root);
+
+            var all = new List<Node>();
+            void Walk(Node n) { all.Add(n); foreach (var c in n.GetChildren()) Walk(c); }
+            Walk(root);
+
+            // A `Control`, because the host adds it beside `RoomView` and hides that instead of changing
+            // scene. A `Node3D` root would simply not draw, with nothing to say why.
+            Check($"{pocketScene.Id} is a Control, so it can sit beside the room view", root is Control);
+
+            var containers = all.OfType<SubViewportContainer>().ToList();
+            Check($"{pocketScene.Id} draws its 3D through a SubViewportContainer", containers.Count > 0);
+
+            // **The monochrome lives on the container, not in the scene.** Forget it and the Dream is in full
+            // colour — which looks like a shader bug and is a missing drag-and-drop.
+            Check($"{pocketScene.Id} wears the look pass, or the Dream is in colour",
+                containers.Any(c => c.Material != null));
+
+            // **`stretch_shrink` is what makes the pocket render at 480x270, and forgetting it is invisible in
+            // a screenshot.** With `stretch` on and no shrink, the container resizes the `SubViewport` to its
+            // own 1920x1080, so everything still draws and still looks monochrome — but `DreamLook` derives
+            // its Bayer grid from `textureSize(TEXTURE, 0)`, so an 8x8 cell lands on 8 screen pixels instead
+            // of 32. The shader's own comment names the outcome: *"the pattern is four times too fine and
+            // reads as noise instead of as texture."*
+            //
+            // **What it actually looked like was a colour, which is why this needed a gate rather than an
+            // eye.** Reported twice as green fog at the white/grey boundary and only while moving. Nothing in
+            // the frame is green — both of the shader's exits are `vec3(x)`, so R, G and B are equal by
+            // construction — but a near-1-pixel alternating pattern lights alternating subpixels on an
+            // RGB-striped panel, and green is the middle one. Standing still your eye integrates it back to
+            // grey; moving, the pattern crawls across the geometry and the fringe reads as colour. **A
+            // rendering fault that is not in the render is exactly the kind a screenshot cannot settle**, and
+            // the resolution is a number in the scene, so it belongs here.
+            //
+            // Asserted as "shrinks at all" rather than "== 4": 4 is the tuned value, but a pocket authored at
+            // 2 or 8 is a look decision, and only 1 is the accident.
+            Check($"{pocketScene.Id} shrinks its viewport, or the dither lands on the wrong grid",
+                containers.All(c => c.StretchShrink > 1));
+
+            // Nearest, or the upscale interpolates the pixels the shrink just bought back into a smear — the
+            // shrink is only half of the low-resolution look and the other half is one enum.
+            Check($"{pocketScene.Id} upscales without filtering, so the pixels stay pixels",
+                containers.All(c => c.TextureFilter is CanvasItem.TextureFilterEnum.Nearest
+                    or CanvasItem.TextureFilterEnum.NearestWithMipmaps));
+
+            var viewports = all.OfType<SubViewport>().ToList();
+            Check($"{pocketScene.Id} has a viewport for the host to switch off while you are awake", viewports.Count > 0);
+
+            // **The trap `dream-probe.md` names in capitals.** A private `World3D` costs nothing at runtime and
+            // makes every node in it invisible in the editor's 3D view — so the pocket can be run and never
+            // authored. It reads as tidiness and it is the one setting that removes the ability to build.
+            var privateWorld = viewports.Where(v => v.OwnWorld3D).ToList();
+            Check($"{pocketScene.Id} shares the parent world, or none of it can be authored ({privateWorld.Count} private)",
+                privateWorld.Count == 0);
+
+            // A pocket you cannot walk out of is not a softlock — the bar empties and you are carried to a
+            // camp — but it charges a whole visit for a wrong turn, and nothing about it looks unfinished.
+            var ways = all.Count(n => n is PocketExit or PocketAnchor);
+            Check($"{pocketScene.Id} has a way back out of it ({ways})", ways > 0);
+
+            // **`PocketStandalone` has to tell two runs apart, so both are driven here.** Under F6 it is the
+            // only thing that can make a pocket a pocket; under F5 `PocketHost` has already crossed you in and
+            // it must keep its hands off — otherwise every real crossing would silently top up the bar and
+            // hand over two verbs the player has not earned. One node, two answers, and the wrong one is
+            // invisible in play.
+            var standalones = all.OfType<PocketStandalone>().ToList();
+            if (standalones.Count > 0)
+            {
+                // **There is deliberately no check here that it stands down under F5, and the reason is worth
+                // more than the check would have been.** One was written, and its break-test — deleting the
+                // `InsideTheDream` guard — stayed **green**: `PocketManager.Enter` independently refuses with
+                // `AlreadyInside`, so nothing observable changes either way. §3's seventh class, caught by
+                // planning the break-test rather than by the suite. The guard stays, because without it every
+                // legitimate crossing pushes a warning nobody should be trained to ignore — but it is
+                // defence-in-depth over a rule that is already gated where it lives, and a check over it would
+                // pass whether it existed or not.
+                //
+                // What *is* falsifiable is the half only this node does: working out which pocket the scene
+                // belongs to, from `ScenePath` rather than an authored id, so a copied scene cannot carry a
+                // stale one.
+                foreach (var standalone in standalones) standalone.Engage();
+                Check($"{pocketScene.Id}'s helper crosses you in when nothing else has, and picks its own pocket",
+                    standalones.All(s => s.Engaged) && pockets.CurrentPocketId == pocketScene.Id);
+
+                // **Being inside a pocket is not the same as the keys working, and the first version of this
+                // node shipped believing it was.** `DreamVerbHold` is attached by `PocketHost` — the one thing
+                // a standalone run does not have — so entering only moved the verbs from *refused, with a
+                // reason in the log* to *silently doing nothing*, which is the worse of the two.
+                Check($"{pocketScene.Id}'s helper also brings a verb poller, or the keys reach nothing",
+                    standalones.All(s => s.VerbInputLive));
+
+                pockets.Leave();
+                foreach (DreamVerb granted in System.Enum.GetValues<DreamVerb>())
+                    if (granted != DreamVerb.None) world.SetFlag(Flags.VerbLearned(granted), false);
+            }
+
+            floodTree?.Root.RemoveChild(root);
+            root.QueueFree();
+        }
+
         // -- A minor creature takes a chunk, and the cooldown is what makes that survivable --
         var minor = new DreamCreatureData { Id = "verify_minor", ResolveCost = 9, TouchCooldownSeconds = 5f };
         var creature = new DreamCreature { Data = minor };
@@ -6338,10 +6831,17 @@ public static class SliceVerifier
             items.Any(i => i.Track == KnowledgeTrack.Craft) &&
             items.Any(i => i.Track == KnowledgeTrack.Physick));
 
-        // -- 9. The permanence rule and its Equipment exemption, driven live --
+        // -- 9. The permanence rule, driven live --
         // Asserted about the running bench rather than about the fields, because `AlreadyMade`'s two arms
-        // read different storage — a flag for a repair, the satchel for a trap — and only one of them is
-        // exercised by the tool recipes the stations sweep already covers.
+        // read different storage — a flag for a repair, what you own for a trap or a coat — and only one of
+        // them is exercised by the tool recipes the stations sweep already covers.
+        //
+        // **This block used to assert the opposite for equipment** — *"and a spare is allowed, the cache
+        // exists partly to bank one"* — and it is worth leaving that on the record, because a green gate
+        // asserting a repealed rule is worse than no gate: it is a check standing guard over the bug. The
+        // reason it cited had already been struck by §19 in the same breath as equipment began surviving
+        // death (*"the shared cache is retired… equipment surviving death removes that purpose"*), and
+        // nothing re-read this check when that landed. Jeremy found it by playing, 2026-08-07.
         inv.ResetAll();
         world.ResetAll();
         nav.GoToRoom("verify_camp");
@@ -6359,10 +6859,28 @@ public static class SliceVerifier
             inv.GetCount("mat_heartwood") == 1 && inv.GetCount("mat_pitch") == 1);
 
         Check("a coat is made", inv.Craft("recipe_armour_tanners_coat"));
-        Check("and a spare is allowed — the cache exists partly to bank one",
-            inv.Inspect("recipe_armour_tanners_coat") == CraftBlock.None &&
-            inv.Craft("recipe_armour_tanners_coat") &&
-            inv.GetCount("armour_tanners_coat") == 2);
+        Check("and refuses a second, on the same terms as the trap",
+            inv.Inspect("recipe_armour_tanners_coat") == CraftBlock.AlreadyMade);
+        Check("with the hide for another still to hand, so that refusal is not poverty either",
+            inv.GetCount("mat_cured_hide") >= 3);
+
+        // The cache is retired but `Deposit` still works, so it is a live route to launder the permanence
+        // rule: put the one you own in the box and the bench sees an empty satchel. Both arms, because the
+        // trap arm shipped with this hole and only the coat was reported.
+        Check("the snare goes into the cache", inv.Deposit("trap_snare") && inv.GetCount("trap_snare") == 0);
+        Check("and the bench still refuses it — owning one anywhere is owning one",
+            inv.Inspect("recipe_trap_snare") == CraftBlock.AlreadyMade);
+        Check("a banked coat is refused the same way",
+            inv.Deposit("armour_tanners_coat") &&
+            inv.Inspect("recipe_armour_tanners_coat") == CraftBlock.AlreadyMade);
+        // The other side of the rule, made twice rather than merely inspected: a `!= AlreadyMade` on a
+        // recipe nobody has learned would pass on `Unknown` and measure nothing.
+        inv.Discover("lore_physick_deepmend");
+        inv.AddItem("herb_bitterroot", 6);
+        inv.AddItem("mat_tallow", 4);
+        Check("a salve is still repeatable, so permanence did not leak into the stackables",
+            inv.Craft("recipe_salve_deepmend") && inv.Craft("recipe_salve_deepmend") &&
+            inv.GetCount("salve_deepmend") == 2);
 
         // -- 10. The field nothing authored sets yet, and the reason is not just "not yet" --
         // (It is no longer unread: `Inspect` refuses on it as `CraftBlock.HalfKnown` since 2026-08-05, gated

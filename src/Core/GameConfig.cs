@@ -247,6 +247,20 @@ public static class GameConfig
     /// <summary>Dream pockets (unit 6). The replacement for the deleted heist registry.</summary>
     public const string PocketDataDir = "res://data/pockets";
 
+    /// <summary>
+    /// Dream creature types. <b>There is no registry behind this and there should not be one</b> — a
+    /// <c>DreamCreature</c> node points at its <c>DreamCreatureData</c> through an <c>[Export]</c>, so the
+    /// files are reached by the scenes that use them and nothing has to load them all.
+    /// </summary>
+    /// <remarks>
+    /// <b>The constant exists because the verifier reads it, and for no other reason.</b> <c>ZoneDataDir</c>
+    /// was declared, never used, and deleted on 2026-08-02 along with the class it pointed at; a path with no
+    /// reader is a claim that a directory means something. This one's reader is the roster sweep in
+    /// <c>SliceVerifier</c>, which is what makes the fifth blind-spot class — a file on disk that never became
+    /// content — closable for creatures the way it already is for rooms, items, recipes and pockets.
+    /// </remarks>
+    public const string DreamCreatureDataDir = "res://data/creatures";
+
     public const string SaveFilePath = "user://savegame.json";
 
     /// <summary>

@@ -1,0 +1,256 @@
+[gd_scene format=3 uid="uid://mi7u4kh8g3ot"]
+
+[ext_resource type="Script" uid="uid://56ltlaw4hyp4" path="res://src/Dream/DreamLookTuner.cs" id="1_tuner"]
+[ext_resource type="Script" uid="uid://7ty8vfjgu5rp" path="res://src/Dream/DreamProbeWalker.cs" id="2_walker"]
+[ext_resource type="Material" path="res://scenes/dream/DreamLook.tres" id="3_look"]
+[ext_resource type="Environment" path="res://scenes/dream/DreamEnvironment.tres" id="4_env"]
+[ext_resource type="Script" uid="uid://ujh3ngaqtsy5" path="res://src/Dream/DreamLightFlicker.cs" id="5_flicker"]
+[ext_resource type="Script" uid="uid://dfkuk2hbmssi1" path="res://src/Dream/DreamSuppressibleLight.cs" id="6_lamp"]
+[ext_resource type="Script" uid="uid://vqslsi5teufn" path="res://src/Dream/DreamAuthorLight.cs" id="7_authorlight"]
+[ext_resource type="Script" uid="uid://gdjd1ugup6pm" path="res://src/Dream/PocketBounds.cs" id="8_bounds"]
+[ext_resource type="Script" uid="uid://tc8kpquvwjhi" path="res://src/Dream/PocketExit.cs" id="9_exit"]
+[ext_resource type="Script" uid="uid://c30ptrfx5syly" path="res://src/Dream/PocketGate.cs" id="10_gate"]
+[ext_resource type="Script" uid="uid://6tx7k5um0g66" path="res://src/Dream/DreamCreature.cs" id="11_creature"]
+[ext_resource type="Resource" path="res://data/creatures/dream_still.tres" id="12_still"]
+[ext_resource type="Resource" path="res://data/creatures/dream_drifter.tres" id="13_drifter"]
+[ext_resource type="Script" uid="uid://d0rxcc2yo7t1p" path="res://src/Dream/PocketStandalone.cs" id="14_standalone"]
+
+[sub_resource type="BoxMesh" id="Mesh_ground"]
+size = Vector3(60, 1, 60)
+
+[sub_resource type="StandardMaterial3D" id="Mat_ground"]
+albedo_color = Color(0.5, 0.5, 0.5, 1)
+metallic_specular = 0.0
+
+[sub_resource type="BoxShape3D" id="Shape_ground"]
+size = Vector3(60, 1, 60)
+
+[sub_resource type="StandardMaterial3D" id="Mat_structure"]
+albedo_color = Color(0.62, 0.62, 0.62, 1)
+metallic_specular = 0.0
+
+[sub_resource type="PrismMesh" id="Mesh_landmark"]
+size = Vector3(4, 9, 4)
+
+[sub_resource type="SphereMesh" id="Mesh_signal"]
+radius = 0.22
+height = 0.44
+
+[sub_resource type="StandardMaterial3D" id="Mat_signal"]
+shading_mode = 0
+albedo_color = Color(1, 0.15, 0.15, 1)
+
+[sub_resource type="CapsuleMesh" id="Mesh_creature"]
+radius = 0.4
+height = 1.9
+
+[sub_resource type="StandardMaterial3D" id="Mat_creature"]
+albedo_color = Color(0.03, 0.03, 0.03, 1)
+metallic_specular = 0.0
+
+[sub_resource type="SphereShape3D" id="Shape_creature"]
+radius = 0.7
+
+[sub_resource type="CapsuleShape3D" id="Shape_player"]
+radius = 0.35
+height = 1.8
+
+[node name="Sandbox" type="Control" unique_id=236024757]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_tuner")
+
+[node name="DreamContainer" type="SubViewportContainer" parent="." unique_id=2074134818]
+unique_name_in_owner = true
+texture_filter = 1
+material = ExtResource("3_look")
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+stretch = true
+stretch_shrink = 4
+
+[node name="DreamViewport" type="SubViewport" parent="DreamContainer" unique_id=464223052]
+handle_input_locally = false
+gui_disable_input = true
+size = Vector2i(480, 270)
+render_target_update_mode = 4
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="DreamContainer/DreamViewport" unique_id=1931975790]
+environment = ExtResource("4_env")
+
+[node name="Bounds" type="Node3D" parent="DreamContainer/DreamViewport" unique_id=734150410]
+script = ExtResource("8_bounds")
+Size = Vector3(60, 20, 60)
+BorderShell = true
+
+[node name="Ground" type="MeshInstance3D" parent="DreamContainer/DreamViewport" unique_id=783834415]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
+mesh = SubResource("Mesh_ground")
+surface_material_override/0 = SubResource("Mat_ground")
+
+[node name="GroundBody" type="StaticBody3D" parent="DreamContainer/DreamViewport/Ground" unique_id=619421058]
+
+[node name="Collision" type="CollisionShape3D" parent="DreamContainer/DreamViewport/Ground/GroundBody" unique_id=307327210]
+shape = SubResource("Shape_ground")
+
+[node name="Pillars" type="Node3D" parent="DreamContainer/DreamViewport" unique_id=1338727177]
+
+[node name="PillarA" type="CSGBox3D" parent="DreamContainer/DreamViewport/Pillars" unique_id=2056935035]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 3, -6)
+use_collision = true
+size = Vector3(3, 6, 3)
+material = SubResource("Mat_structure")
+
+[node name="PillarB" type="CSGBox3D" parent="DreamContainer/DreamViewport/Pillars" unique_id=599802182]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7, 2, -14)
+use_collision = true
+size = Vector3(3, 4, 3)
+material = SubResource("Mat_structure")
+
+[node name="PillarC" type="CSGBox3D" parent="DreamContainer/DreamViewport/Pillars" unique_id=1915338282]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14, 4, 8)
+use_collision = true
+size = Vector3(4, 8, 4)
+material = SubResource("Mat_structure")
+
+[node name="WallStub" type="CSGBox3D" parent="DreamContainer/DreamViewport/Pillars" unique_id=263862392]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14, 2.5, 6)
+use_collision = true
+size = Vector3(12, 5, 1.5)
+material = SubResource("Mat_structure")
+
+[node name="Ramp" type="CSGBox3D" parent="DreamContainer/DreamViewport" unique_id=1239445845]
+transform = Transform3D(1, 0, 0, 0, 0.9397, 0.342, 0, -0.342, 0.9397, 0, 1.2, 10)
+use_collision = true
+size = Vector3(5, 0.5, 12)
+material = SubResource("Mat_structure")
+
+[node name="Shelf" type="CSGBox3D" parent="DreamContainer/DreamViewport" unique_id=1438286854]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.3, 17)
+use_collision = true
+size = Vector3(8, 0.5, 6)
+material = SubResource("Mat_structure")
+
+[node name="HighLedge" type="CSGBox3D" parent="DreamContainer/DreamViewport" unique_id=1450224173]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16, 7, -14)
+use_collision = true
+size = Vector3(7, 0.5, 7)
+material = SubResource("Mat_structure")
+
+[node name="Gate" type="Node" parent="DreamContainer/DreamViewport/HighLedge" unique_id=934799563]
+script = ExtResource("10_gate")
+Requires = 2
+
+[node name="Landmark" type="MeshInstance3D" parent="DreamContainer/DreamViewport" unique_id=1181103384]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 20, 4.5, -20)
+mesh = SubResource("Mesh_landmark")
+surface_material_override/0 = SubResource("Mat_structure")
+
+[node name="FarLightLandmark" type="OmniLight3D" parent="DreamContainer/DreamViewport" unique_id=966874628]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 20, 7, -15)
+light_energy = 1.6
+light_specular = 0.0
+omni_range = 14.0
+
+[node name="Flicker" type="Node" parent="DreamContainer/DreamViewport/FarLightLandmark" unique_id=754314078]
+script = ExtResource("5_flicker")
+Amount = 0.35
+Speed = 7.0
+
+[node name="Signal" type="MeshInstance3D" parent="DreamContainer/DreamViewport" unique_id=245966080]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16, 8, -14)
+mesh = SubResource("Mesh_signal")
+surface_material_override/0 = SubResource("Mat_signal")
+
+[node name="FarLightShelf" type="OmniLight3D" parent="DreamContainer/DreamViewport" unique_id=1803300377]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 6, 17)
+light_energy = 1.2
+light_specular = 0.0
+omni_range = 10.0
+
+[node name="Flicker" type="Node" parent="DreamContainer/DreamViewport/FarLightShelf" unique_id=141500084]
+script = ExtResource("5_flicker")
+Amount = 0.2
+Speed = 5.0
+
+[node name="CreatureStill" type="Area3D" parent="DreamContainer/DreamViewport" unique_id=1266282034]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 0.95, 4)
+script = ExtResource("11_creature")
+Data = ExtResource("12_still")
+
+[node name="Body" type="MeshInstance3D" parent="DreamContainer/DreamViewport/CreatureStill" unique_id=142356605]
+mesh = SubResource("Mesh_creature")
+surface_material_override/0 = SubResource("Mat_creature")
+
+[node name="Collision" type="CollisionShape3D" parent="DreamContainer/DreamViewport/CreatureStill" unique_id=708790885]
+shape = SubResource("Shape_creature")
+
+[node name="CreatureDrifter" type="Area3D" parent="DreamContainer/DreamViewport" unique_id=2099941258]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 9, 0.95, 2)
+script = ExtResource("11_creature")
+Data = ExtResource("13_drifter")
+
+[node name="Body" type="MeshInstance3D" parent="DreamContainer/DreamViewport/CreatureDrifter" unique_id=860071852]
+mesh = SubResource("Mesh_creature")
+surface_material_override/0 = SubResource("Mat_creature")
+
+[node name="Collision" type="CollisionShape3D" parent="DreamContainer/DreamViewport/CreatureDrifter" unique_id=605906571]
+shape = SubResource("Shape_creature")
+
+[node name="Exit" type="Area3D" parent="DreamContainer/DreamViewport" unique_id=538773195]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, -24)
+script = ExtResource("9_exit")
+
+[node name="Collision" type="CollisionShape3D" parent="DreamContainer/DreamViewport/Exit" unique_id=274337263]
+shape = SubResource("Shape_creature")
+
+[node name="Player" type="CharacterBody3D" parent="DreamContainer/DreamViewport" unique_id=1824586007]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+script = ExtResource("2_walker")
+
+[node name="Collision" type="CollisionShape3D" parent="DreamContainer/DreamViewport/Player" unique_id=1906335973]
+shape = SubResource("Shape_player")
+
+[node name="Camera" type="Camera3D" parent="DreamContainer/DreamViewport/Player" unique_id=577108281]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.7, 0)
+current = true
+
+[node name="PlayerLight" type="OmniLight3D" parent="DreamContainer/DreamViewport/Player" unique_id=473222216]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0)
+light_energy = 2.0
+light_specular = 0.0
+omni_range = 6.0
+script = ExtResource("6_lamp")
+
+[node name="Flicker" type="Node" parent="DreamContainer/DreamViewport/Player/PlayerLight" unique_id=2108084618]
+script = ExtResource("5_flicker")
+Amount = 0.12
+Speed = 6.0
+
+[node name="AuthorLight" type="Node" parent="." unique_id=906304231]
+script = ExtResource("7_authorlight")
+
+[node name="Standalone" type="Node" parent="." unique_id=1672781545]
+script = ExtResource("14_standalone")
+
+[node name="Overlay" type="CanvasLayer" parent="." unique_id=259689857]
+
+[node name="Readout" type="Label" parent="Overlay" unique_id=573502116]
+unique_name_in_owner = true
+offset_left = 16.0
+offset_top = 12.0
+offset_right = 520.0
+offset_bottom = 400.0

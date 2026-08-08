@@ -478,6 +478,10 @@ traps, and it makes traps more useful beyond a lot of damage with no meaning."*
 **No armour wards Fire.** Jeremy: *"So fire is the only hazard you have to stomach."* Kept deliberately
 — one unanswerable damage type gives the bestiary somewhere to escalate that no loadout can defuse.
 
+**Each of the four is forged once.** Nothing degrades, nothing is lost on death, and one worn item per
+slot — so a second Padded Jack has no use, and the bench stops offering it once you own one. Same rule as
+a trap (§3); ruled 2026-08-07, reasoning in `combat.md` §19.
+
 **Armour is one family with three variants, so one pocket.** The armour slot starts **empty**: the first
 coat should be a moment rather than a default.
 

@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="DreamCreatureData" format=3]
+
+[ext_resource type="Script" path="res://src/Data/DreamCreatureData.cs" id="1_creature"]
+
+[resource]
+script = ExtResource("1_creature")
+Id = "dream_still"
+DisplayName = "A still shape"
+ResolveCost = 12
+TouchCooldownSeconds = 2.0
+Banishes = false
+PursuesOnlyWhenLit = true

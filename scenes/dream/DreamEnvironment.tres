@@ -1,0 +1,63 @@
+; The Dream's environment as a shared resource rather than a sub-resource inside each pocket.
+;
+; Deliberate, and it is `DreamLook.tres`'s argument applied to the other half of the look: an
+; `Environment` embedded in a scene is copied by every pocket that starts from that scene, so
+; fourteen pockets would hold fourteen copies of the ambient and the fog, and the day one of them
+; is retuned is the day thirteen of them are wrong. Point every pocket's `WorldEnvironment` at
+; *this file* and the Dream has one atmosphere.
+;
+; TO USE IT: select the pocket's `WorldEnvironment`, and in the Inspector drag this file into the
+; `Environment` slot, replacing whatever sub-resource is there. One drag per pocket, once.
+;
+; ---------------------------------------------------------------------------------------------
+; THE FOG IS OFF, AND THE REASON IS THAT IT CANNOT DO THE JOB IT WAS TURNED ON FOR.
+;
+; Depth fog measures **distance from the camera**, so it travels with you: at `begin = 10` there is
+; always clear air for ten metres in every direction and always fog past it, wherever you stand. It
+; can dim the far field. It can never mark a border, because it has no idea where the border is.
+; Tried and turned off on 2026-08-07, after it was recommended for exactly that job and did not do it.
+;
+; `FogVolume` — the node that WOULD place fog in boxes along a border — is Forward+ only, and
+; `project.godot` runs `gl_compatibility`. So there is no fog feature here that knows where a wall is.
+;
+; WHAT TO USE INSTEAD: `PocketBounds.BorderShell`. It draws the invisible walls as unshaded grey, at
+; the boundary, where they actually are. It does not move, because it is geometry.
+;
+; TURNING THIS BACK ON is one flag, and worth it if you want the far field to fade as atmosphere
+; rather than as a border. Two things to know first, both specific to this game:
+;
+; 1. THE FOG COLOUR MUST BE EXACTLY GREY. `DreamLook.gdshader` promotes anything with chroma at or
+;    above `signal_chroma` (0.04) to pure white as a point of interest — the one visual reserved for
+;    "go here". R, G and B here are identical on purpose and a gate fails if they stop being.
+;    NOTE: the look shader cannot output a colour at all — both of its exits are `vec3(x)`, so R, G
+;    and B are equal by construction. THAT DOES NOT MEAN YOU CANNOT SEE ONE. A tint reported here
+;    twice on 2026-08-07 — green, at the white/grey boundary, only while moving — was not in the
+;    frame at all: the pocket was rendering at full 1920x1080 because its `SubViewportContainer` had
+;    no `stretch_shrink`, which puts the Bayer cell on 8 screen pixels instead of 32, and a near
+;    1-pixel alternating pattern lights alternating subpixels on an RGB-striped panel. Green is the
+;    middle one. Standing still your eye integrates it back to grey; moving, it reads as colour.
+;    SO: if you see a tint, check the container's `stretch_shrink` (4) and `texture_filter`
+;    (Nearest) BEFORE the fog or the material. Both are gated now. `B` taking the look off is the
+;    other thing that can do it, and that one really is colour.
+;
+; 2. THERE ARE NO GRADIENTS AT `levels = 2`. The look posterises to two values capped at 0.40, so
+;    fog cannot be haze — it can only push a pixel across one threshold, and the dither turns that
+;    crossing into crosshatch. Raise `levels` (`[` `]`) if you want more than one step in it.
+;
+[gd_resource type="Environment" format=3]
+
+[resource]
+background_mode = 1
+ambient_light_source = 2
+ambient_light_color = Color(1, 1, 1, 1)
+ambient_light_energy = 0.04
+fog_enabled = false
+fog_mode = 1
+fog_light_color = Color(0.6, 0.6, 0.6, 1)
+fog_light_energy = 1.0
+fog_density = 1.0
+fog_aerial_perspective = 0.0
+fog_sky_affect = 0.0
+fog_depth_curve = 1.0
+fog_depth_begin = 10.0
+fog_depth_end = 26.0

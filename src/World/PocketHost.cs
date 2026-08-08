@@ -29,6 +29,7 @@ public partial class PocketHost : Control
     private Node _live;
     private string _liveScenePath = "";
     private DreamVerbHold _verbs;
+    private DreamAuthorLight _authorLight;
 
     /// <summary>The room view to hide while a pocket is up. Set by <c>Main</c>.</summary>
     private RoomView _roomView;
@@ -41,6 +42,9 @@ public partial class PocketHost : Control
 
     /// <summary>Whether the verb poller is attached right now. For the gates.</summary>
     public bool VerbInputLive => _verbs != null;
+
+    /// <summary>The pocket's debug flood light, or null when no pocket is up. For the gates.</summary>
+    public DreamAuthorLight AuthorLight => _authorLight;
 
     public void Bind(RoomView roomView) => _roomView = roomView;
 
@@ -82,6 +86,7 @@ public partial class PocketHost : Control
         // Before the scene branches, so a pocket with no geometry still has verbs — and so that no authored
         // scene has to remember anything. See `AttachVerbInput`.
         AttachVerbInput();
+        AttachAuthorLight();
 
         if (string.IsNullOrEmpty(pocket.ScenePath))
         {
@@ -122,6 +127,10 @@ public partial class PocketHost : Control
     {
         // Rendering stopped before the node goes, so the last frame of a freed viewport cannot be drawn.
         SetViewportsRendering(false);
+
+        // The light before the verbs and both before the geometry: `DreamAuthorLight._ExitTree` puts the
+        // ambient and the look material back, and it can only do that while the nodes it changed still exist.
+        DetachAuthorLight();
         DetachVerbInput();
 
         if (_live != null)
@@ -176,6 +185,42 @@ public partial class PocketHost : Control
         RemoveChild(_verbs);
         _verbs.QueueFree();
         _verbs = null;
+    }
+
+    // ---- The author's flood light ----------------------------------------
+
+    /// <summary>
+    /// Give the pocket its <see cref="DreamAuthorLight"/>, so <b>F9</b> lights it up for authoring.
+    /// </summary>
+    /// <remarks>
+    /// <b>Attached here for the reason the verb poller is</b>, and the argument is now load-bearing rather
+    /// than theoretical: this is the second thing every pocket must have that takes no configuration and has
+    /// no position, and the first one shipped as a node to drop in per scene and was forgotten on the first
+    /// pocket played. Wiring that can be forgotten fourteen times will be.
+    /// <para>
+    /// A sibling of the loaded scene rather than a child of it, so the flood can find every
+    /// <c>WorldEnvironment</c> and <c>SubViewportContainer</c> in the pocket by walking down from the host —
+    /// and so it exists on the no-geometry path, where it simply finds nothing to light.
+    /// </para>
+    /// </remarks>
+    private void AttachAuthorLight()
+    {
+        if (_authorLight != null) return;
+
+        _authorLight = new DreamAuthorLight();
+        AddChild(_authorLight);
+    }
+
+    /// <summary>Take it away again. Its <c>_ExitTree</c> restores anything it changed.</summary>
+    private void DetachAuthorLight()
+    {
+        if (_authorLight == null) return;
+
+        // Removed then freed rather than queued, for the reason the scene and the poller are: a pocket
+        // re-entered in the same frame would otherwise find the old one still parented here and keep two.
+        RemoveChild(_authorLight);
+        _authorLight.QueueFree();
+        _authorLight = null;
     }
 
     private void ShowPocket()

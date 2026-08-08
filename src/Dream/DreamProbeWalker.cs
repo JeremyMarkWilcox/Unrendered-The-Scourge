@@ -1,4 +1,6 @@
 using Godot;
+using Unrendered.Core;
+using Unrendered.Managers;
 
 namespace Unrendered.Dream;
 
@@ -62,6 +64,37 @@ public partial class DreamProbeWalker : CharacterBody3D
     [Export] public float Gravity { get; set; } = 14.0f;
     [Export] public float LookSensitivity { get; set; } = 0.0022f;
 
+    /// <summary>
+    /// Metres per second of rise while <see cref="DreamVerb.Float"/> is held.
+    /// </summary>
+    /// <remarks>
+    /// <b>The act for the second verb, and it is here because the first one taught the lesson.</b> Suppress
+    /// was priced in unit 8 and had nothing happen for three days — the meter drained, the light stayed on,
+    /// and it read as broken rather than unbuilt. Float was in the same state until now: the hold was live,
+    /// the drain was real, and Space did nothing at all.
+    /// <para>
+    /// <b>Slow on purpose.</b> `Enums.cs` calls it *"slow rise and slight lateral drift — vertical traversal
+    /// without ladders"*, which is a lift and not a jump. At 4 Resolve a second against a 100 bar, a full
+    /// meter buys about 25 seconds of rise, so this number and the drain together are what decide how high a
+    /// pocket can gate something. Change one and re-walk the ledge.
+    /// </para>
+    /// </remarks>
+    [Export] public float FloatRiseSpeed { get; set; } = 1.6f;
+
+    /// <summary>
+    /// How much of your walking speed you keep in the air while floating, 0 to 1.
+    /// </summary>
+    /// <remarks>
+    /// The *drift* half of the verb. Full control would make floating a better walk than walking; none at all
+    /// would make it a lift you cannot steer, and every gated ledge would have to sit directly above a
+    /// launch point. A fraction is the reading that keeps it traversal rather than flight.
+    /// </remarks>
+    [Export(PropertyHint.Range, "0,1,0.05")]
+    public float FloatDrift { get; set; } = 0.5f;
+
+    /// <summary>Whether the rise is happening this frame. For the gates and a readout.</summary>
+    public bool Floating { get; private set; }
+
     private Camera3D _camera;
     private float _pitch;
 
@@ -87,12 +120,25 @@ public partial class DreamProbeWalker : CharacterBody3D
             wish = wish.Normalized();
         }
 
+        // **`IsHolding`, not `Holds`.** The first asks whether the key is down this instant, the second
+        // whether the verb was ever taught — and a ledge that lifts you the moment you learn Float, forever,
+        // is a different game. `DreamVerbs` refuses the hold outside a pocket and on an empty bar, so this
+        // needs no guard of its own: the meter running out drops you, which is the intended failure.
+        Floating = DreamVerbs.IsHolding(DreamVerb.Float);
+
         var speed = Input.IsPhysicalKeyPressed(Key.Shift) ? SprintSpeed : WalkSpeed;
+        if (Floating) speed *= Mathf.Clamp(FloatDrift, 0.0f, 1.0f);
 
         var velocity = Velocity;
         velocity.X = wish.X * speed;
         velocity.Z = wish.Z * speed;
-        velocity.Y = IsOnFloor() ? 0.0f : velocity.Y - (Gravity * (float)delta);
+
+        // Rise beats gravity outright rather than fighting it. A float that fell back at (rise − gravity)
+        // would need `FloatRiseSpeed` tuned against `Gravity` to go up at all, which is two numbers holding
+        // one decision — and the first time someone lowered the rise it would silently become a slow fall.
+        if (Floating) velocity.Y = FloatRiseSpeed;
+        else velocity.Y = IsOnFloor() ? 0.0f : velocity.Y - (Gravity * (float)delta);
+
         Velocity = velocity;
         MoveAndSlide();
     }

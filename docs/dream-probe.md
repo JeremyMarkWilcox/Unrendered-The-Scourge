@@ -10,7 +10,36 @@ walls, the landmark. Those are two different sessions and it is worth keeping th
 
 ---
 
-## Running it
+## Two scenes, and which one to open
+
+| | |
+|---|---|
+| **`scenes/dream/Sandbox.tscn`** | **the playtest pocket.** `data/pockets/dream_probe.tres` points at it, so **F10 in the running game** crosses you in — and that is the only way the verbs, the creatures and the exit are live at all, because they all refuse outside a pocket. Build here |
+| **`scenes/dream/DreamProbe.tscn`** | the look bench. Three creature meshes side by side for scrubbing the creature shader, which the sandbox has no reason to carry. **F6** it when you are tuning the look and nothing else |
+
+Both carry the tuner, so the look keys below work in either.
+
+> **F6 on the sandbox is a real visit** — the verbs work, creatures cost, the exit fires. That is not free:
+> everything in a pocket asks `PocketManager` whether you are inside one first, and running a scene directly
+> never used to set it, so all of them refused and the pocket read as broken. The **`Standalone`** node in the
+> scene is what tells the manager. It also fills the bar and hands over Float and Flare, so there is no F11 to
+> remember.
+>
+> **Put one in every pocket scene you build.** It works out which pocket it belongs to from the scene's own
+> path, so there is nothing to configure and a copied scene cannot carry a stale id. It stands down entirely
+> when you cross in from the game, so it costs nothing there.
+>
+**Use F6 to build and F5 → F10 to believe it.** F6 is a two-second loop on one scene and covers everything
+you author. What it cannot cover is the crossing itself — `PocketHost` loading the scene, freeing it, turning
+the viewports off on the way out, and the HUD and panels surviving all of it. Nothing in the scene can be
+wrong in a way F6 shows and F10 hides; plenty can be the other way round.
+
+A reasonable rhythm: F6 while shaping, F5 → F10 at the end of a sitting and any time the scene's *structure*
+changed rather than its contents.
+
+---
+
+## Running the look bench
 
 1. In the **FileSystem** panel (bottom left), open `scenes/` → `dream/` → double-click
    `DreamProbe.tscn`.
@@ -41,7 +70,8 @@ Hold a key to scrub it. The readout in the top-left shows every current value.
 | `[` `]` | **greys** | how many bands the world is posterised into. **2 to 5 is the sanctioned band**; the choice inside it depends on how much detail the eventual models have, so it is not settled and does not need to be |
 | `; '` | **clamp** | the ceiling on ordinary surfaces. This is what *reserves* white — geometry physically cannot reach the top of the ramp |
 | `- =` | **dither** | the crosshatch strength. Trades against greys: a heavily dithered 2 can read richer than a clean 12, so move the two together |
-| `, .` | **light** | the player light's radius. This is also the Resolve degrade in its entirety — when the drain is built, the dark closing in *is* this number falling |
+| `G` `H` | **border** | how bright `PocketBounds.BorderShell` reads. **The value you are hunting is the dither band, not a brightness** — see below |
+| `, .` | **light** | the player light's radius. This is also the Resolve degrade in its entirety — when the drain is built, the dark closing in *is* this number falling. **`Q` (Suppress) dims the same number**, and the two do not fight: the verb takes the radius over only while it is held, and hands it back to whatever you last tuned it to |
 
 **Creatures** — both at once, so body-locked and screen-space stay comparable:
 
@@ -73,8 +103,33 @@ Hold a key to scrub it. The readout in the top-left shows every current value.
 
 | Key | | What it does |
 |---|---|---|
+| `B` | **flood** | light the whole pocket at once and drop the monochrome, so you can see what you are building. `B` again puts both back |
 | `F4` | | hide the readout, for a clean screenshot |
 | `F12` | | save a frame to `.shots/`, named after the values that produced it |
+
+**The verbs** — not tuning keys. These are the real abilities, they cost Resolve while held, and they are
+listed here and on the readout because they are the other thing you press in a pocket:
+
+| Key | | What it does |
+|---|---|---|
+| `Q` | **Suppress** | 2/s. Puts the lamp out. Hold it to hide |
+| `Space` | **Float** | 4/s. Slow rise with damped steering. About 25 s of lift on a full bar |
+| `E` | **Flare** | 6/s. Throws the lamp wide — **the light only**, see below |
+
+Holding `Q` and `E` together costs both (8/s) and goes dark; Suppress wins. Running the bar out ends every
+hold, so Float drops you.
+
+> **`B` is two changes, not one, and the second is what makes it useful.** Raising the ambient alone hands a
+> bright room to `DreamLook`, which posterises it into a few greys under a clamp — a flooded pocket comes out
+> one flat value and you can see *less* than by lamplight. So the look material comes off the container at the
+> same time and you get the raw lit room.
+>
+> **`PocketHost` attaches the light**, so a pocket you cross into from the game always has it and there is
+> nothing to wire. **A pocket you run on its own with `F6` has no host**, so if you want `B` in that workflow —
+> and that is the workflow — drop a plain `Node` with `DreamAuthorLight` on it at the root of the pocket scene.
+> Having both is fine: the first one into the tree answers the key and the other stays quiet.
+>
+> Nothing about it is saved and nothing about it ships.
 
 > There is no signal-threshold key any more. Points of interest used to be detected by *brightness*,
 > which leaked — a wall near a bright light would flash white. They are detected by **chroma** now:
@@ -82,9 +137,190 @@ Hold a key to scrub it. The readout in the top-left shows every current value.
 > one. **Paint a material any colour and it becomes white in game.** The sphere is red in the editor
 > and white when you play.
 
+> **Standing rule, 2026-08-07: every debug key that works in a pocket goes on the readout**, including ones
+> the tuner does not own. Asked for after `B` was rebound twice and went unfound: *"we should always add the
+> debug buttons labels to the temp hud."* So the flood light and the three verbs are listed there beside the
+> scrub keys even though nothing about them is scrubbed. The duplication is deliberate — a key you cannot
+> discover is a key that does not exist, and there is one surface in a pocket where discovery happens.
+
 **Nothing you scrub at runtime is saved.** That is why the readout prints to the Output panel and why
 F12 puts the numbers in the filename — so a value you like can be found again. Send me the numbers, or
 just the filenames, and I will write them into `DreamLook.tres` as the new defaults.
+
+---
+
+## The three verbs now do something
+
+Until 2026-08-07 all three verbs were **priced but inert**: `DreamVerbs` refused the hold outside a pocket,
+charged Resolve by the second while it was held, and then nothing happened. That is the worst state a feature
+can sit in, because every check about it is green and the meter really moves, so it reads as *broken* rather
+than as unbuilt. Jeremy found it the only way it can be found — *"Q works. I didn't see space do anything."*
+
+### `Q` — Suppress, and `E` — Flare: one script on the lamp
+
+Attach **`DreamSuppressibleLight`** to the player's `OmniLight3D` (right-click the node → *Extend Script*, or
+swap its type). Nothing else. Holding `Q` puts the lamp out over `FadeSeconds`; holding `E` throws it wide;
+letting go brings it back.
+
+| field | | |
+|---|---|---|
+| `SuppressedFraction` | **0** | how much lamp is left while hiding. `0` is out entirely — invisible and blind. `0.1` leaves a stub you can read the floor by |
+| `FlaredMultiple` | **3** | how far Flare throws the same radius. §19 calls Flare *"the exact mirror of Suppress"*, so once Suppress owned the radius the mirror was a multiplier, not a second mechanism |
+| `FadeSeconds` | **0.2** | how fast it goes, both directions. Not instant, or it reads as a renderer fault rather than an act |
+
+**Holding both is a contradiction, and Suppress wins.** You pay for both — the rates are additive, so `Q`+`E`
+is 8 Resolve a second — and the lamp goes dark. Going dark is the safe resolution: the alternative hands
+someone who fat-fingered a key a tripled lamp in a room full of things that hunt light.
+
+> **It drives the *radius*, not the energy, and that is forced.** `DreamLightFlicker` writes `LightEnergy`
+> every frame from a base it captured at `_Ready`, so anything else writing energy is overwritten before you
+> ever see it — a feature that would look plainly broken with nothing in the log.
+>
+> **While you are lit it writes nothing**, so `,` and `.` still tune the lamp normally; the verb takes the
+> channel over only while held and returns it to whatever you last set. That is gated in both directions.
+
+> ⚠️ **Flare is the light, and only the light.** The verb is also supposed to *reveal hidden geometry* and to
+> *let everything in the pocket see you*. Neither exists. The first wants a `PocketGate` variant that reads
+> the **hold** (`IsHolding`) rather than the **grant** (`Holds`); the second is creature AI, which is
+> unwritten. Worth knowing before concluding Flare is finished.
+
+### `Space` — Float: two fields on the walker
+
+`DreamProbeWalker` already carried the movement, so Float is two numbers in `_PhysicsProcess`.
+
+| field | | |
+|---|---|---|
+| `FloatRiseSpeed` | **1.6** | metres per second of rise while held. A lift, not a jump — `Enums.cs` says *"slow rise and slight lateral drift"* |
+| `FloatDrift` | **0.5** | the fraction of walking speed you keep in the air. Full control makes floating a better walk than walking; none at all makes every gated ledge sit directly above its launch point |
+
+**Rise beats gravity outright** rather than fighting it — `velocity.Y = FloatRiseSpeed`, not a force added
+against `Gravity`. Two numbers holding one decision is how you get a "float" that silently becomes a slow
+fall the first time someone lowers the rise.
+
+At 4 Resolve a second against a 100 bar, **a full meter buys about 25 seconds of rise** — roughly 40 m. That
+pairing is what decides how high a pocket can gate something, so if you change either number, re-walk the
+ledge. Running out drops you, which is the intended failure.
+
+> **Float's movement has no gate, deliberately.** `_PhysicsProcess` and `MoveAndSlide` do not run in a
+> headless verifier, so a check could only re-assert the arithmetic I just wrote. Play is the only proof:
+> hold Space on the sandbox floor and you should reach the y = 7 `HighLedge` in about five seconds.
+
+---
+
+## What is in the sandbox
+
+Built from scratch on 2026-08-07, to the contract `PocketHost` expects and with one of everything that
+exists so far. It is **scaffolding, not content** — nothing in it ships, so change or delete anything.
+
+| | |
+|---|---|
+| **`DreamContainer`** | `stretch_shrink = 4` and `texture_filter = Nearest`. **These two lines are the 480 × 270 look** — see the warning below before touching either |
+| **Ground** | 60 × 60, one mesh with its own collision. Visible, because it is the thing you walk on |
+| **`Bounds`** | `PocketBounds` at 60 × 20 × 60. Invisible walls and a lid. **This is the whole containment** |
+| **Structures** | four blocks and a stub wall, as `CSGBox3D` with `use_collision` — things to walk around rather than a room to walk in, which is the open-floor reading |
+| **`Ramp`** | 20°, walkable. `CharacterBody3D` **does not step up**, so this is the only way to gain height on foot |
+| **`HighLedge`** | at y = 7, out of walking reach, carrying a `PocketGate` set to **Float** — so it is not there at all until you have the verb. Press **F11** to grant Float and Flare and watch it appear |
+| **`Signal`** | the white sphere, on the ledge. Red in the editor, white in game — that is the chroma rule, not a bug |
+| **`Landmark`** | a tall prism with its own light, far off, for navigating by silhouette |
+| **Creatures** | one `dream_still` and one `dream_drifter`, both inert until you cross in as a pocket. Neither moves — **AI is the 3D pass and is not written** |
+| **`Exit`** | a `PocketExit` at z = −24. Walk into it and you are back in the Waking world, having written nothing |
+| **`Standalone`** | what makes **F6** a real visit. Enters the pocket, fills the bar, grants Float and Flare. Inert under F5 |
+| **No `PocketAnchor`** | deliberately. An anchor calls `Complete()`, which writes `pocket.dream_probe.cleared` and **breaks the entrance for that save** — the same reason `F10` cannot complete |
+
+> ### ⚠️ If the Dream looks tinted, it is the viewport resolution, not a colour
+>
+> **The look shader cannot emit colour.** Both of its exits are `vec3(x)`, so R, G and B come out equal by
+> construction and no amount of lighting, fog or material changes that. **And you can still see green.**
+>
+> `stretch_shrink = 4` is what makes the pocket render at 480 × 270. Leave it off and `stretch` resizes the
+> `SubViewport` to the full 1920 × 1080 — everything still draws, still looks monochrome, and the 8 × 8 Bayer
+> cell lands on **8 screen pixels instead of 32**. A near-1-pixel alternating pattern lights alternating
+> subpixels on an RGB-striped monitor, and green is the middle one. **Standing still you see grey; moving,
+> the pattern crawls and it reads as colour** — strongest at the white/grey boundary, because that is where
+> the dither is 50/50 and the pattern is finest.
+>
+> That is the whole of the "green fog" reported on 2026-08-07. It cost two rounds because it was diagnosed
+> as pigment. **A rendering fault that is not in the render is one a screenshot cannot settle** — the frame
+> was pure grey the entire time and measuring it would have confirmed nothing. When something is reported as
+> *motion-dependent* and *sitting on a pattern edge*, suspect pixel scale first.
+>
+> Both lines are gated on **every** pocket scene now, so the other thirteen cannot repeat it.
+
+---
+
+## The boundary — two nodes, one shared file
+
+**`PocketBounds`** contains the player; **`DreamEnvironment.tres`** is what the border looks like. They are
+kept apart on purpose, so the border can be restyled without touching what stops you walking, and so an
+unstyled pocket still cannot be escaped.
+
+### Containing it
+
+Drop a **`PocketBounds`** at floor level, in the middle of the room, and type the room's dimensions into
+`Size`. You get four walls and a lid, built from collision and nothing else — no meshes, no material,
+nothing to draw. The walls stand **outside** the size you typed, so the number is the space you get.
+
+| field | | |
+|---|---|---|
+| `Size` | **40 × 12 × 40** | the clear volume, running *up* from the node. Centred in X and Z |
+| `Thickness` | **2** | not a tunnelling guard — `CharacterBody3D` sweeps, so nothing passes a wall of any thickness. It is thick enough to be unambiguous |
+| `BuildCap` | **on** | the lid that stops Float. Turn it off for a pocket with a real ceiling |
+| `BuildFloor` | **off** | deliberately. A pocket has a floor you can see; a second invisible one under it would hide the seam you want to find |
+
+> **It does not catch you when you fall through a seam** — that is the deferred C5 in `whats-left.md`, and
+> when it lands it belongs on this node, built from the same `Size`.
+
+### Showing it
+
+Tick **`BorderShell`** on the same node. It draws each invisible wall as unshaded grey, at the wall, so the
+boundary can be seen as well as felt.
+
+**Then scrub `BorderValue` with `G` / `H` — do not try to pick it.** The first default was 0.55, reasoned
+from the posterise threshold sitting near 0.5, and it came out as a flat slab filling the horizon. What the
+shader reads is the *rendered luminance* of an unshaded surface, not the albedo you typed, and the two are
+not close.
+
+> **You are hunting the dither band, not a brightness.** The ordered dither shifts the threshold per pixel,
+> so there is a range where only *some* pixels cross it and the wall reads as **crosshatch — a haze you can
+> see through**. Above that band every pixel crosses and it is an opaque panel; below it, none do and there
+> is no border at all. Two of those three are wrong and the good one is narrow. Starts at 0.30.
+>
+> **Unshaded is the feature, not a detail.** A *lit* wall out past the lamp's radius is black, which is
+> precisely the invisible boundary this exists to fix.
+
+### Why this is not fog — corrected 2026-08-07
+
+**Depth fog was recommended for this job and cannot do it.** It measures distance from the *camera*, so it
+travels with you: always clear for the first `fog_depth_begin` metres in every direction and always thick
+past them, wherever you stand. It dims the far field; it can never mark a border, because nothing about it
+knows where the border is. `FogVolume`, the node that *would* place fog in a box, is **Forward+ only** and
+this project runs `gl_compatibility`.
+
+So `DreamEnvironment.tres` ships with **`fog_enabled = false`**, values intact. Turn it back on if you want
+the far field to fade as atmosphere — that it does well. Two things first:
+
+- **It must be exactly grey.** Chroma at or above `signal_chroma` (0.04) is promoted to pure white, the one
+  visual reserved for *go here*, so a tinted fog becomes a glowing wall the player reads as the objective.
+  Gated; Godot's own default fog colour is bluish and trips it.
+- **There are no gradients at `levels = 2`.** Fog can only push a pixel across one threshold, and the dither
+  turns that into crosshatch. A dithered edge, not a soft fade.
+
+> **If you ever see a *coloured* fog on screen, the fog is not the problem.** `DreamLook.gdshader` cannot
+> output a colour at all — every path in it ends in grey or white. A tint means the look material is not on
+> the container, and the usual reason is that the flood light (**`B`**) took it off.
+
+---
+
+## Seeing inside while authoring — use the editor's own switch
+
+**There is nothing to build for this and nothing to remember to turn off.** In the 3D viewport, the
+**Perspective** dropdown (top left) → **Display Unshaded** draws flat albedo with no lighting at all, so the
+whole box is legible instantly. It is per-viewport and non-destructive.
+
+**Do not raise `AmbientLightEnergy` in the inspector instead.** That value lives on the `Environment`
+embedded in the pocket, so a `Ctrl+S` while it is up ships that pocket with the horror drained out of it, and
+nothing anywhere would go red about it. `B` at runtime is safe for the same reason in reverse — runtime
+changes are never written to disk.
 
 ---
 
